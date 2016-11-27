@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QCompleter>
 #include <QString>
+#include <QKeyEvent>
 
 #include "ui_crs_selector.h"
 
@@ -29,6 +30,8 @@ namespace geotools {
             void initUi();
             void loadCrs(std::map<int, std::string> &target, const std::string &filename);
             void updateFields();
+        protected:
+            void keyPressEvent(QKeyEvent *e);
         public:
             CRSSelector(QWidget *parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
             void enableVertical(bool);

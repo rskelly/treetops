@@ -296,6 +296,7 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
 }
 
 // Implementations for MemRaster
+
 template <class T>
 void MemRaster<T>::checkInit() const {
     if (m_grid == nullptr)
@@ -304,12 +305,12 @@ void MemRaster<T>::checkInit() const {
 
 template <class T>
 MemRaster<T>::MemRaster() :
-m_grid(nullptr),
-m_cols(-1), m_rows(-1),
-m_item_dealloc(nullptr),
-m_nodata(0),
-m_mmapped(false),
-m_size(0) {
+    m_grid(nullptr),
+    m_cols(-1), m_rows(-1),
+    m_item_dealloc(nullptr),
+    m_nodata(0),
+    m_mmapped(false),
+    m_size(0) {
 }
 
 template <class T>

@@ -81,6 +81,8 @@ namespace geotools {
         public:
             Grid();
 
+            virtual ~Grid() = 0;
+            
             // Return the number of rows in the dataset.
             virtual int32_t rows() const = 0;
 

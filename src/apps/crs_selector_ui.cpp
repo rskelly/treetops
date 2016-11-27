@@ -4,6 +4,7 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QFileDialog>
 #include <QCompleter>
+#include <QKeyEvent>
 
 #include "cpl_conv.h"
 
@@ -48,6 +49,7 @@ void CRSSelector::initUi() {
 
     loadCrs(m_vcrs, "vertcs.csv");
     loadCrs(m_vcrs, "vertcs.override.csv");
+    m_vlst << QString("0 - None");
     for (const std::pair<int, std::string> &item : m_vcrs)
         m_vlst << QString((std::to_string(item.first) + " - " + item.second).c_str());
 
@@ -59,6 +61,7 @@ void CRSSelector::initUi() {
 
     loadCrs(m_hcrs, "gcs.csv");
     loadCrs(m_hcrs, "pcs.csv");
+    m_hlst << QString("0 - None");
     for (const std::pair<int, std::string> &item : m_hcrs)
         m_hlst << QString((std::to_string(item.first) + " - " + item.second).c_str());
 
@@ -77,18 +80,18 @@ void CRSSelector::initUi() {
 }
 
 void CRSSelector::updateFields() {
-    if (m_hcomp && m_hsrid > 0) {
+    //if (m_hcomp && m_hsrid > 0) {
         QString h;
         h.setNum(m_hsrid);
         txtHorizontalCRS->setText(h);
         m_hcomp->complete();
-    }
-    if (m_vcomp && m_vsrid > 0) {
+    //}
+    //if (m_vcomp && m_vsrid > 0) {
         QString v;
         v.setNum(m_vsrid);
         txtVerticalDatum->setText(v);
         m_vcomp->complete();
-    }
+    //}
 }
 
 void CRSSelector::textUpdate() {
@@ -104,6 +107,14 @@ void CRSSelector::textUpdate() {
      */
 }
 
+void CRSSelector::keyPressEvent(QKeyEvent *e) {
+    if(e->key() != Qt::Key_Escape) {
+        QDialog::keyPressEvent(e);
+    } else {
+        reject();
+    }
+}
+
 void CRSSelector::cancelClicked() {
     reject();
 }
@@ -117,7 +128,7 @@ void CRSSelector::selectClicked() {
     int vidx = m_vlst.indexOf(m_vcomp->currentCompletion());
     if (vidx >= 0)
         m_vsrid = std::next(m_vcrs.begin(), vidx)->first;
-    g_debug("vsrid: " << m_vsrid << "; hsrid: " << m_hsrid);
+    g_debug("vsrid: " << hidx << ", " << m_vsrid << "; hsrid: " << vidx << ", " << m_hsrid);
     accept();
 }
 

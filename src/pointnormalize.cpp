@@ -40,25 +40,25 @@ double computeArea(double x1, double y1, double z1, double x2, double y2, double
 }
 
 class FileSorter {
-            private:
-                double m_colSize;
-                double m_rowSize;
-            public:
+private:
+    double m_colSize;
+    double m_rowSize;
+public:
 
-                FileSorter(double colSize, double rowSize) :
-                m_colSize(colSize), m_rowSize(rowSize) {
-                }
+    FileSorter(double colSize, double rowSize) :
+    m_colSize(colSize), m_rowSize(rowSize) {
+    }
 
-                bool operator()(const std::string &a, const std::string &b) {
-                    LASReader ar(a);
-                    LASReader br(b);
-                    Bounds ab = ar.bounds();
-                    Bounds bb = br.bounds();
-                    int idxa = ((int) (ab.miny() / m_rowSize)) * ((int) (ab.width() / m_colSize)) + ((int) (ab.minx() / m_colSize));
-                    int idxb = ((int) (bb.miny() / m_rowSize)) * ((int) (bb.width() / m_colSize)) + ((int) (bb.minx() / m_colSize));
-                    return idxa < idxb;
-                }
-            };
+    bool operator()(const std::string &a, const std::string &b) {
+        LASReader ar(a);
+        LASReader br(b);
+        Bounds ab = ar.bounds();
+        Bounds bb = br.bounds();
+        int idxa = ((int) (ab.miny() / m_rowSize)) * ((int) (ab.width() / m_colSize)) + ((int) (ab.minx() / m_colSize));
+        int idxb = ((int) (bb.miny() / m_rowSize)) * ((int) (bb.width() / m_colSize)) + ((int) (bb.minx() / m_colSize));
+        return idxa < idxb;
+    }
+};
             
 void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbacks *callbacks) {
 
@@ -76,7 +76,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbac
     std::vector<std::string> files(config.pointFiles.begin(), config.pointFiles.end());
     FileSorter fs(10, -10);
     std::sort(files.begin(), files.end(), fs);
-    std::list<Point_3> pts;
+    std::vector<liblas::Point> objPts;
     std::list<liblas::Point> repeats;
     
     for (unsigned int i = 0; i < files.size(); ++i) {
@@ -98,23 +98,27 @@ void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbac
         liblas::Header outHeader(lasHeader);
         liblas::Writer lasWriter(outstr, outHeader);
         
+        std::vector<Point_3> groundPts;
+        
         while (lasReader.ReadNextPoint()) {
             const liblas::Point &opt = lasReader.GetPoint();
-            if(opt.GetClassification().GetClass() != 2)
-                continue;
-            Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-            pts.push_back(std::move(p));
+            if(opt.GetClassification().GetClass() != 2) {
+                objPts.push_back(opt);
+            } else {
+                Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
+                groundPts.push_back(std::move(p));
+            }
         }
         // TODO: This is not "correct".
         for(const liblas::Point &opt : repeats) {
             Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-            pts.push_back(std::move(p));            
+            groundPts.push_back(std::move(p));            
         }
 
         lasReader.Reset();
         
-        Delaunay dt(pts.begin(), pts.end());
-        pts.clear();
+        Delaunay dt(groundPts.begin(), groundPts.end());
+        groundPts.clear();
         repeats.clear();
         
         Face_handle hint;
@@ -122,11 +126,10 @@ void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbac
         uint64_t ptCountByReturn[255];
         for(int i = 0; i < 5; ++i)
             ptCountByReturn[i] = 0;
-        
-        while (lasReader.ReadNextPoint()) {
-            const liblas::Point &opt = lasReader.GetPoint();
-            if(opt.GetClassification().GetClass() == 2)
-                continue;
+
+        #pragma omp parallel for
+        for(size_t i = 0; i < objPts.size(); ++i) {
+            const liblas::Point &opt = objPts[i];
             Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
             hint = dt.locate(p, hint);
             if(dt.is_infinite(hint)) {
@@ -146,22 +149,26 @@ void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbac
             liblas::Point npt(opt);
             if(p.z() > 0.0 || !config.dropNegative)
                 npt.SetZ(g_max(0.0, p.z() - total / area));
-            lasWriter.WritePoint(npt);
-            ptCountByReturn[npt.GetReturnNumber() - 1]++;
-            ++ptCount;
+            #pragma omp critical
+            {
+                lasWriter.WritePoint(npt);
+                ptCountByReturn[npt.GetReturnNumber() - 1]++;
+                ++ptCount;
+            }
         }
 
         g_debug(" -- setting original count " << outHeader.GetPointRecordsCount() << " to " << ptCount);
         outHeader.SetPointRecordsCount(ptCount);
         for(int i = 0; i < 5; ++i)
             outHeader.SetPointRecordsByReturnCount(i + 1, ptCountByReturn[i]);
+        lasWriter.SetHeader(outHeader);
         
         // Keep the bounds of the infinite faces to triangulate in the next round.
         for(All_faces_iterator it = dt.all_faces_begin(); it != dt.all_faces_end(); ++it) {
             if(dt.is_infinite(it)) {
                 for(int i = 0; i < 3; ++i) {
                     if(it->vertex(i)->point().z() > 0)
-                        pts.push_back(it->vertex(i)->point());
+                        groundPts.push_back(it->vertex(i)->point());
                 }
             }
         }

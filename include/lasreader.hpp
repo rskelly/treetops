@@ -6,9 +6,20 @@
 #include <memory>
 #include <string>
 
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Polygon_with_holes_2.h>
+#include <CGAL/Polygon_2.h>
+#include <CGAL/Point_2.h>
+#include <CGAL/Boolean_set_operations_2.h>
+
 #include "util.hpp"
 #include "laspoint.hpp"
 #include "raster.hpp"
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Polygon_with_holes_2<K>                       Polygon_with_holes_2;
+typedef CGAL::Polygon_2<K>                                  Polygon_2;
+typedef K::Point_2                                          Point_2;
 
 using namespace geotools::las;
 using namespace geotools::util;
@@ -41,6 +52,7 @@ private:
     double m_zMax;
 
     uint64_t m_curPoint;
+    size_t m_batchSize;
 
     std::unique_ptr<Buffer> m_buf;
     std::queue<LASPoint> m_pts;
@@ -118,8 +130,6 @@ public:
             delete m_buf.release();
     }
 
-    size_t m_batchSize;
-
     void reset() {
         m_curPoint = 0;
         std::fseek(m_f, m_offset, SEEK_SET);
@@ -168,6 +178,7 @@ private:
     std::unique_ptr<MemRaster<uint32_t> > m_finalizer;
     double m_resolution;
     Bounds m_bounds;
+    std::list<Polygon_with_holes_2> m_finalized;
     
     void load(const std::vector<std::string> &files) {
         m_bounds.collapse();
@@ -197,7 +208,7 @@ private:
     }
     
 public:
-    LASMultiReader(const std::vector<std::string> &files, double resolution = 10.0) :
+    LASMultiReader(const std::vector<std::string> &files, double resolution = 50.0) :
         m_reader(nullptr),
         m_idx(0),
         m_resolution(resolution) {
@@ -228,5 +239,38 @@ public:
         return true;
     }
 
+    bool _isEdge(int col, int row) {
+        if(col <= 0 || row <= 0 || row >= m_finalizer->rows() - 1 || 
+                col >= m_finalizer->cols() - 1)
+            return true;
+        if(m_finalizer->get(col - 1, row - 1) == 0 || 
+                m_finalizer->get(col + 1, row - 1) == 0 ||
+                m_finalizer->get(col - 1, row + 1) == 0 ||
+                m_finalizer->get(col + 1, row + 1) == 0)
+            return true;
+        return false;
+    }
+    
+    void generateFinalPoly() {
+        std::list<Polygon_with_holes_2> polys(m_finalized.begin(), m_finalized.end());
+        for(int row = 0; row < m_finalizer->rows(); ++row) {
+        for(int col = 0; col < m_finalizer->cols(); ++col) {
+            double x1 = m_bounds.minx() + col * m_resolution;
+            double x2 = m_bounds.minx() + (col + 1) * m_resolution;
+            double y1 = m_bounds.miny() + row * m_resolution;
+            double y2 = m_bounds.miny() + (row + 1) * m_resolution;
+            std::list<Point_2> pts;
+            pts.push_back(Point_2(x1, y1));
+            pts.push_back(Point_2(x1, y2));
+            pts.push_back(Point_2(x2, y2));
+            pts.push_back(Point_2(x2, y1));
+            pts.push_back(Point_2(x1, y1));
+            Polygon_with_holes_2 poly(Polygon_2(pts.begin(), pts.end()));
+            polys.push_back(std::move(poly));
+            m_finalized.clear();
+            CGAL::intersection(polys.begin(), polys.end(), std::back_inserter(m_finalized));
+        }
+        }
+    }
 };
 #endif
