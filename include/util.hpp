@@ -136,7 +136,7 @@ namespace geotools {
 
             bool contains(double x, double y, double z) const;
 
-            bool contains(const geotools::util::Bounds &b) const;
+            bool contains(const geotools::util::Bounds &b, int dims = 2) const;
 
             bool intersects(const geotools::util::Bounds &b, int dims = 2) const;
 

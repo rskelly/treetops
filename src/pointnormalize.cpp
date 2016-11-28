@@ -1,5 +1,6 @@
 #include <atomic>
 #include <thread>
+#include <vector>
 
 #include <boost/filesystem.hpp>
 
@@ -53,7 +54,37 @@ public:
         return idxa < idxb;
     }
 };
-            
+
+class FileSearcher {
+private:
+    std::vector<std::string> m_files;
+    std::vector<std::pair<std::string, Bounds> > m_bounds;
+public:
+    FileSearcher(const std::vector<std::string> &files) :
+        m_files(files) {
+            init();
+    }
+        
+    void init() {
+        for(const std::string &file : m_files) {
+            LASReader r(file);
+            Bounds b = r.bounds();
+            m_bounds.push_back(std::make_pair(file, b));
+        }
+    }
+    
+    std::vector<std::string> getFiles(const Bounds &bounds) {
+        std::vector<std::string> files;
+        for(const auto &pr : m_bounds) {
+            std::cerr << std::setprecision(9);
+            g_debug(" -- check: " << pr.second.print() << "; " << bounds.print() << "; " << pr.second.intersects(bounds));
+            if(pr.second.intersects(bounds))
+                files.push_back(pr.first);
+        }
+        return files;
+    }
+};
+
 bool _cancel = false;
 
 void PointNormalize::normalize(const PointNormalizeConfig &config, 
@@ -88,10 +119,8 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
     path outDir(config.outputDir);
     liblas::ReaderFactory rf;
 
-    // Sort the blocks.
     std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
-    FileSorter fs(10, -10);
-    std::sort(files.begin(), files.end(), fs);
+    FileSearcher fileSearch(files);
     
     for (unsigned int i = 0; !*cancel && i < files.size(); ++i) {
         if(*cancel) return;
@@ -109,35 +138,47 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
             continue;
         }
 
+        std::vector<liblas::Point> objPts;
+        std::list<Point_3> meshPts;
+    
+        // Build a mesh from the buffered ground points.
+        LASReader lr(pointFile);
+        Bounds bounds = lr.bounds();
+        g_debug(" -- bounds: " << bounds.print());
+        bounds.extend(bounds.minx() - 10.0, bounds.miny() - 10.0);
+        bounds.extend(bounds.maxx() + 10.0, bounds.maxy() + 10.0);
+        g_debug(" -- bounds: " << bounds.print());
+        std::vector<std::string> bufFiles = fileSearch.getFiles(bounds);
+        g_debug(" -- " << bufFiles.size() << " files to satisfy the buffer");
+        for(const std::string &file : bufFiles) {            
+            std::ifstream instr(file.c_str(), std::ios::binary);
+            liblas::Reader lasReader = rf.CreateWithStream(instr);
+            while(lasReader.ReadNextPoint()) {
+                const liblas::Point &pt = lasReader.GetPoint();
+                if(bounds.contains(pt.GetX(), pt.GetY()) && pt.GetClassification().GetClass() == 2) {
+                    Point_3 p(pt.GetX(), pt.GetY(), pt.GetZ());
+                    meshPts.push_back(std::move(p));                    
+                }
+                if(*cancel)
+                    return;
+            }
+        }
+        
+        // Load the non-ground points.
         std::ifstream instr(pointFile.c_str(), std::ios::binary);
         liblas::Reader lasReader = rf.CreateWithStream(instr);
         liblas::Header lasHeader = lasReader.GetHeader();
 
-        std::ofstream outstr(newPath.c_str(), std::ios::binary);
-        liblas::Header outHeader(lasHeader);
-        liblas::Writer lasWriter(outstr, outHeader);
-                
-        std::vector<liblas::Point> objPts;
-        std::list<Point_3> meshPts;
-    
         while (lasReader.ReadNextPoint()) {
             if(*cancel) return;
             const liblas::Point &opt = lasReader.GetPoint();
-            if(opt.GetClassification().GetClass() == 2) {
-                Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-                meshPts.push_back(std::move(p));
-                if(!config.dropGround)
-                    objPts.push_back(opt);
-            } else {
+            if(!config.dropGround || opt.GetClassification().GetClass() != 2)
                 objPts.push_back(opt);
-            }
             if(*cancel)
                 return;
         }
 
-        lasReader.Reset();
-        
-        if(*cancel) return;
+        // Build the Delaunay triangulation.
         Delaunay dt(meshPts.begin(), meshPts.end());
         meshPts.clear();
         if(*cancel) return;
@@ -151,6 +192,10 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
         std::atomic<size_t> curPt(0);
         size_t ptCount = objPts.size();
         
+        std::ofstream outstr(newPath.c_str(), std::ios::binary);
+        liblas::Header outHeader(lasHeader);
+        liblas::Writer lasWriter(outstr, outHeader);
+
         #pragma omp parallel for
         for(size_t i = 0; i < ptCount; ++i) {
             if(*cancel) continue;
@@ -201,17 +246,6 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
         for(int i = 0; i < 5; ++i)
             outHeader.SetPointRecordsByReturnCount(i + 1, finalPtCountByReturn[i]);
         lasWriter.SetHeader(outHeader);
-        
-        // Keep the bounds of the infinite faces to triangulate in the next round.
-        // TODO: Maybe also keep the vertices of the adjoining faces?
-        for(All_faces_iterator it = dt.all_faces_begin(); it != dt.all_faces_end(); ++it) {
-            if(dt.is_infinite(it)) {
-                for(int i = 0; i < 3; ++i) {
-                    if(it->vertex(i)->point().z() > 0)
-                        meshPts.push_back(it->vertex(i)->point());
-                }
-            }
-        }
         
         instr.close();
         outstr.close();

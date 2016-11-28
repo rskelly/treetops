@@ -50,33 +50,35 @@ Bounds::Bounds(double minx, double miny, double maxx, double maxy, double minz, 
 }
 
 bool Bounds::contains(double x, double y) const {
-    return x >= m_minx && x <= m_maxx && y >= m_miny && y <= m_maxy;
+    return x > m_minx && x < m_maxx && y > m_miny && y < m_maxy;
 }
 
 bool Bounds::contains(double x, double y, double z) const {
-    return contains(x, y) && z >= m_minz && z <= m_maxz;
+    return contains(x, y) && z > m_minz && z < m_maxz;
 }
 
-bool Bounds::contains(const Bounds &b) const {
-    return contains(b.minx(), b.miny(), b.minz()) && contains(b.maxx(), b.maxy(), b.maxz());
+bool Bounds::contains(const Bounds &b, int dims) const {
+    if(dims == 3) {
+        return contains(b.minx(), b.miny(), b.minz()) && 
+                contains(b.maxx(), b.maxy(), b.maxz());
+    } else {
+        return contains(b.minx(), b.miny()) && contains(b.maxx(), b.maxy());
+    }
 }
 
 bool Bounds::intersects(const Bounds &b, int dims) const {
     if (dims == 3) {
-        return b.contains(*this) ||
-                contains(b.minx(), b.miny(), b.minz()) || contains(b.minx(), b.maxy(), b.minz()) ||
-                contains(b.maxx(), b.miny(), b.minz()) || contains(b.maxx(), b.maxy(), b.minz()) ||
-                contains(b.minx(), b.miny(), b.maxz()) || contains(b.minx(), b.maxy(), b.maxz()) ||
-                contains(b.maxx(), b.miny(), b.maxz()) || contains(b.maxx(), b.maxy(), b.maxz());
+        return !(b.maxx() < minx() || b.maxy() < miny() || b.minx() > maxx() || 
+                b.miny() > maxy() || b.minz() > maxz() || b.maxz() < minz());
     } else {
-        return b.contains(*this) ||
-                contains(b.minx(), b.miny()) || contains(b.minx(), b.maxy()) ||
-                contains(b.maxx(), b.miny()) || contains(b.maxx(), b.maxy());
+        return !(b.maxx() < minx() || b.maxy() < miny() || b.minx() > maxx() || 
+                b.miny() > maxy());
     }
 }
 
 Bounds Bounds::intersection(const Bounds &other) const {
-    return Bounds(g_max(minx(), other.minx()), g_max(miny(), other.miny()), g_min(maxx(), other.maxx()), g_min(maxy(), other.maxy()));
+    return Bounds(g_max(minx(), other.minx()), g_max(miny(), other.miny()), 
+            g_min(maxx(), other.maxx()), g_min(maxy(), other.maxy()));
 }
 
 double Bounds::minx() const {
