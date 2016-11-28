@@ -295,6 +295,9 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
 
 }
 
+template <class T>
+Grid<T>::~Grid() {}
+
 // Implementations for MemRaster
 
 template <class T>

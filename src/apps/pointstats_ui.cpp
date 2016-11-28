@@ -15,6 +15,19 @@ using namespace geotools::point::pointstats_config;
 QSettings _settings("PointStats", "Geotools");
 QString _last_dir("last_dir");
 
+void PointStatsCallbacks::stepCallback(float status) const {
+    emit stepProgress((int) std::round(status * 100));
+}
+
+void PointStatsCallbacks::overallCallback(float status) const {
+    emit overallProgress((int) std::round(status * 100));
+}
+
+void WorkerThread::init(PointStatsForm *parent, const geotools::util::Bounds &bounds) {
+    m_parent = parent;
+    m_bounds = bounds;
+}
+
 void WorkerThread::run() {
     try {
         m_error = "";

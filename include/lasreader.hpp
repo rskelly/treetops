@@ -238,18 +238,6 @@ public:
         m_finalizer->set(col, row, count - 1);
         return true;
     }
-
-    bool _isEdge(int col, int row) {
-        if(col <= 0 || row <= 0 || row >= m_finalizer->rows() - 1 || 
-                col >= m_finalizer->cols() - 1)
-            return true;
-        if(m_finalizer->get(col - 1, row - 1) == 0 || 
-                m_finalizer->get(col + 1, row - 1) == 0 ||
-                m_finalizer->get(col - 1, row + 1) == 0 ||
-                m_finalizer->get(col + 1, row + 1) == 0)
-            return true;
-        return false;
-    }
     
     void generateFinalPoly() {
         std::list<Polygon_with_holes_2> polys(m_finalized.begin(), m_finalized.end());

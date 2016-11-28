@@ -15,29 +15,17 @@
 
 namespace geotools {
 
-    namespace point {
+    namespace ui {
 
         class PointStatsCallbacks : public QObject, public geotools::util::Callbacks {
-
             Q_OBJECT
         public:
-            void stepCallback(float status) const {
-                emit stepProgress((int) std::round(status * 100));
-            }
-
-            void overallCallback(float status) const {
-                emit overallProgress((int) std::round(status * 100));
-            }
-
+            void stepCallback(float status) const;
+            void overallCallback(float status) const;
         signals:
             void stepProgress(int) const;
             void overallProgress(int) const;
         };
-
-    }
-
-    namespace ui {
-
 
         class WorkerThread;
 
@@ -58,12 +46,12 @@ namespace geotools {
             int m_quantile;
             int m_quantiles;
             double m_resolution;
-            unsigned int m_threads;
+            uint32_t m_threads;
             unsigned char m_angleLimit;
             unsigned char m_gapFunction;
-            unsigned int m_quantileFilter;
-            unsigned int m_quantileFilterFrom;
-            unsigned int m_quantileFilterTo;
+            uint32_t m_quantileFilter;
+            uint32_t m_quantileFilterFrom;
+            uint32_t m_quantileFilterTo;
             QDir m_last;
             geotools::util::Callbacks *m_callbacks;
             WorkerThread *m_workerThread;
@@ -118,19 +106,11 @@ namespace geotools {
             geotools::util::Bounds m_bounds;
             PointStatsForm *m_parent;
             std::string m_error;
-
             void run();
         public:
-
-            void init(PointStatsForm *parent, const geotools::util::Bounds &bounds) {
-                m_parent = parent;
-                m_bounds = bounds;
-            }
-
+            void init(PointStatsForm *parent, const geotools::util::Bounds &bounds);
             bool hasError();
-
             std::string getError();
-
         };
 
     }
