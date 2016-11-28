@@ -222,6 +222,16 @@ void Bounds::print(std::ostream &str) const {
     str << "[Bounds: " << minx() << ", " << miny() << ", " << minz() << "; " << maxx() << ", " << maxy() << ", " << maxz() << "]";
 }
 
+double Util::computeArea(double x1, double y1, double z1, 
+        double x2, double y2, double z2, 
+        double x3, double y3, double z3) {
+    double side0 = std::sqrt(std::pow(x1 - x2, 2.0) + std::pow(y1 - y2, 2.0) + std::pow(z1 - z2, 2.0));
+    double side1 = std::sqrt(std::pow(x2 - x3, 2.0) + std::pow(y2 - y3, 2.0) + std::pow(z2 - z3, 2.0));
+    double side2 = std::sqrt(std::pow(x3 - x1, 2.0) + std::pow(y3 - y1, 2.0) + std::pow(z3 - z1, 2.0));
+    double s = (side0 + side1 + side2) / 2.0;
+    return std::sqrt(s * (s - side0) * (s - side1) * (s - side2));
+}
+
 void Util::parseRanges(std::set<double> &values, const char *str, double step) {
     std::stringstream ss;
     double first = 0, second = 0;

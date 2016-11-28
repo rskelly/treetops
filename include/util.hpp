@@ -202,9 +202,7 @@ namespace geotools {
 
         class Util;
 
-        /**
-         * Maintains a memory-mapped file, and gives access to the mapped data.
-         */
+        // Maintains a memory-mapped file, and gives access to the mapped data.
         class MappedFile {
             friend class Util;
         private:
@@ -221,54 +219,47 @@ namespace geotools {
             ~MappedFile();
         };
 
-        /**
-         * Provides utility methods for working with LiDAR data.
-         */
+        // Provides utility methods for working with LiDAR data.
         class Util {
         public:
+
+            // Computes the area of the triangle given by the coordinates.
+            static double computeArea(double x1, double y1, double z1, 
+                double x2, double y2, double z2, 
+                double x3, double y3, double z3);
 
             static void parseRanges(std::set<double> &values, const char *str, double step = 1.0);
 
             static void parseRanges(std::set<int> &values, const char *str);
 
-            /**
-             * Split a comma-delimited string into a set of unique integers.
-             */
+            // Split a comma-delimited string into a set of unique integers.
             static void intSplit(std::set<int> &values, const char *str);
 
-            /**
-             * Split a comma-delimited string into a set of unique integers.
-             */
+            // Split a comma-delimited string into a set of unique integers.
             static void intSplit(std::list<int> &values, const char *val);
 
-            /**
-             * Split a comma-delimited string into a set of unique integers.
-             */
+            // Split a comma-delimited string into a set of unique integers.
             static void intSplit(std::vector<int> &values, const char *str);
 
             static void intSplit(std::set<uint8_t> &values, const char *str);
-            /**
-             * Return true if the integer is in the set, or the set is empty.
-             */
+
+            // Return true if the integer is in the set, or the set is empty.
             static bool inList(std::set<int> &values, int value);
 
             static bool inList(std::vector<int> &values, int value);
 
             static void splitString(const std::string &str, std::list<std::string> &lst);
+
             // TODO: Use back inserter.
             static void splitString(const std::string &str, std::vector<std::string> &lst);
 
-            /**
-             * Prints out a status message; a percentage representing current
-             * of total steps.
-             */
+            // Prints out a status message; a percentage representing current
+            // of total steps.
             static void status(int current, int total);
 
             static void copyfile(std::string &srcfile, std::string &dstfile);
 
-            /**
-             * Load the samples from a csv file. The file must have x, y and z headers.
-             */
+            // Load the samples from a csv file. The file must have x, y and z headers.
             static void loadXYZSamples(std::string &datafile, std::vector<std::tuple<double, double, double> > &samples);
 
             static void loadIDXYZSamples(std::string &datafile, std::vector<std::tuple<std::string, double, double, double> > &samples);
@@ -276,8 +267,11 @@ namespace geotools {
             static void status(int step, int of, const std::string &message = "", bool end = false);
 
             static const std::string tmpFile(const std::string &root);
+
             static const std::string tmpFile();
+
             static bool rm(const std::string &name);
+
             static bool mkdir(const std::string &dir);
 
             // Populates the vector with the files contained in dir. If ext is specified, filters
