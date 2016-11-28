@@ -2,27 +2,38 @@
 
 #include "geotools.h"
 #include "pointnormalize.hpp"
+#ifdef WITH_GUI
+#include "pointnormalize_ui.hpp"
+#endif
 
 using namespace geotools::point;
 
 void usage() {
-    std::cerr << "Usage: pointnormalize [options] <terrain file> <output dir> <point file [point file [point file ...]]>\n"
+    std::cerr << "Usage: pointnormalize [options] <output dir> <point file [point file [point file ...]]>\n"
             << " -v                          Verbose output.\n"
             << " -h                          Print this message.\n"
-            << " --threads                   The number of threads to use for computing output.\n"
-            << " -gui                        Run the graphical user interface.\n";
+            << " --threads                   The number of threads to use for computing output.\n";
+}
+
+int runWithUI(int argc, char **argv) {
+#ifdef WITH_GUI
+    QApplication q(argc, argv);
+    QWidget *w = new QWidget();
+    geotools::ui::PointNormalizeForm f;
+    f.setupUi(w);
+    w->show();
+    return q.exec();
+#else
+    std::cerr << "GUI not enabled." << std::endl;
+    return 1;
+#endif
 }
 
 int main(int argc, char **argv) {
 
     try {
 
-        std::string terrainFile;
-        std::string chmFile;
-        std::string pointDir;
-        std::list<std::string> pointFiles;
-        int threads = 1;
-        bool gui = false;
+        PointNormalizeConfig config;
 
         g_loglevel(0);
 
@@ -31,33 +42,23 @@ int main(int argc, char **argv) {
             if (s == "-h") {
                 usage();
                 return 0;
-            } else if (s == "-gui") {
-                gui = true;
             } else if (s == "-v") {
                 g_loglevel(G_LOG_DEBUG);
             } else if (s == "--threads") {
-                threads = atoi(argv[++i]);
+                config.threads = atoi(argv[++i]);
             } else {
-                if (terrainFile.empty()) {
-                    terrainFile.assign(s);
-                } else if (pointDir.empty()) {
-                    pointDir.assign(s);
+                if (config.outputDir.empty()) {
+                    config.outputDir = s;
                 } else {
-                    pointFiles.push_back(s);
+                    config.sourceFiles.push_back(s);
                 }
             }
         }
 
-        if (gui) {
-            //return runWithUI(argc, argv);
+        if (config.sourceFiles.size() == 0) {
+           return runWithUI(argc, argv);
         } else {
             PointNormalize pn;
-            PointNormalizeConfig config;
-            config.terrainFile = terrainFile;
-            config.pointOutputDir = pointDir;
-            config.pointFiles = pointFiles;
-            config.threads = threads;
-
             pn.normalize(config);
         }
 

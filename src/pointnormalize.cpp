@@ -1,3 +1,5 @@
+#include <atomic>
+#include <thread>
 
 #include <boost/filesystem.hpp>
 
@@ -31,14 +33,6 @@ typedef Delaunay::All_faces_iterator All_faces_iterator;
 typedef Delaunay::Face Face;
 typedef Delaunay::Face_handle Face_handle;
 
-double computeArea(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3) {
-    double side0 = std::sqrt(std::pow(x1 - x2, 2.0) + std::pow(y1 - y2, 2.0) + std::pow(z1 - z2, 2.0));
-    double side1 = std::sqrt(std::pow(x2 - x3, 2.0) + std::pow(y2 - y3, 2.0) + std::pow(z2 - z3, 2.0));
-    double side2 = std::sqrt(std::pow(x3 - x1, 2.0) + std::pow(y3 - y1, 2.0) + std::pow(z3 - z1, 2.0));
-    double s = (side0 + side1 + side2) / 2.0;
-    return std::sqrt(s * (s - side0) * (s - side1) * (s - side2));
-}
-
 class FileSorter {
 private:
     double m_colSize;
@@ -60,32 +54,57 @@ public:
     }
 };
             
-void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbacks *callbacks) {
+bool _cancel = false;
 
-    if (config.pointOutputDir.empty())
-        g_argerr("A point output dir must be provided.");
+void PointNormalize::normalize(const PointNormalizeConfig &config, 
+        const Callbacks *callbacks, bool *cancel) {
+
+    // If the cancel flag isn't given, take a reference to a dummy
+    // that is always false.
+    if(!cancel) cancel = &_cancel;
     
-    if (!Util::mkdir(config.pointOutputDir))
-        g_argerr("Couldn't create output dir " << config.pointOutputDir);
-
+    // Sanity checks.
+    if (config.outputDir.empty())
+        g_argerr("A point output dir must be provided.");
+    if (!Util::mkdir(config.outputDir))
+        g_argerr("Couldn't create output dir " << config.outputDir);
+    uint32_t threads = config.threads;
+    uint32_t tmax = std::thread::hardware_concurrency();
+    if(threads < 1) {
+        g_warn("Too few threads specified. Using 1.");
+        threads = 1;
+    }
+    if(threads > tmax && tmax > 0) {
+        g_warn("Too many threads specified. Using 1.");
+        threads = 1;
+    }
+    
+    // Set the thread count.
+    omp_set_dynamic(1);
+    omp_set_num_threads(threads);
+    
     using namespace boost::filesystem;
 
-    path outDir(config.pointOutputDir);
+    path outDir(config.outputDir);
     liblas::ReaderFactory rf;
 
-    std::vector<std::string> files(config.pointFiles.begin(), config.pointFiles.end());
+    // Sort the blocks.
+    std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
     FileSorter fs(10, -10);
     std::sort(files.begin(), files.end(), fs);
-    std::vector<liblas::Point> objPts;
-    std::list<liblas::Point> repeats;
     
-    for (unsigned int i = 0; i < files.size(); ++i) {
+    for (unsigned int i = 0; !*cancel && i < files.size(); ++i) {
+        if(*cancel) return;
+        
+        if(callbacks)
+            callbacks->overallCallback(((float) i + 0.5f) / files.size());
+        
         const std::string &pointFile = files[i];
         path oldPath(pointFile);
         path newPath(outDir / oldPath.filename());
 
         g_debug(" -- normalize (point) processing " << pointFile << " to " << newPath);
-        if (exists(newPath)) {
+        if (!config.overwrite && exists(newPath)) {
             g_warn("The output file " << newPath << " already exists.");
             continue;
         }
@@ -97,84 +116,108 @@ void PointNormalize::normalize(const PointNormalizeConfig &config, const Callbac
         std::ofstream outstr(newPath.c_str(), std::ios::binary);
         liblas::Header outHeader(lasHeader);
         liblas::Writer lasWriter(outstr, outHeader);
-        
-        std::vector<Point_3> groundPts;
-        
+                
+        std::vector<liblas::Point> objPts;
+        std::list<Point_3> meshPts;
+    
         while (lasReader.ReadNextPoint()) {
+            if(*cancel) return;
             const liblas::Point &opt = lasReader.GetPoint();
-            if(opt.GetClassification().GetClass() != 2) {
-                objPts.push_back(opt);
-            } else {
+            if(opt.GetClassification().GetClass() == 2) {
                 Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-                groundPts.push_back(std::move(p));
+                meshPts.push_back(std::move(p));
+                if(!config.dropGround)
+                    objPts.push_back(opt);
+            } else {
+                objPts.push_back(opt);
             }
-        }
-        // TODO: This is not "correct".
-        for(const liblas::Point &opt : repeats) {
-            Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-            groundPts.push_back(std::move(p));            
+            if(*cancel)
+                return;
         }
 
         lasReader.Reset();
         
-        Delaunay dt(groundPts.begin(), groundPts.end());
-        groundPts.clear();
-        repeats.clear();
+        if(*cancel) return;
+        Delaunay dt(meshPts.begin(), meshPts.end());
+        meshPts.clear();
+        if(*cancel) return;
         
         Face_handle hint;
-        uint64_t ptCount = 0;
-        uint64_t ptCountByReturn[255];
+        uint64_t finalPtCount = 0;
+        uint64_t finalPtCountByReturn[255];
         for(int i = 0; i < 5; ++i)
-            ptCountByReturn[i] = 0;
-
+            finalPtCountByReturn[i] = 0;
+        
+        std::atomic<size_t> curPt(0);
+        size_t ptCount = objPts.size();
+        
         #pragma omp parallel for
-        for(size_t i = 0; i < objPts.size(); ++i) {
-            const liblas::Point &opt = objPts[i];
-            Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
-            hint = dt.locate(p, hint);
-            if(dt.is_infinite(hint)) {
-                repeats.push_back(opt);
-                continue;
+        for(size_t i = 0; i < ptCount; ++i) {
+            if(*cancel) continue;
+            
+            if(callbacks)
+                callbacks->stepCallback((float) ++curPt / ptCount);
+            
+            liblas::Point &opt = objPts[i];
+            if(opt.GetClassification().GetClass() == 2) {
+                opt.SetZ(0.0);
+            } else {
+                Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
+                hint = dt.locate(p, hint);
+                // TODO: The point is outside the mesh and can't be normalized.
+                //       Ideally, this would build the mesh to the neighbouring
+                //       files and normalize these points...
+                if(dt.is_infinite(hint))
+                    continue;
+                double area = 0.0;
+                double total = 0.0;
+                for(int i = 0; i < 3; ++i) {
+                    Point_3 p1 = hint->vertex(i)->point();
+                    Point_3 p2 = hint->vertex((i + 1) % 3)->point();
+                    Point_3 p3 = hint->vertex((i + 2) % 3)->point();
+                    double h = Util::computeArea(
+                        p1.x(), p1.y(), p1.z(), 
+                        p2.x(), p2.y(), p2.z(), 
+                        p.x(), p.y(), p.z()
+                    );
+                    area += h;
+                    total += h * p3.z();
+                }
+                double z = p.z() - total / area;
+                if(z < 0.0 && config.dropNegative)
+                    continue;
+                opt.SetZ(z);
             }
-            double area = 0.0;
-            double total = 0.0;
-            for(int i = 0; i < 3; ++i) {
-                Point_3 p1 = hint->vertex(i)->point();
-                Point_3 p2 = hint->vertex((i + 1) % 3)->point();
-                Point_3 p3 = hint->vertex((i + 2) % 3)->point();
-                double h = computeArea(p1.x(), p1.y(), p1.z(), p2.x(), p2.y(), p2.z(), p.x(), p.y(), p.z());
-                area += h;
-                total += h * p3.z();
-            }
-            liblas::Point npt(opt);
-            if(p.z() > 0.0 || !config.dropNegative)
-                npt.SetZ(g_max(0.0, p.z() - total / area));
             #pragma omp critical
             {
-                lasWriter.WritePoint(npt);
-                ptCountByReturn[npt.GetReturnNumber() - 1]++;
-                ++ptCount;
+                lasWriter.WritePoint(opt);
+                finalPtCountByReturn[opt.GetReturnNumber() - 1]++;
+                ++finalPtCount;
             }
         }
 
         g_debug(" -- setting original count " << outHeader.GetPointRecordsCount() << " to " << ptCount);
-        outHeader.SetPointRecordsCount(ptCount);
+        outHeader.SetPointRecordsCount(finalPtCount);
         for(int i = 0; i < 5; ++i)
-            outHeader.SetPointRecordsByReturnCount(i + 1, ptCountByReturn[i]);
+            outHeader.SetPointRecordsByReturnCount(i + 1, finalPtCountByReturn[i]);
         lasWriter.SetHeader(outHeader);
         
         // Keep the bounds of the infinite faces to triangulate in the next round.
+        // TODO: Maybe also keep the vertices of the adjoining faces?
         for(All_faces_iterator it = dt.all_faces_begin(); it != dt.all_faces_end(); ++it) {
             if(dt.is_infinite(it)) {
                 for(int i = 0; i < 3; ++i) {
                     if(it->vertex(i)->point().z() > 0)
-                        groundPts.push_back(it->vertex(i)->point());
+                        meshPts.push_back(it->vertex(i)->point());
                 }
             }
         }
         
         instr.close();
         outstr.close();
+
+        if(callbacks)
+            callbacks->overallCallback(((float) i + 1.0f) / files.size());
     }
 
 

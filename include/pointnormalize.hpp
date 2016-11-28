@@ -12,20 +12,27 @@ namespace geotools {
 
         class PointNormalizeConfig {
         public:
-            std::string terrainFile;
-            std::string pointOutputDir;
-            std::list<std::string> pointFiles;
-            uint32_t threads;
+            std::string outputDir;
+            std::vector<std::string> sourceFiles;
             bool dropNegative;
+            bool dropGround;
+            uint32_t threads;
+            bool overwrite;
+            
             PointNormalizeConfig() :
-                dropNegative(true) {
+                dropNegative(true),
+                dropGround(true),
+                threads(1),
+                overwrite(true) {
                 
             }
         };
 
         class PointNormalize {
         public:
-            void normalize(const PointNormalizeConfig &config, const geotools::util::Callbacks *callbacks = nullptr);
+            void normalize(const PointNormalizeConfig &config, 
+                    const geotools::util::Callbacks *callbacks = nullptr, 
+                    bool *cancel = nullptr);
         };
 
     } // point
