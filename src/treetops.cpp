@@ -40,6 +40,8 @@ using namespace geotools::treetops::config;
 using namespace geotools::treetops::util;
 using namespace geotools::treetops;
 
+bool _cancel = false;
+
 namespace geotools {
 
     namespace treetops {
@@ -124,6 +126,84 @@ namespace geotools {
 
 } // geotools
 
+TreetopsConfig::TreetopsConfig() :
+    srid(0),
+    buildIndex(false),
+    tableCacheSize(1024 * 1024),
+    rowCacheSize(24 * 1024 * 1024),
+    doSmoothing(false),
+    smoothWindowSize(3),
+    smoothSigma(0.8),
+    doTops(false),
+    topsMinHeight(4.0),
+    topsWindowSize(7),
+    doCrowns(false),
+    crownsRadius(10.0),
+    crownsHeightFraction(0.65),
+    crownsMinHeight(4.0) {
+}
+
+void TreetopsConfig::checkSmoothing() const {
+    if (!doSmoothing)
+        g_argerr("Not configured to perform smoothing.");
+    if (smoothOriginalCHM.empty())
+        g_argerr("Smoothing: CHM filename must not be empty.");
+    if (smoothSmoothedCHM.empty())
+        g_argerr("Smoothing: Output filename must not be empty.");
+    if (smoothSigma <= 0 || smoothSigma > 1)
+        g_argerr("Smoothing: Std. deviation must be 0 < n <= 1. " << smoothSigma << " given.");
+    if (smoothWindowSize % 2 == 0 || smoothWindowSize < 3)
+        g_argerr("Smoothing: The window must be odd and >=3.");
+}
+
+void TreetopsConfig::checkTops() const {
+    if (!doTops)
+        g_argerr("Not configured to find treetops.");
+    if (topsOriginalCHM.empty())
+        g_argerr("Tops: Unsmoothed CHM filename must not be empty.");
+    if (topsSmoothedCHM.empty())
+        g_argerr("Tops: Smoothed CHM filename must not be empty.");
+    if (topsTreetopsDatabase.empty())
+        g_argerr("Tops: Treetops database filename must not be empty.");
+    if (topsWindowSize % 2 == 0 || topsWindowSize < 3)
+        g_argerr("Tops: Treetops window size must be an odd number >= 3. " << topsWindowSize << " given.");
+}
+
+void TreetopsConfig::checkCrowns() const {
+    if (!doCrowns)
+        g_argerr("Not configured to find crowns.");
+    if (crownsRadius <= 0.0)
+        g_argerr("Crowns: The maximum crown radius must be > 0. " << crownsRadius << " given.");
+    if (crownsHeightFraction <= 0.0 || crownsHeightFraction > 1.0)
+        g_argerr("Crowns: The crown height fraction must be between 0 and 1. " << crownsHeightFraction << " given.");
+    if (crownsCrownsRaster.empty())
+        g_argerr("Crowns: Output raster filename must not be empty.")
+        if (crownsTreetopsDatabase.empty())
+            g_argerr("Crowns: Treetops database filename must not be empty.");
+    if (crownsSmoothedCHM.empty())
+        g_argerr("Crowns: Smoothed CHM filename must not be empty.");
+}
+
+void TreetopsConfig::check() const {
+    if (doSmoothing)
+        checkSmoothing();
+    if (doTops)
+        checkTops();
+    if (doCrowns)
+        checkCrowns();
+}
+
+bool TreetopsConfig::canRun() const {
+    try {
+        check();
+        return true;
+    } catch(const std::exception &ex) {
+        // Do nothing.
+    }
+    return false;
+}
+
+
 Top::Top(uint64_t id, double x, double y, double z, double uz, int col, int row) :
     id(id),
     x(x), y(y), z(z), uz(uz),
@@ -140,23 +220,33 @@ void Treetops::setCallbacks(Callbacks *callbacks) {
     m_callbacks = callbacks;
 }
 
-void Treetops::smooth(const TreetopsConfig &config) {
+void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
     config.checkSmoothing();
+    
+    if(!cancel) cancel = &_cancel;
+    
     Raster<float> in(config.smoothOriginalCHM);
     Raster<float> out(config.smoothSmoothedCHM, 1, in);
-    in.smooth(out, config.smoothStdDev, config.smoothWindowSize, m_callbacks);
+    in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks, cancel);
 }
 
-void Treetops::treetops(const TreetopsConfig &config) {
+void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
     config.checkTops();
+    
+    if(!cancel) cancel = &_cancel;
+    
     if(m_callbacks)
         m_callbacks->stepCallback(0.01);
 
+    if(*cancel) return;
+    
     // Initialize input rasters.
     g_debug(" -- tops: opening rasters");
     Raster<float> original(config.topsOriginalCHM);
     Raster<float> smoothed(config.topsSmoothedCHM);
 
+    if(*cancel) return;
+    
     // Prepare database.
     g_debug(" -- tops: preparing db");
     std::map<std::string, int> fields;
@@ -166,6 +256,8 @@ void Treetops::treetops(const TreetopsConfig &config) {
     db.dropGeomIndex();
     db.setCacheSize(config.tableCacheSize);
 
+    if(*cancel) return;
+    
     if(m_callbacks)
         m_callbacks->stepCallback(0.02);
 
@@ -186,19 +278,24 @@ void Treetops::treetops(const TreetopsConfig &config) {
 
         #pragma omp for
         for (int32_t brow = 0; brow < original.rows(); brow += bufSize) {
-
+            if(*cancel) continue;
+            
             bufSize0 = g_min(bufSize, original.rows() - brow - config.topsWindowSize);
             if(bufSize0 < bufSize)
                 blk.init(original.cols(), bufSize0 + config.topsWindowSize);
 
             g_debug(" -- bufsize " << bufSize0);
 
+            if(*cancel) continue;
+            
             #pragma omp critical(__c)
             smoothed.readBlock(0, brow, blk);
 
             for (int32_t row = 0; row < bufSize0; ++row) {
+                if(*cancel) break;
                 for (int32_t col = 0; col < original.cols() - config.topsWindowSize; ++col) {
-        
+                    if(*cancel) break;
+                    
                     int32_t r = row + config.topsWindowSize / 2;
                     int32_t c = col + config.topsWindowSize / 2;            
                     double max;
@@ -239,6 +336,7 @@ void Treetops::treetops(const TreetopsConfig &config) {
 
         std::vector<std::unique_ptr<Point> > points;
         for (const auto &it : tops0) {
+            if(*cancel) break;
             const uint64_t &id = it.first;
             const std::unique_ptr<Top> &t = it.second;
             std::map<std::string, std::string> fields;
@@ -247,6 +345,7 @@ void Treetops::treetops(const TreetopsConfig &config) {
             points.push_back(std::move(pt));
 
             if (++b % batch == 0 || b >= topCount0) {
+                if(*cancel) break;
                 g_debug("inserting " << points.size() << " points");
                 #pragma omp critical(__b)
                 {
@@ -264,6 +363,7 @@ void Treetops::treetops(const TreetopsConfig &config) {
     if(m_callbacks)
         m_callbacks->stepCallback(0.99);
 
+    if(*cancel) return;
     if (config.buildIndex) {
         g_debug(" -- tops: building index");
         db.createGeomIndex();
@@ -276,11 +376,16 @@ void Treetops::treetops(const TreetopsConfig &config) {
 
 }
 
-void Treetops::treecrowns(const TreetopsConfig &config) {
+void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
     config.checkCrowns();
+    
+    if(!cancel) cancel = &_cancel;
+    
     if(m_callbacks)
         m_callbacks->stepCallback(0.01);
-
+    
+    if(*cancel) return;
+    
     g_debug(" -- crowns: delineating crowns...");
     uint32_t batchSize = 10000;
 
@@ -295,7 +400,9 @@ void Treetops::treecrowns(const TreetopsConfig &config) {
 
     if(m_callbacks)
         m_callbacks->stepCallback(0.02);
-    
+
+    if(*cancel) return;
+
     // Initialize the database, get the treetop count and estimate the buffer size.
     g_debug(" -- crowns: preparing database")
     uint64_t geomCount;
@@ -337,6 +444,7 @@ void Treetops::treecrowns(const TreetopsConfig &config) {
 
         #pragma omp for
         for (int32_t row = 0; row < inrast.rows(); row += rowStep) {
+            if(*cancel) continue;
             curRow += rowStep;
 
             // Load the tree tops for the strip.
@@ -352,6 +460,7 @@ void Treetops::treecrowns(const TreetopsConfig &config) {
             // Convert the Tops to Nodes.
             std::queue<std::unique_ptr<Node> > q;
             for (const std::unique_ptr<Point> &t : tops) {
+                if(*cancel) break;
                 int col = inrast.toCol(t->x);
                 int row = inrast.toRow(t->y);
                 int id = atoi(t->fields["id"].c_str());
@@ -360,7 +469,7 @@ void Treetops::treecrowns(const TreetopsConfig &config) {
             }
 
             // Run through the queue.
-            while (q.size()) {
+            while (!*cancel && q.size()) {
                 std::unique_ptr<Node> n = std::move(q.front());
                 q.pop();
 
@@ -396,6 +505,8 @@ void Treetops::treecrowns(const TreetopsConfig &config) {
 
             if (row > 0 && (row + bufRows) >= inrast.rows())
                 continue;
+
+             if(*cancel) continue;
 
             #pragma omp critical(__b)
             outrast.writeBlock(0, row, blk, 0, bufRows);

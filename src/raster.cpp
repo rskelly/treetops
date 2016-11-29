@@ -12,6 +12,8 @@
 using namespace geotools::util;
 using namespace geotools::raster;
 
+bool _cancel = false;
+
 // Implementations for Cell
 
 Cell::Cell(int32_t col, int32_t row) :
@@ -221,7 +223,9 @@ void Grid<T>::voidFillIDW(double radius, int32_t count, double exp) {
 }
 
 template <class T>
-void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *status) {
+void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *status, bool *cancel) {
+    
+    if(!cancel) cancel = &_cancel;
     
     g_debug("Smoothing grid...");
     if(status)
@@ -245,6 +249,7 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
 
     #pragma omp parallel for
     for (int32_t row = 0; row < rows(); row += bufRows - size) {
+        if(*cancel) continue;
         MemRaster<double> weights(size, size);
         gaussianWeights(weights.grid(), size, sigma);
         MemRaster<T> strip(cols(), g_min(bufRows, rows() - row));
@@ -254,6 +259,7 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
         strip.fill((const T) nd);
         smooth.nodata((T) nd);
         smooth.fill((T) nd);
+        if(*cancel) continue;
         #pragma omp critical(a)
         {
             // On the first loop, read from the first row and write to size/2 down
@@ -261,7 +267,9 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
             readBlock(0, row == 0 ? row : row - size / 2, strip, 0, row == 0 ? size / 2 : 0);
         }
         for (int32_t r = 0; r < strip.rows() - size; ++r) {
+            if(*cancel) continue;
             for (int32_t c = 0; c < strip.cols() - size; ++c) {
+                if(*cancel) continue;
                 double v, t = 0.0;
                 bool foundNodata = false;
                 strip.readBlock(c, r, buf);
@@ -280,9 +288,10 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size, Callbacks *s
             }
             #pragma omp atomic
             ++completed;
-        if(status)
-            status->stepCallback((float) completed / rows());
+            if(status)
+                status->stepCallback((float) completed / rows());
         }
+        if(*cancel) continue;
         #pragma omp critical(b)
         {
             // The blur buffer is always written size/2 down, so read from there.
@@ -621,10 +630,10 @@ T* BlockCache<T>::freeOne() {
 
 template <class T>
 BlockCache<T>::BlockCache() :
-m_band(nullptr),
-m_size(0),
-m_time(0),
-m_bw(0), m_bh(0) {
+    m_band(nullptr),
+    m_size(0),
+    m_time(0),
+    m_bw(0), m_bh(0) {
 }
 
 template <class T>
@@ -828,25 +837,16 @@ GDALDataType Raster<T>::getType() {
 template <class T>
 T Raster<T>::getDefaultNodata() {
     return 0;
-    /*
-    switch(getType()) {
-    case GDT_Float32:
-    case GDT_Float64:
-            return (T) -9999.0; // Hides the implicit overflow for unsigned types. (Compiler error.)
-    default:
-            return (T) 0;
-    }
-     */
 }
 
 template <class T>
 Raster<T>::Raster() :
-m_cols(-1), m_rows(-1),
-m_bandn(1),
-m_writable(false),
-m_ds(nullptr), m_band(nullptr),
-m_type(getType()),
-m_inited(false) {
+    m_cols(-1), m_rows(-1),
+    m_bandn(1),
+    m_writable(false),
+    m_ds(nullptr), m_band(nullptr),
+    m_type(getType()),
+    m_inited(false) {
 }
 
 template <class T>
@@ -1422,6 +1422,17 @@ Raster<T>::~Raster() {
         GDALClose(m_ds);
 }
 
+template class geotools::raster::BlockCache<float>;
+template class geotools::raster::BlockCache<double>;
+template class geotools::raster::BlockCache<uint64_t>;
+template class geotools::raster::BlockCache<uint32_t>;
+template class geotools::raster::BlockCache<uint16_t>;
+template class geotools::raster::BlockCache<uint8_t>;
+template class geotools::raster::BlockCache<int64_t>;
+template class geotools::raster::BlockCache<int32_t>;
+template class geotools::raster::BlockCache<int16_t>;
+template class geotools::raster::BlockCache<int8_t>;
+template class geotools::raster::BlockCache<char>;
 
 template class geotools::raster::Grid<float>;
 template class geotools::raster::Grid<double>;

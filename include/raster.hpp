@@ -303,7 +303,9 @@ namespace geotools {
             // Smooth the raster and write the smoothed version to the output raster.
             // Callback is an optional function reference with a single float
             // between 0 and 1, for status tracking.
-            void smooth(Grid<T> &smoothed, double sigma, int32_t size, geotools::util::Callbacks *status = nullptr);
+            void smooth(Grid<T> &smoothed, double sigma, int32_t size, 
+                geotools::util::Callbacks *status = nullptr, 
+                bool *cancel = nullptr);
 
             // The radius is given with cells as the unit, but
             // can be rational. When determining which cells to
@@ -505,17 +507,17 @@ namespace geotools {
         template <class T>
         class DLL_EXPORT Raster : public Grid<T> {
         private:
-            int32_t m_cols, m_rows; // Raster cols/rows
-            int32_t m_bandn; // The band number
-            bool m_writable; // True if the raster is writable
-            GDALDataset *m_ds; // GDAL dataset
-            GDALRasterBand *m_band; // GDAL band
-            GDALDataType m_type; // GDALDataType -- limits the possible template types.
-            T m_nodata; // Nodata value.
-            double m_trans[6]; // Raster transform
-            bool m_inited; // True if the instance is initialized.
-            std::string m_filename; // Raster filename
-            BlockCache<T> m_cache; // Block cache.
+            int32_t m_cols, m_rows;     // Raster cols/rows
+            int32_t m_bandn;            // The band number
+            bool m_writable;            // True if the raster is writable
+            GDALDataset *m_ds;          // GDAL dataset
+            GDALRasterBand *m_band;     // GDAL band
+            GDALDataType m_type;        // GDALDataType -- limits the possible template types.
+            T m_nodata;                 // Nodata value.
+            double m_trans[6];          // Raster transform
+            bool m_inited;              // True if the instance is initialized.
+            std::string m_filename;     // Raster filename
+            BlockCache<T> m_cache;      // Block cache.
 
             // Get the GDAL type for the given c++ type.
             GDALDataType getType(double v);

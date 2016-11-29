@@ -1,8 +1,10 @@
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QFileDialog>
+#include <QWidget>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QDir>
-//#include <QHelpEngine>
+#include <QSettings>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "geotools.h"
 #include "treetops.hpp"
@@ -11,13 +13,88 @@
 
 using namespace geotools::ui;
 using namespace geotools::treetops;
+using namespace geotools::treetops::config;
 
+QSettings _settings("Treetops", "GeoTools");
+
+QString _str(const std::string &str) {
+    return QString(str.c_str());
+}
+
+std::string _getInputFile(QWidget *form, const std::string &title, QDir &path, const std::string &filter) {
+    QString res = QFileDialog::getOpenFileName(form, _str(title), path.path(), _str(filter));
+    path.setPath(res);
+    return res.toStdString();
+}
+
+std::string _getOutputFile(QWidget *form, const std::string &title, QDir &path, const std::string &filter) {
+    QString res = QFileDialog::getSaveFileName(form, _str(title), path.path(), _str(filter));
+    path.setPath(res);
+    return res.toStdString();
+}
+
+void _loadConfig(TreetopsConfig &config) {
+    QSettings qs("TreetopsConfig", "GeoTools");
+    config.srid = qs.value(QString("srid"), config.srid).toInt();
+    config.buildIndex = qs.value(QString("buildIndex"), config.buildIndex).toBool();
+    config.tableCacheSize = qs.value(QString("tableCacheSize"), config.tableCacheSize).toInt();
+    config.rowCacheSize = qs.value(QString("rowCacheSize"), config.rowCacheSize).toInt();
+    config.doSmoothing = qs.value(QString("doSmoothing"), config.doSmoothing).toBool();
+    config.smoothWindowSize = qs.value(QString("smoothingWindowSize"), config.smoothWindowSize).toInt();
+    config.smoothSigma = qs.value(QString("smoothSigma"), config.smoothSigma).toDouble();
+    config.smoothOriginalCHM = qs.value(QString("smoothOriginalCHM"), _str(config.smoothOriginalCHM)).toString().toStdString();
+    config.smoothSmoothedCHM = qs.value(QString("smoothSmoothedCHM"), _str(config.smoothSmoothedCHM)).toString().toStdString();
+    config.doTops = qs.value(QString("doTops"), config.doTops).toBool();
+    config.topsMinHeight = qs.value(QString("topsMinHeight"), config.topsMinHeight).toDouble();
+    config.topsWindowSize = qs.value(QString("topsWindowSize"), config.topsWindowSize).toInt();
+    config.topsOriginalCHM = qs.value(QString("topsOriginalCHM"), _str(config.topsOriginalCHM)).toString().toStdString();
+    config.topsSmoothedCHM = qs.value(QString("topsSmoothedCHM"), _str(config.topsSmoothedCHM)).toString().toStdString();
+    config.topsTreetopsDatabase = qs.value(QString("topsTreetopsDatabase"), _str(config.topsTreetopsDatabase)).toString().toStdString();
+    config.doCrowns = qs.value(QString("doCrowns"), config.doCrowns).toBool();
+    config.crownsRadius = qs.value(QString("crownsRadius"), config.crownsRadius).toDouble();
+    config.crownsHeightFraction = qs.value(QString("crownsHeightFraction"), config.crownsHeightFraction).toDouble();
+    config.crownsMinHeight = qs.value(QString("crownsMinHeight"), config.crownsMinHeight).toDouble();
+    config.crownsSmoothedCHM = qs.value(QString("crownsSmoothedCHM"), _str(config.crownsSmoothedCHM)).toString().toStdString();
+    config.crownsTreetopsDatabase = qs.value(QString("crownsTreetopsDatabase"), _str(config.crownsTreetopsDatabase)).toString().toStdString();
+    config.crownsCrownsRaster = qs.value(QString("crownsCrownsRaster"), _str(config.crownsCrownsRaster)).toString().toStdString();
+    config.crownsCrownsDatabase = qs.value(QString("crownsCrownsDatabase"), _str(config.crownsCrownsDatabase)).toString().toStdString();
+}
+
+void _saveConfig(TreetopsConfig &config) {
+    QSettings qs("TreetopsConfig", "GeoTools");
+    qs.setValue(QString("srid"), config.srid);
+    qs.setValue(QString("buildIndex"), config.buildIndex);
+    qs.setValue(QString("tableCacheSize"), config.tableCacheSize);
+    qs.setValue(QString("rowCacheSize"), config.rowCacheSize); //(24 * 1024 * 1024),
+    qs.setValue(QString("doSmoothing"), config.doSmoothing);
+    qs.setValue(QString("smoothingWindowSize"), config.smoothWindowSize);
+    qs.setValue(QString("smoothSigma"), config.smoothSigma);
+    qs.setValue(QString("smoothOriginalCHM"), _str(config.smoothOriginalCHM));
+    qs.setValue(QString("smoothSmoothedCHM"), _str(config.smoothSmoothedCHM));
+    qs.setValue(QString("doTops"), config.doTops);
+    qs.setValue(QString("topsMinHeight"), config.topsMinHeight);
+    qs.setValue(QString("topsWindowSize"), config.topsWindowSize);
+    qs.setValue(QString("topsOriginalCHM"), _str(config.topsOriginalCHM));
+    qs.setValue(QString("topsSmoothedCHM"), _str(config.topsSmoothedCHM));
+    qs.setValue(QString("topsTreetopsDatabase"), _str(config.topsTreetopsDatabase));
+    qs.setValue(QString("doCrowns"), config.doCrowns);
+    qs.setValue(QString("crownsRadius"), config.crownsRadius);
+    qs.setValue(QString("crownsHeightFraction"), config.crownsHeightFraction);
+    qs.setValue(QString("crownsMinHeight"), config.crownsMinHeight);
+    qs.setValue(QString("crownsSmoothedCHM"), _str(config.crownsSmoothedCHM));
+    qs.setValue(QString("crownsTreetopsDatabase"), _str(config.crownsTreetopsDatabase));
+    qs.setValue(QString("crownsCrownsRaster"), _str(config.crownsCrownsRaster));
+    qs.setValue(QString("crownsCrownsDatabase"), _str(config.crownsCrownsDatabase));
+    
+}
+    
 TreetopsForm::TreetopsForm(QWidget *p) :
     QWidget(p),
     m_callbacks(nullptr) {
 }
 
 TreetopsForm::~TreetopsForm() {
+    _saveConfig(m_config);
     delete m_callbacks;
     if (m_workerThread) {
         m_workerThread->exit(0);
@@ -26,25 +103,51 @@ TreetopsForm::~TreetopsForm() {
 }
 
 void TreetopsForm::setupUi(QWidget *form) {
-
     Ui::TreetopsForm::setupUi(form);
 
-    g_loglevel(G_LOG_DEBUG);
+    m_form = form;
 
+    _loadConfig(m_config);
+    
+    if (_settings.contains(QString("last_dir"))) {
+        m_last.setPath(_settings.value(QString("last_dir")).toString());
+    } else {
+        m_last = QDir::home();
+    }
+    
     m_callbacks = new TreetopsCallbacks();
-
     m_workerThread = new WorkerThread();
     m_workerThread->init(this);
     
-    m_form = form;
-    m_last = QDir::home();
+    chkEnableSmoothing->setChecked(m_config.doSmoothing);
+    spnSmoothWindow->setValue(m_config.smoothWindowSize);
+    spnSmoothSigma->setValue(m_config.smoothSigma);
+    txtSmoothOriginalCHM->setText(_str(m_config.smoothOriginalCHM));
+    txtSmoothSmoothedCHM->setText(_str(m_config.smoothSmoothedCHM));
 
+    chkEnableTops->setChecked(m_config.doTops);
+    spnTopsMinHeight->setValue(m_config.topsMinHeight);
+    spnTopsWindowSize->setValue(m_config.topsWindowSize);
+    txtTopsOriginalCHM->setText(_str(m_config.topsOriginalCHM));
+    txtTopsSmoothedCHM->setText(_str(m_config.topsSmoothedCHM));
+    txtTopsTreetopsDatabase->setText(_str(m_config.topsTreetopsDatabase));
+    spnTopsTreetopsSRID->setValue(m_config.srid);
+    
+    chkEnableCrowns->setChecked(m_config.doCrowns);
+    spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
+    spnCrownsRadius->setValue(m_config.crownsRadius);
+    spnCrownsMinHeight->setValue(m_config.crownsMinHeight);
+    txtCrownsSmoothedCHM->setText(_str(m_config.crownsSmoothedCHM));
+    txtCrownsTreetopsDatabase->setText(_str(m_config.crownsTreetopsDatabase));
+    txtCrownsCrownsRaster->setText(_str(m_config.crownsCrownsRaster));
+    txtCrownsCrownsDatabase->setText(_str(m_config.crownsCrownsDatabase));
+    
     connect(chkEnableSmoothing, SIGNAL(toggled(bool)), SLOT(doSmoothChanged(bool)));
     connect(chkEnableTops, SIGNAL(toggled(bool)), SLOT(doTopsChanged(bool)));
     connect(chkEnableCrowns, SIGNAL(toggled(bool)), SLOT(doCrownsChanged(bool)));
 
     connect(spnSmoothWindow, SIGNAL(valueChanged(int)), SLOT(smoothWindowSizeChanged(int)));
-    connect(spnSmoothStdDev, SIGNAL(valueChanged(double)), SLOT(smoothStdDevChanged(double)));
+    connect(spnSmoothSigma, SIGNAL(valueChanged(double)), SLOT(smoothSigmaChanged(double)));
     connect(txtSmoothOriginalCHM, SIGNAL(textChanged(QString)), SLOT(smoothOriginalCHMChanged(QString)));
     connect(txtSmoothSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(smoothSmoothedCHMChanged(QString)));
     connect(btnSmoothOriginalCHM, SIGNAL(clicked()), SLOT(smoothOriginalCHMClicked()));
@@ -86,12 +189,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 }
 
-QString _str(const std::string &str) {
-    return QString(str.c_str());
-}
-
 void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
-    m_config.srid = spnTopsTreetopsSRID->value();
+    m_config.srid = srid;
     checkRun();
 }
 
@@ -104,28 +203,6 @@ void TreetopsForm::topsTreetopsSRIDClicked() {
 }
 
 void TreetopsForm::updateView() {
-    /*
-    txtSmoothInputFile->setText(_str(m_config.smoothInputFile));
-    txtSmoothOutputFile->setText(_str(m_config.smoothOutputFile));
-    txtTopsOriginalCHM->setText(_str(m_config.topsInputFile));
-    txtTopsOutputFile->setText(_str(m_config.topsOutputFile));
-    txtCrownsInputFile->setText(_str(m_config.crownsInputFile));
-    txtCrownsTreetopsFile->setText(_str(m_config.crownsTreetopsFile));
-    txtCrownsOutputRaster->setText(_str(m_config.crownsOutputRaster));
-    txCrownsOutputVector->setText(_str(m_config.crownsOutputVector));
-     */
-}
-
-std::string _getInputFile(QWidget *form, const std::string &title, QDir &path, const std::string &filter) {
-    QString res = QFileDialog::getOpenFileName(form, _str(title), path.path(), _str(filter));
-    path.setPath(res);
-    return res.toStdString();
-}
-
-std::string _getOutputFile(QWidget *form, const std::string &title, QDir &path, const std::string &filter) {
-    QString res = QFileDialog::getSaveFileName(form, _str(title), path.path(), _str(filter));
-    path.setPath(res);
-    return res.toStdString();
 }
 
 void TreetopsForm::smoothOriginalCHMClicked() {
@@ -151,7 +228,6 @@ void TreetopsForm::smoothSmoothedCHMClicked() {
         m_config.crownsSmoothedCHM = m_config.smoothSmoothedCHM;
         txtCrownsSmoothedCHM->setText(_str(m_config.crownsSmoothedCHM));
     }
-    updateView();
 }
 
 void TreetopsForm::topsSmoothedCHMClicked() {
@@ -162,14 +238,12 @@ void TreetopsForm::topsSmoothedCHMClicked() {
         m_config.crownsSmoothedCHM = m_config.topsSmoothedCHM;
         txtCrownsSmoothedCHM->setText(_str(m_config.crownsSmoothedCHM));
     }
-    updateView();
 }
 
 void TreetopsForm::topsOriginalCHMClicked() {
     m_config.topsOriginalCHM = _getInputFile(this, "Original CHM for Treetops", m_last, "GeoTiff (*.tif *.tiff)");
     txtTopsOriginalCHM->setText(_str(m_config.topsOriginalCHM));
     checkRun();
-    updateView();
 }
 
 void TreetopsForm::topsTreetopsDatabaseClicked() {
@@ -180,7 +254,6 @@ void TreetopsForm::topsTreetopsDatabaseClicked() {
         m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
         txtCrownsTreetopsDatabase->setText(_str(m_config.crownsTreetopsDatabase));
     }
-    updateView();
 }
 
 void TreetopsForm::crownsSmoothedCHMClicked() {
@@ -287,8 +360,8 @@ void TreetopsForm::smoothWindowSizeChanged(int size) {
     checkRun();
 }
 
-void TreetopsForm::smoothStdDevChanged(double stdDev) {
-    m_config.smoothStdDev = stdDev;
+void TreetopsForm::smoothSigmaChanged(double sigma) {
+    m_config.smoothSigma = sigma;
     checkRun();
 }
 
@@ -302,42 +375,19 @@ void TreetopsForm::smoothSmoothedCHMChanged(QString file) {
     checkRun();
 }
 
-/*
-void TreetopsForm::crsConfigClicked() {
-        CRSSelector cs(m_form);
-        cs.setHorizontalSRID(m_hsrid);
-        cs.setVerticalSRID(m_vsrid);
-        if(cs.exec()) {
-                m_vsrid = cs.getVerticalSRID();
-                m_hsrid = cs.getHorizontalSRID();
-                std::stringstream ss;
-                ss << "epsg:" << m_hsrid;
-                if(m_vsrid > 0)
-                        ss << "+" << m_vsrid;
-                txtCRSConfig->setText(QString(ss.str().c_str()));
-        }
-        checkRun();
-}
- */
-
 void TreetopsForm::runClicked() {
-
     if (m_workerThread->isRunning())
         return;
-
+    m_cancel = false;
     btnRun->setEnabled(false);
-    btnExit->setEnabled(false);
     btnCancel->setEnabled(true);
-
+    btnExit->setEnabled(false);    
     m_workerThread->init(this);
     m_workerThread->start();
-
+    checkRun();
 }
 
 void TreetopsForm::done() {
-    btnRun->setEnabled(true);
-    btnExit->setEnabled(true);
-    btnCancel->setEnabled(false);
     checkRun();
 }
 
@@ -348,14 +398,17 @@ void TreetopsForm::exitClicked() {
 
 void TreetopsForm::cancelClicked() {
     g_trace("cancel");
+    m_cancel = true;
+    checkRun();
 }
 
 void TreetopsForm::helpClicked() {
-    //QHelpEngine qh("help.qhc", this);
     g_trace("help");
+    QDesktopServices::openUrl(QUrl("http://www.dijital.ca/geotools/help/treetops.html", QUrl::TolerantMode));
 }
 
 void TreetopsForm::checkRun() {
-    // TODO: Check runnable.
-    btnRun->setEnabled(true);
+    btnRun->setEnabled(m_config.canRun() && !m_workerThread->isRunning());
+    btnCancel->setEnabled(m_workerThread->isRunning());
+    btnExit->setEnabled(!m_workerThread->isRunning());
 }

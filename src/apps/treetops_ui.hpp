@@ -49,7 +49,7 @@ namespace geotools {
             TreetopsConfig m_config;
             geotools::util::Callbacks *m_callbacks;
             WorkerThread *m_workerThread;
-
+            bool m_cancel;
             void checkRun();
             void updateView();
 
@@ -64,7 +64,7 @@ namespace geotools {
             void doCrownsChanged(bool);
 
             void smoothWindowSizeChanged(int);
-            void smoothStdDevChanged(double);
+            void smoothSigmaChanged(double);
             void smoothOriginalCHMChanged(QString);
             void smoothSmoothedCHMChanged(QString);
 

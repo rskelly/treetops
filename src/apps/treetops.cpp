@@ -96,12 +96,11 @@ int main(int argc, char **argv) {
                 config.smoothOriginalCHM = argv[++i];
                 config.doSmoothing = true;
             } else if (arg == "-sd") {
-                config.smoothStdDev = atof(argv[++i]);
+                config.smoothSigma = atof(argv[++i]);
                 config.doSmoothing = true;
             } else if (arg == "-ss") {
                 config.smoothSmoothedCHM = argv[++i];
                 config.doSmoothing = true;
-
             } else if (arg == "-to") {
                 config.topsOriginalCHM = argv[++i];
                 config.doTops = true;

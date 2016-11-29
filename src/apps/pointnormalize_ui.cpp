@@ -17,8 +17,7 @@
 #include "filelist.hpp"
 #include "util.hpp"
 
-QSettings _settings("PointNormalize", "Geotools");
-QString _last_dir("last_dir");
+QSettings _settings("PointNormalize", "GeoTools");
 
 using namespace geotools::ui;
 using namespace geotools::util;
@@ -66,8 +65,8 @@ void PointNormalizeForm::setupUi(QWidget *form) {
     
     _loadConfig(m_config);
     
-    if (_settings.contains(_last_dir)) {
-        m_last.setPath(_settings.value(_last_dir).toString());
+    if (_settings.contains(QString("last_dir"))) {
+        m_last.setPath(_settings.value(QString("last_dir")).toString());
     } else {
         m_last = QDir::home();
     }
@@ -103,12 +102,14 @@ void PointNormalizeForm::setupUi(QWidget *form) {
     connect(rdoKeepNegativePoints, SIGNAL(toggled(bool)), this, SLOT(keepNegativeToggled(bool)));
     connect(rdoKeepGroundPoints, SIGNAL(toggled(bool)), this, SLOT(keepGroundToggled(bool)));
     connect(&m_fileList, SIGNAL(fileListChanged()), this, SLOT(fileListChanged()));
-    connect((PointNormalizeCallbacks *) m_callbacks, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
-    connect((PointNormalizeCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
     connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
     connect(chkOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteChanged(bool)));
     connect(spnThreads, SIGNAL(valueChanged(int)), this, SLOT(threadsChanged(int)));
     connect(spnBuffer, SIGNAL(valueChanged(double)), this, SLOT(bufferChanged(double)));
+    if(m_callbacks) {
+        connect((PointNormalizeCallbacks *) m_callbacks, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
+        connect((PointNormalizeCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
+    }
 }
 
 void PointNormalizeForm::bufferChanged(double b) {
@@ -170,7 +171,7 @@ void PointNormalizeForm::outputFolderClicked() {
             m_last.path(),QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     m_config.outputDir = res.toStdString();
     m_last.setPath(res);
-    _settings.setValue(_last_dir, m_last.path());
+    _settings.setValue(QString("last_dir"), m_last.path());
     txtOutputFolder->setText(res);
     checkRun();
 }
@@ -214,6 +215,11 @@ void PointNormalizeForm::done() {
 
 PointNormalizeForm::~PointNormalizeForm() {
    _saveConfig(m_config);
+    delete m_callbacks;
+    if (m_workerThread) {
+        m_workerThread->exit(0);
+        delete m_workerThread;
+    }
 }
 
 

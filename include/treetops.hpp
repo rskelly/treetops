@@ -13,7 +13,6 @@ namespace geotools {
         namespace config {
 
             // Contains configuration information for performing tree top extraction.
-
             class TreetopsConfig {
             public:
 
@@ -44,9 +43,9 @@ namespace geotools {
                 // The size of the smoothing window >=3; an odd number.
                 int smoothWindowSize;
 
-                // The std. deviation used for generating the gaussian kernel.
+                // The std. deviation used for generating the Gaussian kernel.
                 // 0 < n <= 1.
-                double smoothStdDev;
+                double smoothSigma;
 
                 std::string smoothOriginalCHM;
                 std::string smoothSmoothedCHM;
@@ -87,76 +86,19 @@ namespace geotools {
                 std::string crownsCrownsDatabase;
 
                 // Build a TreetopsConfig with defaults.
+                TreetopsConfig();
 
-                TreetopsConfig() :
-                srid(0),
-                buildIndex(false),
-                tableCacheSize(1024 * 1024),
-                rowCacheSize(24 * 1024 * 1024),
-                doSmoothing(false),
-                smoothWindowSize(3),
-                smoothStdDev(0.8),
-                doTops(false),
-                topsMinHeight(4.0),
-                topsWindowSize(7),
-                doCrowns(false),
-                crownsRadius(10.0),
-                crownsHeightFraction(0.65),
-                crownsMinHeight(4.0) {
-                }
+                void checkSmoothing() const;
 
-                void checkSmoothing() const {
-                    if (!doSmoothing)
-                        g_argerr("Not configured to perform smoothing.");
-                    if (smoothOriginalCHM.empty())
-                        g_argerr("Smoothing: CHM filename must not be empty.");
-                    if (smoothSmoothedCHM.empty())
-                        g_argerr("Smoothing: Output filename must not be empty.");
-                    if (smoothStdDev <= 0 || smoothStdDev > 1)
-                        g_argerr("Smoothing: Std. deviation must be 0 < n <= 1. " << smoothStdDev << " given.");
-                    if (smoothWindowSize % 2 == 0 || smoothWindowSize < 3)
-                        g_argerr("Smoothing: The window must be odd and >=3.");
-                }
+                void checkTops() const;
 
-                void checkTops() const {
-                    if (!doTops)
-                        g_argerr("Not configured to find treetops.");
-                    if (topsOriginalCHM.empty())
-                        g_argerr("Tops: Unsmoothed CHM filename must not be empty.");
-                    if (topsSmoothedCHM.empty())
-                        g_argerr("Tops: Smoothed CHM filename must not be empty.");
-                    if (topsTreetopsDatabase.empty())
-                        g_argerr("Tops: Treetops database filename must not be empty.");
-                    if (topsWindowSize % 2 == 0 || topsWindowSize < 3)
-                        g_argerr("Tops: Treetops window size must be an odd number >= 3. " << topsWindowSize << " given.");
-                }
-
-                void checkCrowns() const {
-                    if (!doCrowns)
-                        g_argerr("Not configured to find crowns.");
-                    if (crownsRadius <= 0.0)
-                        g_argerr("Crowns: The maximum crown radius must be > 0. " << crownsRadius << " given.");
-                    if (crownsHeightFraction <= 0.0 || crownsHeightFraction > 1.0)
-                        g_argerr("Crowns: The crown height fraction must be between 0 and 1. " << crownsHeightFraction << " given.");
-                    if (crownsCrownsRaster.empty())
-                        g_argerr("Crowns: Output raster filename must not be empty.")
-                        if (crownsTreetopsDatabase.empty())
-                            g_argerr("Crowns: Treetops database filename must not be empty.");
-                    if (crownsSmoothedCHM.empty())
-                        g_argerr("Crowns: Smoothed CHM filename must not be empty.");
-                }
+                void checkCrowns() const;
 
                 // Check the validity of the configuration.
+                void check() const;
 
-                void check() const {
-                    if (doSmoothing)
-                        checkSmoothing();
-                    if (doTops)
-                        checkTops();
-                    if (doCrowns)
-                        checkCrowns();
-                }
-
+                // Returns true if any function can be successfully run.
+                bool canRun() const;
             };
 
         } // config
@@ -192,17 +134,17 @@ namespace geotools {
 
             // A convenience method for smoothing the input raster before using it to generate crowns
             // or treetops.
-            void smooth(const geotools::treetops::config::TreetopsConfig &config);
+            void smooth(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
             // Locates tree top points on a canopy height model.
-            void treetops(const geotools::treetops::config::TreetopsConfig &config);
+            void treetops(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
             // Performs tree crown delineation using a (preferrably smoothed) input raster and a
             // vector file (sqlite) containing tree tops as seeds. Output is an integer raster with 
             // cell values representing tree top IDs, and an optional vector which is the polygonized 
             // version of the raster. The table should have been generated using the treetops() method
             // to ensure that its structure is correct.
-            void treecrowns(const geotools::treetops::config::TreetopsConfig &config);
+            void treecrowns(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
         };
 
