@@ -18,14 +18,9 @@ namespace geotools {
             bool dropGround;
             uint32_t threads;
             bool overwrite;
+            double buffer;
             
-            PointNormalizeConfig() :
-                dropNegative(true),
-                dropGround(true),
-                threads(1),
-                overwrite(true) {
-                
-            }
+            PointNormalizeConfig();
         };
 
         class PointNormalize {

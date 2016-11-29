@@ -69,6 +69,7 @@ namespace geotools {
             void keepGroundToggled(bool);
             void threadsChanged(int);
             void overwriteChanged(bool);
+            void bufferChanged(double);
             
         public:
             PointNormalizeForm(QWidget *p = Q_NULLPTR);

@@ -14,6 +14,7 @@
 #include <CGAL/Polygon_2_algorithms.h>
 
 #include <liblas/liblas.hpp>
+#include <qt5/QtCore/qsettings.h>
 
 #include "pointnormalize.hpp"
 #include "raster.hpp"
@@ -33,6 +34,15 @@ typedef Delaunay::Finite_faces_iterator Finite_faces_iterator;
 typedef Delaunay::All_faces_iterator All_faces_iterator;
 typedef Delaunay::Face Face;
 typedef Delaunay::Face_handle Face_handle;
+
+
+PointNormalizeConfig::PointNormalizeConfig() :
+    dropNegative(true),
+    dropGround(true),
+    threads(1),
+    overwrite(true),
+    buffer(10.0) {
+}
 
 class FileSorter {
 private:

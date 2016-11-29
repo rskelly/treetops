@@ -9,17 +9,46 @@
 #include <QSettings>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "pointnormalize.hpp"
 #include "pointnormalize_ui.hpp"
 #include "filelist.hpp"
 #include "util.hpp"
 
-QSettings _settings("PointStats", "Geotools");
+QSettings _settings("PointNormalize", "Geotools");
 QString _last_dir("last_dir");
 
 using namespace geotools::ui;
 using namespace geotools::util;
+
+void _loadConfig(PointNormalizeConfig &config) {
+    QSettings qs("PointNormalizeConfig", "GeoTools");
+    config.dropNegative = qs.value(QString("dropNegative"), true).toBool();
+    config.dropGround = qs.value(QString("dropGround"), true).toBool();
+    config.threads = qs.value(QString("threads"), 1).toInt();
+    config.overwrite = qs.value(QString("overwrite"), true).toBool();
+    config.buffer = qs.value(QString("buffer"), 10.0).toDouble();
+    config.outputDir = qs.value(QString("outputDir")).toString().toStdString();
+    QStringList files = qs.value(QString("sourceFiles")).toStringList();
+    for(const QString &file : files)
+        config.sourceFiles.push_back(file.toStdString());
+}
+
+void _saveConfig(PointNormalizeConfig &config) {
+    QSettings qs("PointNormalizeConfig", "GeoTools");
+    qs.setValue(QString("dropNegative"), config.dropNegative);
+    qs.setValue(QString("dropGround"), config.dropGround);
+    qs.setValue(QString("threads"), config.threads);
+    qs.setValue(QString("overwrite"), config.overwrite);
+    qs.setValue(QString("buffer"), config.buffer);
+    qs.setValue(QString("outputDir"), QString(config.outputDir.c_str()));
+    QStringList files;
+    for(const std::string &file : config.sourceFiles)
+        files << QString(file.c_str());
+    qs.setValue(QString("sourceFiles"), files);
+}
 
 void PointNormalizeCallbacks::stepCallback(float status) const {
     emit stepProgress((int) std::round(status * 100));
@@ -36,6 +65,9 @@ void PointNormalizeForm::setupUi(QWidget *form) {
     Ui::PointNormalizeForm::setupUi(form);
     m_form = form;
     m_filter = QString("LAS Files (*.las)");
+    
+    _loadConfig(m_config);
+    
     if (_settings.contains(_last_dir)) {
         m_last.setPath(_settings.value(_last_dir).toString());
     } else {
@@ -60,8 +92,10 @@ void PointNormalizeForm::setupUi(QWidget *form) {
     
     spnThreads->setMaximum(std::thread::hardware_concurrency());
     spnThreads->setValue(m_config.threads);
-    
+    spnBuffer->setValue(m_config.buffer);
     chkOverwrite->setChecked(m_config.overwrite);
+    txtOutputFolder->setText(QString(m_config.outputDir.c_str()));
+    m_fileList.setFiles(m_config.sourceFiles);
     
     connect(btnOutputFolder, SIGNAL(clicked()), this, SLOT(outputFolderClicked()));
     connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
@@ -76,6 +110,13 @@ void PointNormalizeForm::setupUi(QWidget *form) {
     connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
     connect(chkOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteChanged(bool)));
     connect(spnThreads, SIGNAL(valueChanged(int)), this, SLOT(threadsChanged(int)));
+    connect(spnBuffer, SIGNAL(valueChanged(double)), this, SLOT(bufferChanged(double)));
+}
+
+void PointNormalizeForm::bufferChanged(double b) {
+    m_config.buffer = b;
+    g_debug(" -- buffer " << b);
+    checkRun();
 }
 
 void PointNormalizeForm::threadsChanged(int t) {
@@ -148,7 +189,7 @@ void PointNormalizeForm::cancelClicked() {
 }
 
 void PointNormalizeForm::helpClicked() {
-    
+  QDesktopServices::openUrl(QUrl("http://www.dijital.ca/geotools/help/pointnormalize.html", QUrl::TolerantMode));
 }
 
 void PointNormalizeForm::runClicked() {
@@ -173,7 +214,9 @@ void PointNormalizeForm::done() {
     checkRun();
 }
 
-PointNormalizeForm::~PointNormalizeForm() {}
+PointNormalizeForm::~PointNormalizeForm() {
+   _saveConfig(m_config);
+}
 
 
 void WorkerThread::init(PointNormalizeForm *parent) {

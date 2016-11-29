@@ -47,7 +47,8 @@ namespace geotools {
                     QString &filter);
 
             std::vector<std::string> files();
-
+            void setFiles(const std::vector<std::string> &files);
+            
             virtual ~FileList();
 
         public slots:

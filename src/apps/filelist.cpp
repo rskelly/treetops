@@ -97,6 +97,11 @@ std::vector<std::string> FileList::files() {
     return m_files;
 }
 
+void FileList::setFiles(const std::vector<std::string> &files) {
+    m_files = files;
+    updateFileList();
+}
+
 FileList::~FileList() {
 }
 
