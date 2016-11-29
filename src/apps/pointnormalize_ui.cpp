@@ -28,7 +28,6 @@ void _loadConfig(PointNormalizeConfig &config) {
     config.dropNegative = qs.value(QString("dropNegative"), true).toBool();
     config.dropGround = qs.value(QString("dropGround"), true).toBool();
     config.threads = qs.value(QString("threads"), 1).toInt();
-    config.overwrite = qs.value(QString("overwrite"), true).toBool();
     config.buffer = qs.value(QString("buffer"), 10.0).toDouble();
     config.outputDir = qs.value(QString("outputDir")).toString().toStdString();
     QStringList files = qs.value(QString("sourceFiles")).toStringList();
@@ -41,7 +40,6 @@ void _saveConfig(PointNormalizeConfig &config) {
     qs.setValue(QString("dropNegative"), config.dropNegative);
     qs.setValue(QString("dropGround"), config.dropGround);
     qs.setValue(QString("threads"), config.threads);
-    qs.setValue(QString("overwrite"), config.overwrite);
     qs.setValue(QString("buffer"), config.buffer);
     qs.setValue(QString("outputDir"), QString(config.outputDir.c_str()));
     QStringList files;

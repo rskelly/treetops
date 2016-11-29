@@ -40,7 +40,7 @@ PointNormalizeConfig::PointNormalizeConfig() :
     dropNegative(true),
     dropGround(true),
     threads(1),
-    overwrite(true),
+    overwrite(false),
     buffer(10.0) {
 }
 
