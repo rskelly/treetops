@@ -14,7 +14,6 @@
 #include <CGAL/Polygon_2_algorithms.h>
 
 #include <liblas/liblas.hpp>
-#include <qt5/QtCore/qsettings.h>
 
 #include "pointnormalize.hpp"
 #include "raster.hpp"

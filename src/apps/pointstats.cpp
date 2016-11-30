@@ -18,8 +18,10 @@ void usage() {
             << "                             count, density, stddev (sample), pstddev (population). Default mean.\n"
             << "                             Use a Comma-delimited list to do more than one. Requires a Comma-delimited\n"
             << "                             list of filenames.\n"
-            << " -g <type>					 Gap Fraction type. These are IR, FR, RR, BLa and BLb, adaped from \n"
-            << "                             Hopkins and Chasmer, 2009: Testing LiDAR Models of Fractional Cover...\n"
+            << " -g <type>                   Gap Fraction type. These are IR, FR, RR, BLa and BLb, CCF and GAP.\n"
+            << "                             the first five are adapted from Hopkins and Chasmer, 2009: Testing LiDAR Models "
+            << "                             of Fractional Cover. The last two require a threshold value (-gt).\n"
+            << " -gt <threshold>             A double representing the threshold height for gap fraction.\n"
             << " -r <resolution>             Resolution (default 2).\n"
             << " -s <srid>                   The EPSG ID of the CRS.\n"
             << " -c <classes>                Comma-delimited (e.g. '2,0' (ground and unclassified)).\n"
@@ -68,7 +70,8 @@ int main(int argc, char **argv) {
         std::string gap;
         std::set<unsigned char> classes;
         Bounds bounds;
-
+        double gapThreshold;
+        
         g_loglevel(0);
 
         for (int i = 1; i < argc; ++i) {
@@ -100,6 +103,8 @@ int main(int argc, char **argv) {
                 g_loglevel(G_LOG_DEBUG);
             } else if (s == "-g") {
                 gap = argv[++i];
+            } else if(s == "-gt") {
+                gapThreshold = atof(argv[++i]);
             } else if (s == "-C") {
                 rebuild = false;
             } else if (s == "--angle-limit") {
@@ -135,7 +140,7 @@ int main(int argc, char **argv) {
             config.gapFractionType = config.parseGap(gap);
             config.rebuild = rebuild;
             config.normalize = normalize;
-
+            config.threshold = gapThreshold;
             lg.pointstats(config);
         }
 

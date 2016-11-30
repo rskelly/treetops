@@ -87,7 +87,9 @@ namespace geotools {
                 {"BLa", GAP_BLA},
                 {"BLb", GAP_BLB},
                 {"RR", GAP_RR},
-                {"FR", GAP_FR}
+                {"FR", GAP_FR},
+                {"CCF", GAP_CCF},
+                {"GAP", GAP_GAP}
             };
 
         } // config
@@ -148,6 +150,10 @@ namespace geotools {
                 return GAP_RR;
             } else if ("ir" == gapStr) {
                 return GAP_IR;
+            } else if("ccf" == gapStr) {
+                return GAP_CCF;
+            } else if("gap" == gapStr) {
+                return GAP_GAP;
             }
             return 0;
         }
@@ -196,7 +202,7 @@ namespace geotools {
                 case TYPE_KURTOSIS: return new CellKurtosis();
                 case TYPE_SKEW: return new CellSkewness();
                 case TYPE_QUANTILE: return new CellQuantile(config.quantile, config.quantiles);
-                case TYPE_GAP_FRACTION: return new CellGapFraction(config.gapFractionType);
+                case TYPE_GAP_FRACTION: return new CellGapFraction(config.gapFractionType, config.threshold);
                 default:
                     g_argerr("Invalid statistic type: " << type);
             }
@@ -240,7 +246,15 @@ namespace geotools {
                 if (!pts.empty()) {
                     for (size_t i = 0; i < m_computers.size(); ++i) {
                         std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
-                        m_mem[i]->set(idx, m_computers[i]->compute(pts));
+                        int bands = m_computers[i]->bands();
+                        g_debug(" -- bands " << bands);
+                        double *value = (double *) calloc(sizeof(double), bands);
+                        m_computers[i]->compute(pts, value);
+                        g_debug(" -- computed " << value[0] << " point " << pts.size());
+                        int b = 0;
+                        for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
+                            m->set(idx, value[b++]);
+                        free(value);
                     }
                     for (LASPoint *pt : pts)
                         delete pt;
@@ -302,17 +316,23 @@ namespace geotools {
             for (size_t i = 0; i < config.types.size(); ++i) {
                 // Create computers for each stat
                 g_debug(" -- configuring computer " << (int) config.types[i]);
-                std::unique_ptr<CellStats> cs(getComputer(config.types[i], config));
+                CellStats *stats = getComputer(config.types[i], config);
+                int bands = stats->bands();
                 if (filter)
-                    cs->setFilter(filter);
+                    stats->setFilter(filter);
+                std::unique_ptr<CellStats> cs(stats);
                 m_computers.push_back(std::move(cs));
 
                 // Create raster grid for each stat.
                 g_debug(" -- configuring grid");
-                std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(ps.cols(), ps.rows(), true));
-                mr->fill(-9999.0);
-                mr->nodata(-9999.0);
-                m_mem.push_back(std::move(mr));
+                std::vector<std::unique_ptr<MemRaster<float> > > rasters;
+                for(int b = 0; b < bands; ++b) {
+                    std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(ps.cols(), ps.rows(), true));
+                    mr->fill(-9999.0);
+                    mr->nodata(-9999.0);
+                    rasters.push_back(std::move(mr));
+                }
+                m_mem.push_back(std::move(rasters));
 
                 // Create mutex for grid.
                 g_debug(" -- creating mutex");
@@ -360,17 +380,22 @@ namespace geotools {
                 // Normalize the grids if desired.
                 if (config.normalize) {
                     g_debug(" -- normalizing");
-                    m_mem[i]->normalize();
+                    for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
+                        m->normalize();
                 }
                 // Prepare the grid
                 // TODO: Only works with UTM north.
                 g_debug(" -- preparing " << config.dstFiles[i]);
-                Raster<float> grid(config.dstFiles[i], 1, bounds, config.resolution,
+                int band = 0;
+                for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i]) {
+                    std::stringstream file;
+                    file << config.dstFiles[i] << "_" << ++band << ".tif";
+                    Raster<float> grid(file.str().c_str(), 1, bounds, config.resolution,
                         -config.resolution, -9999, config.hsrid);
-
-                // Write grid to file.
-                g_debug(" -- writing " << config.types[i]);
-                grid.writeBlock(*(m_mem[i].get()));
+                    // Write grid to file.
+                    g_debug(" -- writing " << config.types[i]);
+                    grid.writeBlock(*(m.get()));
+                }
             }
 
             if (callbacks)

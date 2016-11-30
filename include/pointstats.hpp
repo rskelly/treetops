@@ -79,6 +79,7 @@ namespace geotools {
             bool rebuild;
             bool normalize;
             double resolution;
+            double threshold;
             uint32_t threads;
             uint16_t hsrid;
             uint16_t vsrid;
@@ -133,7 +134,7 @@ namespace geotools {
             std::unordered_map<size_t, std::list<geotools::las::LASPoint*> > m_cache;
             std::queue<size_t> m_idxq;
             std::vector<std::unique_ptr<geotools::point::stats::CellStats> > m_computers;
-            std::vector<std::unique_ptr<geotools::raster::MemRaster<float> > > m_mem;
+            std::vector<std::vector<std::unique_ptr<geotools::raster::MemRaster<float> > > > m_mem;
             std::vector<std::unique_ptr<std::mutex> > m_mtx;
             std::unique_ptr<geotools::las::FinalizedPointStream> m_ps;
             std::queue<size_t> m_bq;
