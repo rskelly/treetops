@@ -27,7 +27,7 @@ using namespace geotools::raster;
 
 class LASReader {
 private:
-    const static size_t BATCH_SIZE = 1000000;
+    const static uint64_t BATCH_SIZE = 1000000;
     std::FILE *m_f;
     std::string m_file;
     uint16_t m_sourceId;
@@ -52,14 +52,14 @@ private:
     double m_zMax;
 
     uint64_t m_curPoint;
-    size_t m_batchSize;
+    uint64_t m_batchSize;
 
     std::unique_ptr<Buffer> m_buf;
     std::queue<LASPoint> m_pts;
 
     void _read(void *buf, size_t l1, size_t l2, std::FILE *f) {
         if (!std::fread(buf, l1, l2, f))
-            g_runerr("Failed to read.");
+            g_runerr("Failed to read " << l1 << "x" << l2 << " from LAS file.");
     }
 
     void load() {
@@ -110,7 +110,7 @@ private:
 
         // TODO: Extended point count.
 
-        //g_debug(" -- " << m_file << " has " << m_pointCount << " points");
+        g_debug(" -- " << m_file << " has " << m_pointCount << " points");
         LASPoint::setScale(m_xScale, m_yScale, m_zScale);
         reset();
     }
@@ -142,9 +142,12 @@ public:
         if (m_buf.get())
             delete m_buf.release();
         m_buf.reset(new Buffer(m_batchSize * m_pointLength));
-        //g_debug(" -- loading " << m_batchSize << " points");
-        _read((void *) m_buf->buf, m_batchSize * m_pointLength, 1, m_f);
-
+        g_debug(" -- loading " << m_batchSize << "; " << m_pointCount << "; " << m_pointLength);
+        try {
+            _read((void *) m_buf->buf, m_batchSize * m_pointLength, 1, m_f);
+        } catch(const std::exception &ex) {
+            g_runerr("Failed to read batch. LAS file may be shorter than indicated by header.");
+        }
         return true;
     }
 

@@ -255,6 +255,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
         for(int i = 0; i < 5; ++i)
             outHeader.SetPointRecordsByReturnCount(i + 1, finalPtCountByReturn[i]);
         lasWriter.SetHeader(outHeader);
+        lasWriter.WriteHeader();
         
         instr.close();
         outstr.close();
