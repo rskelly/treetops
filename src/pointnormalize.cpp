@@ -96,18 +96,12 @@ public:
 
 bool _cancel = false;
 
-void PointNormalize::normalize(const PointNormalizeConfig &config, 
-        const Callbacks *callbacks, bool *cancel) {
-
-    // If the cancel flag isn't given, take a reference to a dummy
-    // that is always false.
-    if(!cancel) cancel = &_cancel;
-    
+void _setup(const PointNormalizeConfig &config) {
     // Sanity checks.
     if (config.outputDir.empty())
-        g_argerr("A point output dir must be provided.");
+        g_argerr("A point output directory must be provided.");
     if (!Util::mkdir(config.outputDir))
-        g_argerr("Couldn't create output dir " << config.outputDir);
+        g_argerr("Couldn't create output directory: " << config.outputDir);
     uint32_t threads = config.threads;
     uint32_t tmax = std::thread::hardware_concurrency();
     if(threads < 1) {
@@ -118,111 +112,119 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
         g_warn("Too many threads specified. Using 1.");
         threads = 1;
     }
-    
     // Set the thread count.
     omp_set_dynamic(1);
     omp_set_num_threads(threads);
-    
+}
+
+void PointNormalize::normalize(const PointNormalizeConfig &config, 
+        const Callbacks *callbacks, bool *cancel) {
+
     using namespace boost::filesystem;
 
+    // If the cancel flag isn't given, take a reference to a dummy
+    // that is always false.
+    if(!cancel) cancel = &_cancel;
+    
+    // Set up
+    _setup(config);
+    
+    // Prepare some necessary variables
     path outDir(config.outputDir);
     liblas::ReaderFactory rf;
-
-    std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
-    FileSearcher fileSearch(files);
+    FileSearcher fileSearch(config.sourceFiles);
+    uint32_t numFiles = config.sourceFiles.size();
+    uint32_t curFile = 0;
     
-    for (unsigned int i = 0; !*cancel && i < files.size(); ++i) {
+    for(const std::string &pointFile : config.sourceFiles) {
         if(*cancel) return;
-        
         if(callbacks)
-            callbacks->overallCallback(((float) i + 0.5f) / files.size());
-        
-        const std::string &pointFile = files[i];
+            callbacks->overallCallback(((float) ++curFile - 0.5f) / numFiles);
+
+        // Original and new file paths
         path oldPath(pointFile);
         path newPath(outDir / oldPath.filename());
-
-        g_debug(" -- normalize (point) processing " << pointFile << " to " << newPath);
         if (!config.overwrite && exists(newPath)) {
             g_warn("The output file " << newPath << " already exists.");
             continue;
         }
+        g_debug("Normalize: processing " << pointFile << " to " << newPath);
 
-        std::vector<liblas::Point> objPts;
+        std::vector<LASPoint> objPts;
         std::list<Point_3> meshPts;
     
         // Build a mesh from the buffered ground points.
         LASReader lr(pointFile);
         Bounds bounds = lr.bounds();
-        g_debug(" -- bounds: " << bounds.print());
-        bounds.extend(bounds.minx() - 10.0, bounds.miny() - 10.0);
-        bounds.extend(bounds.maxx() + 10.0, bounds.maxy() + 10.0);
-        g_debug(" -- bounds: " << bounds.print());
+        bounds.extend(bounds.minx() - config.buffer, bounds.miny() - config.buffer);
+        bounds.extend(bounds.maxx() + config.buffer, bounds.maxy() + config.buffer);
         std::vector<std::string> bufFiles = fileSearch.getFiles(bounds);
-        g_debug(" -- " << bufFiles.size() << " files to satisfy the buffer");
-        for(const std::string &file : bufFiles) {            
-            std::ifstream instr(file.c_str(), std::ios::binary);
-            liblas::Reader lasReader = rf.CreateWithStream(instr);
-            while(lasReader.ReadNextPoint()) {
-                const liblas::Point &pt = lasReader.GetPoint();
-                if(bounds.contains(pt.GetX(), pt.GetY()) && pt.GetClassification().GetClass() == 2) {
-                    Point_3 p(pt.GetX(), pt.GetY(), pt.GetZ());
+        g_debug("Normalize: " << bufFiles.size() << " files to satisfy the buffer");
+        
+        for(const std::string &file : bufFiles) {
+            if(*cancel) return;
+            LASReader r(file);
+            LASPoint pt;
+            bool isPtFile = file == pointFile;
+            while(r.next(pt)) {
+                if(*cancel) return;
+                if(pt.cls == 2 && bounds.contains(pt.x, pt.y)) {
+                    Point_3 p(pt.x, pt.y, pt.z);
                     meshPts.push_back(std::move(p));                    
                 }
-                if(*cancel)
-                    return;
+                if(isPtFile && (!config.dropGround || pt.cls != 2))
+                    objPts.push_back(pt);
             }
         }
         
-        // Load the non-ground points.
-        std::ifstream instr(pointFile.c_str(), std::ios::binary);
-        liblas::Reader lasReader = rf.CreateWithStream(instr);
-        liblas::Header lasHeader = lasReader.GetHeader();
-
-        while (lasReader.ReadNextPoint()) {
-            if(*cancel) return;
-            const liblas::Point &opt = lasReader.GetPoint();
-            if(!config.dropGround || opt.GetClassification().GetClass() != 2)
-                objPts.push_back(opt);
-            if(*cancel)
-                return;
-        }
-
         // Build the Delaunay triangulation.
         Delaunay dt(meshPts.begin(), meshPts.end());
         meshPts.clear();
         if(*cancel) return;
         
-        Face_handle hint;
+        // Prepare point counts.
         uint64_t finalPtCount = 0;
         uint64_t finalPtCountByReturn[255];
         for(int i = 0; i < 5; ++i)
             finalPtCountByReturn[i] = 0;
-        
-        std::atomic<size_t> curPt(0);
-        size_t ptCount = objPts.size();
+
+        // Final bounds for the new file
+        double lbounds[6];
+        for(int i = 0; i < 3; ++i) {
+            lbounds[i] = G_DBL_MAX_POS;
+            lbounds[i + 3] = G_DBL_MAX_NEG;
+        }
+
+        // Hit for the locate function
+        Face_handle hint;
         
         std::ofstream outstr(newPath.c_str(), std::ios::binary);
-        liblas::Header outHeader(lasHeader);
+        std::ifstream instr(pointFile.c_str(), std::ios::binary);
+        liblas::Reader lasReader = rf.CreateWithStream(instr);
+        liblas::Header outHeader(lasReader.GetHeader());
         liblas::Writer lasWriter(outstr, outHeader);
-
+        instr.close();
+        
+        uint64_t ptCount = objPts.size();
+        std::atomic<uint64_t> curPt(0);
+        
         #pragma omp parallel for
-        for(size_t i = 0; i < ptCount; ++i) {
+        for(uint64_t i = 0; i < ptCount; ++i) {
             if(*cancel) continue;
             
             if(callbacks)
                 callbacks->stepCallback((float) ++curPt / ptCount);
-            
-            liblas::Point &opt = objPts[i];
-            if(opt.GetClassification().GetClass() == 2) {
-                opt.SetZ(0.0);
+               
+            LASPoint &pt = objPts[i];
+            if(pt.cls == 2) {
+                pt.z = 0.0;
             } else {
-                Point_3 p(opt.GetX(), opt.GetY(), opt.GetZ());
+                Point_3 p(pt.x, pt.y, pt.z);
                 hint = dt.locate(p, hint);
-                // TODO: The point is outside the mesh and can't be normalized.
-                //       Ideally, this would build the mesh to the neighbouring
-                //       files and normalize these points...
-                if(dt.is_infinite(hint))
+                if(dt.is_infinite(hint)) {
+                    g_warn("Not found in mesh: " << pt.x << ", " << pt.y);
                     continue;
+                }
                 double area = 0.0;
                 double total = 0.0;
                 for(int i = 0; i < 3; ++i) {
@@ -237,15 +239,27 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
                     area += h;
                     total += h * p3.z();
                 }
+                if(std::isnan(area)) {
+                    g_warn("Area is nan: " << area << "; " << total);
+                    continue;
+                }
                 double z = p.z() - total / area;
                 if(z < 0.0 && config.dropNegative)
                     continue;
-                opt.SetZ(z);
+                pt.z = z;
             }
-            #pragma omp critical
+            #pragma omp critical(__las_write)
             {
+                lbounds[0] = g_min(lbounds[0], pt.x);
+                lbounds[1] = g_min(lbounds[1], pt.y);
+                lbounds[2] = g_min(lbounds[2], pt.z);
+                lbounds[3] = g_max(lbounds[3], pt.x);
+                lbounds[4] = g_max(lbounds[4], pt.y);
+                lbounds[5] = g_max(lbounds[5], pt.z);
+                liblas::Point opt(&outHeader);
+                pt.write(opt);
                 lasWriter.WritePoint(opt);
-                finalPtCountByReturn[opt.GetReturnNumber() - 1]++;
+                finalPtCountByReturn[pt.returnNum - 1]++;
                 ++finalPtCount;
             }
         }
@@ -254,14 +268,15 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
         outHeader.SetPointRecordsCount(finalPtCount);
         for(int i = 0; i < 5; ++i)
             outHeader.SetPointRecordsByReturnCount(i + 1, finalPtCountByReturn[i]);
+        outHeader.SetMin(lbounds[0], lbounds[1], lbounds[2]);
+        outHeader.SetMax(lbounds[3], lbounds[4], lbounds[5]);
         lasWriter.SetHeader(outHeader);
         lasWriter.WriteHeader();
         
-        instr.close();
         outstr.close();
-
+        
         if(callbacks)
-            callbacks->overallCallback(((float) i + 1.0f) / files.size());
+            callbacks->overallCallback((float) curFile / numFiles);
     }
 
 

@@ -36,25 +36,34 @@ namespace geotools {
 
             double x, y, z;
             uint16_t intensity;
-            uint16_t returnNum, numReturns;
-            uint16_t scanDirection;
+            uint8_t returnNum, numReturns;
+            bool scanDirection;
+            bool isEdge;
             uint8_t cls;
             uint8_t clsFlags;
             int8_t scanAngle;
-            uint8_t scanDir;
-            bool isEdge;
-            uint8_t red, green, blue, nir;
-            uint8_t channel;
-            double gpsTime;
+            unsigned char userData;
             uint16_t sourceId;
-            uint16_t userData;
-
+            double gpsTime;
+            uint8_t red, green, blue, nir;
+            unsigned char wavePacketDesc;
+            uint64_t waveOffset;
+            uint32_t wavePacketSize;
+            float waveLocation;
+            float xt;
+            float yt;
+            float zt;
+            uint8_t channel;
+            uint8_t format;
+            
             LASPoint();
 
             LASPoint(const liblas::Point &pt);
 
             ~LASPoint();
 
+            void write(liblas::Point &pt) const;
+            
             // Sets the scale values used by all points.
             static void setScale(double x, double y, double z);
 

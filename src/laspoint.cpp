@@ -83,6 +83,40 @@ void LASPoint::update(const liblas::Point &pt) {
     numReturns = pt.GetNumberOfReturns();
     cls = pt.GetClassification().GetClass();
     scanAngle = pt.GetScanAngleRank();
+    isEdge = pt.GetFlightLineEdge();
+    sourceId = pt.GetPointSourceID();
+    scanDirection = pt.GetScanDirection();
+    userData = pt.GetUserData();
+    if(format == 1 || format > 2)
+        gpsTime = pt.GetTime();
+    if(format == 2 || format == 3 || format == 7 || format == 8 ||
+            format == 10) {
+        const liblas::Color &c = pt.GetColor();
+        red = c.GetRed();
+        green = c.GetGreen();
+        blue = c.GetBlue();
+        // nir = c.?
+    }
+}
+
+void LASPoint::write(liblas::Point &pt) const {
+    pt.SetX(x);
+    pt.SetY(y);
+    pt.SetZ(z);
+    pt.SetIntensity(intensity);
+    pt.SetReturnNumber(returnNum);
+    pt.SetNumberOfReturns(numReturns);
+    pt.SetScanDirection((uint16_t) scanDirection);
+    pt.SetFlightLineEdge((uint16_t) isEdge);
+    pt.SetClassification(liblas::Classification(cls, false, false, false));
+    pt.SetScanAngleRank(scanAngle);
+    pt.SetUserData(userData);
+    pt.SetPointSourceID(sourceId);
+    if(format == 1 || format > 2)
+        pt.SetTime(gpsTime);
+    if(format == 2 || format == 3 || format == 7 || format == 8 ||
+            format == 10)
+        pt.SetColor(liblas::Color(red, green, blue)); // no nir
 }
 
 void LASPoint::read(std::istream &str) {
@@ -147,7 +181,7 @@ void LASPoint::readLAS0(char *buf) {
     z = las_scaleZ * zz;
     returnNum = props & 6;
     numReturns = (props >> 3) & 6;
-    scanDir = ((props >> 6) & 1);
+    scanDirection = ((props >> 6) & 1) == 1;
     isEdge = ((props >> 7) & 1) == 1;
     cls = cprops & 31;
     clsFlags = cprops >> 5;
@@ -204,12 +238,13 @@ void LASPoint::readLAS6(char *buf) {
     numReturns = (props >> 4) & 15;
     clsFlags = cprops & 15;
     channel = (cprops >> 4) & 3;
-    scanDir = ((cprops >> 6) & 1);
+    scanDirection = ((cprops >> 6) & 1) == 1;
     isEdge = ((cprops >> 7) & 1) == 1;
 
 }
 
 void LASPoint::readLAS(char *buf, uint8_t format) {
+    this->format = format;
     switch (format) {
         case 0:
             readLAS0(buf);

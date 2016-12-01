@@ -12,8 +12,44 @@ using namespace geotools::ui;
 using namespace geotools::point;
 using namespace geotools::point::pointstats_config;
 
-QSettings _settings("PointStats", "Geotools");
-QString _last_dir("last_dir");
+QSettings _settings("PointStats", "GeoTools");
+
+void _loadConfig(PointStatsConfig &config) {
+    PointStatsConfig dummy;
+    QSettings qs("PointStatsConfig", "GeoTools");
+    QSettings::SettingsMap map = qs.value(QString("settings"));
+    config.angleLimit = map.value("angleLimit", dummy.angleLimit).toInt();
+    config.attribute = map["attribute"].toInt();
+    config.bounds.fromString(qs.value(QString("bounds"), QString(dummy.bounds.toString())).toString().toStdString());
+    Util::intSplit(config.classes, qs.value(QString("classes"), "").toString().toStdString());
+    Util::splitString(qs.value(QString("dstFiles"), "").toString().toStdString(), config.dstFiles);
+    config.fill = qs.value(QString("fill"), false).toBool();
+    config.gapFractionType = qs.value(QString("gapFractionType"), true).toInt();
+    config.angleLimit = qs.value(QString("angleLimit"), true).toInt();
+    config.angleLimit = qs.value(QString("angleLimit"), true).toInt();
+            
+    config.dropNegative = qs.value(QString("dropNegative"), true).toBool();
+    config.dropGround = qs.value(QString("dropGround"), true).toBool();
+    config.threads = qs.value(QString("threads"), 1).toInt();
+    config.buffer = qs.value(QString("buffer"), 10.0).toDouble();
+    config.outputDir = qs.value(QString("outputDir")).toString().toStdString();
+    QStringList files = qs.value(QString("sourceFiles")).toStringList();
+    for(const QString &file : files)
+        config.sourceFiles.push_back(file.toStdString());
+}
+
+void _saveConfig(PointNormalizeConfig &config) {
+    QSettings qs("PointStatsConfig", "GeoTools");
+    qs.setValue(QString("dropNegative"), config.dropNegative);
+    qs.setValue(QString("dropGround"), config.dropGround);
+    qs.setValue(QString("threads"), config.threads);
+    qs.setValue(QString("buffer"), config.buffer);
+    qs.setValue(QString("outputDir"), QString(config.outputDir.c_str()));
+    QStringList files;
+    for(const std::string &file : config.sourceFiles)
+        files << QString(file.c_str());
+    qs.setValue(QString("sourceFiles"), files);
+}
 
 void PointStatsCallbacks::stepCallback(float status) const {
     emit stepProgress((int) std::round(status * 100));

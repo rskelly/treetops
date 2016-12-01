@@ -224,6 +224,27 @@ void Bounds::print(std::ostream &str) const {
     str << "[Bounds: " << minx() << ", " << miny() << ", " << minz() << "; " << maxx() << ", " << maxy() << ", " << maxz() << "]";
 }
 
+void Bounds::fromString(const std::string &str) {
+    std::vector<std::string> parts;
+    Util::splitString(str, parts);
+    if(parts.size() < 4)
+        g_runerr("Bounds string must be 4 or 6 comma-separated doubles.");
+    m_minx = atof(parts[0].c_str());
+    m_miny = atof(parts[1].c_str());
+    m_maxx = atof(parts[2].c_str());
+    m_maxy = atof(parts[3].c_str());
+    if(parts.size() >= 6) {
+        m_maxz = atof(parts[4].c_str());
+        m_maxz = atof(parts[5].c_str());
+    }
+}
+
+std::string Bounds::toString() const {
+    std::stringstream ss;
+    ss << minx() << "," << miny() << "," << maxx() << "," << maxy() << "," << minz() << "," << maxz();
+    return ss.str();
+}
+
 double Util::computeArea(double x1, double y1, double z1, 
         double x2, double y2, double z2, 
         double x3, double y3, double z3) {

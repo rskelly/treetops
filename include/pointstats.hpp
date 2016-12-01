@@ -79,7 +79,7 @@ namespace geotools {
             bool rebuild;
             bool normalize;
             double resolution;
-            double threshold;
+            double gapThreshold;
             uint32_t threads;
             uint16_t hsrid;
             uint16_t vsrid;
@@ -120,6 +120,24 @@ namespace geotools {
              */
             bool hasQuantileFilter() const {
                 return quantileFilterFrom == 0 && quantileFilterTo == quantileFilter - 1;
+            }
+            
+            bool check() {
+                if(!dstFiles.size())
+                    return false;
+                if(!sourceFiles.size())
+                    return false;
+                if(!types.size())
+                    return false;
+                if(!classes.size())
+                    g_warn("No classes specified; using all.");
+                if(!hsrid)
+                    g_warn("No horizontal spatial reference ID specified.");
+                if(!vsrid)
+                    g_warn("No vertical spatial reference ID specified.");
+                if(!attribute)
+                    return false;
+                return true;
             }
 
         };

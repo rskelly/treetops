@@ -52,25 +52,8 @@ int runWithUI(int argc, char **argv) {
 
 int main(int argc, char **argv) {
 
-    try {
-
-        int crs = 0;
-        int threads = 1;
-        bool fill = false;
-        bool gui = false;
-        bool snap = true;
-        bool rebuild = true;
-        bool normalize = false;
-        double resolution = 2.0;
-        unsigned char angleLimit = 100;
-        std::vector<std::string> dstFiles;
-        std::vector<std::string> files;
-        std::vector<std::string> types;
-        std::string att = "height";
-        std::string gap;
-        std::set<unsigned char> classes;
-        Bounds bounds;
-        double gapThreshold;
+    try {        
+        PointStatsConfig config;
         
         g_loglevel(0);
 
@@ -79,68 +62,49 @@ int main(int argc, char **argv) {
             if (s == "-h") {
                 usage();
                 return 0;
-            } else if (s == "-gui") {
-                gui = true;
             } else if (s == "-o") {
-                Util::splitString(argv[++i], dstFiles);
+                Util::splitString(argv[++i], config.dstFiles);
             } else if (s == "-s") {
-                crs = atoi(argv[++i]);
-            } else if (s == "-f") {
-                fill = true;
+                config.hsrid = atoi(argv[++i]);
             } else if (s == "-t") {
+                std::vector<std::string> types;
                 Util::splitString(argv[++i], types);
+                config.types = config.parseTypes(types);
             } else if (s == "-n") {
-                normalize = true;
+                config.normalize = true;
             } else if (s == "-r") {
-                resolution = atof(argv[++i]);
+                config.resolution = atof(argv[++i]);
             } else if (s == "-c") {
-                Util::intSplit(classes, argv[++i]);
+                Util::intSplit(config.classes, argv[++i]);
             } else if (s == "-a") {
-                att = argv[++i];
+                config.attribute= config.parseAtt(argv[++i]);
             } else if (s == "-p") {
-                snap = true;
+                config.snap = true;
             } else if (s == "-v") {
                 g_loglevel(G_LOG_DEBUG);
             } else if (s == "-g") {
-                gap = argv[++i];
+                config.gapFractionType = argv[++i];
             } else if(s == "-gt") {
-                gapThreshold = atof(argv[++i]);
+                config.gapThreshold = atof(argv[++i]);
             } else if (s == "-C") {
-                rebuild = false;
+                config.rebuild = false;
             } else if (s == "--angle-limit") {
-                angleLimit = (unsigned char) atoi(argv[++i]);
+                config.angleLimit = (unsigned char) atoi(argv[++i]);
             } else if (s == "--threads") {
-                threads = atoi(argv[++i]);
+                config.threads = atoi(argv[++i]);
             } else if (s == "-b") {
-                bounds.extend(atof(argv[i + 1]), atof(argv[i + 2]));
-                bounds.extend(atof(argv[i + 3]), atof(argv[i + 4]));
+                config.bounds.extend(atof(argv[i + 1]), atof(argv[i + 2]));
+                config.bounds.extend(atof(argv[i + 3]), atof(argv[i + 4]));
                 i += 4;
             } else {
-                files.push_back(argv[i]);
+                config.sourceFiles.push_back(argv[i]);
             }
         }
 
-        if (gui) {
+        if (!config.check()) {
             return runWithUI(argc, argv);
         } else {
             PointStats lg;
-            PointStatsConfig config;
-            config.dstFiles = dstFiles;
-            config.sourceFiles = files;
-            config.classes = classes;
-            config.hsrid = crs;
-            config.attribute = config.parseAtt(att);
-            config.types = config.parseTypes(types);
-            config.resolution = resolution;
-            config.bounds = bounds;
-            config.angleLimit = angleLimit;
-            config.fill = fill;
-            config.snap = snap;
-            config.threads = threads;
-            config.gapFractionType = config.parseGap(gap);
-            config.rebuild = rebuild;
-            config.normalize = normalize;
-            config.threshold = gapThreshold;
             lg.pointstats(config);
         }
 

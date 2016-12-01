@@ -197,6 +197,10 @@ namespace geotools {
             std::string print() const;
 
             void print(std::ostream &str) const;
+            
+            std::string toString() const;
+            
+            void fromString(const std::string&);
 
         };
 

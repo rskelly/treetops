@@ -18,8 +18,8 @@ using namespace geotools::util;
 using namespace geotools::csv;
 
 CRSSelector::CRSSelector(QWidget *parent, Qt::WindowFlags f) :
-        QDialog(parent, f),
-        m_vsrid(0), m_hsrid(0) {
+    QDialog(parent, f),
+    m_vsrid(0), m_hsrid(0) {
     initUi();
 }
 
