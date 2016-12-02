@@ -94,6 +94,8 @@ namespace geotools {
             uint32_t quantileFilterFrom;
             uint32_t quantileFilterTo;
 
+            PointStatsConfig();
+            
             /**
              * Interpret the attribute and  return the constant int value.
              */

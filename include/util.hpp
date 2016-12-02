@@ -176,6 +176,10 @@ namespace geotools {
 
             int rows(double resolution) const;
 
+            int toCol(double x, double resolution) const;
+            
+            int toRow(double y, double resolution) const;
+            
             void extend(const geotools::util::Bounds &b);
 
             void extendX(double x);
@@ -203,6 +207,7 @@ namespace geotools {
             void fromString(const std::string&);
 
             void align(double x, double y, double xres, double yres);
+            
         };
 
         class Util;

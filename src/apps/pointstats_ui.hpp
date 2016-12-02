@@ -54,34 +54,26 @@ namespace geotools {
             void selectFilesClicked();
             void removeFilesClicked();
             void clearFilesClicked();
-
             void destFileClicked();
             void snapToGridChanged(bool);
-
             void cancelClicked();
             void runClicked();
-
             void crsConfigClicked();
-
             void typeSelected(int);
-
             void threadsChanged(int);
-
             void quantileChanged(int);
             void quantilesChanged(int);
-
             void attributeSelected(int);
             void resolutionChanged(double);
             void gapFunctionSelected(int);
-
+            void originXChanged(double);
+            void originYChanged(double);
             void quantileFilterFromChanged(int);
             void quantileFilterToChanged(int);
             void quantileFilterChanged(int);
             void maxAngleChanged(int);
             void classItemClicked(QListWidgetItem*);
-
             void done();
-
         };
 
         class WorkerThread : public QThread {

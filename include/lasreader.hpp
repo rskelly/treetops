@@ -178,6 +178,7 @@ private:
     std::vector<std::unique_ptr<LASReader> > m_readers;
     LASReader *m_reader;
     uint32_t m_idx;
+    uint32_t m_cols;
     std::unique_ptr<MemRaster<uint32_t> > m_finalizer;
     double m_resolution;
     Bounds m_bounds;
@@ -192,6 +193,7 @@ private:
             m_bounds.extend(r->bounds());
         }
         buildFinalizer();
+        m_cols = bounds().cols(m_resolution);
     }
 
     void buildFinalizer() {
@@ -201,8 +203,8 @@ private:
                 (int) g_abs(m_bounds.height() / m_resolution), true));
         m_finalizer->fill(0);
         LASPoint pt;
-        bool final;
-        while(next(pt, &final)) {
+        uint64_t finalIdx;
+        while(next(pt, &finalIdx)) {
             int col = (int) ((pt.x - m_bounds.minx()) / m_resolution);
             int row = (int) ((pt.y - m_bounds.miny()) / m_resolution);
             m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
@@ -225,7 +227,11 @@ public:
             r->reset();
     }
     
-    bool next(LASPoint &pt, bool *final) {
+    Bounds bounds() const {
+        return m_bounds;
+    }
+    
+    bool next(LASPoint &pt, uint64_t *finalIdx) {
         if(!m_reader || !m_reader->next(pt)) {
             if(m_idx >= m_readers.size())
                 return false;
@@ -237,31 +243,10 @@ public:
         int col = (int) ((pt.x - m_bounds.minx()) / m_resolution);
         int row = (int) ((pt.y - m_bounds.miny()) / m_resolution);
         uint32_t count = m_finalizer->get(col, row);
-        *final = count == 1;
         m_finalizer->set(col, row, count - 1);
+        if(count == 1)
+            *finalIdx = (uint64_t) row * m_cols + col;
         return true;
-    }
-    
-    void generateFinalPoly() {
-        std::list<Polygon_with_holes_2> polys(m_finalized.begin(), m_finalized.end());
-        for(int row = 0; row < m_finalizer->rows(); ++row) {
-        for(int col = 0; col < m_finalizer->cols(); ++col) {
-            double x1 = m_bounds.minx() + col * m_resolution;
-            double x2 = m_bounds.minx() + (col + 1) * m_resolution;
-            double y1 = m_bounds.miny() + row * m_resolution;
-            double y2 = m_bounds.miny() + (row + 1) * m_resolution;
-            std::list<Point_2> pts;
-            pts.push_back(Point_2(x1, y1));
-            pts.push_back(Point_2(x1, y2));
-            pts.push_back(Point_2(x2, y2));
-            pts.push_back(Point_2(x2, y1));
-            pts.push_back(Point_2(x1, y1));
-            Polygon_with_holes_2 poly(Polygon_2(pts.begin(), pts.end()));
-            polys.push_back(std::move(poly));
-            m_finalized.clear();
-            CGAL::intersection(polys.begin(), polys.end(), std::back_inserter(m_finalized));
-        }
-        }
     }
 };
 #endif

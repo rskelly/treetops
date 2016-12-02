@@ -78,7 +78,7 @@ namespace geotools {
 
         } // config
 
-        PointStatsConfig::PointStatsConfig() {
+        PointStatsConfig::PointStatsConfig() : 
             fill(false),
             snap(false),
             rebuild(false),
@@ -248,11 +248,10 @@ namespace geotools {
                         std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
                         int bands = m_computers[i]->bands();
                         Buffer buf(sizeof(double) * bands);
-                        double *value = (double *) buf.data();
-                        m_computers[i]->compute(pts, value);
+                        m_computers[i]->compute(pts, (double *) buf.buf);
                         int b = 0;
                         for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
-                            m->set(idx, value[b++]);
+                            m->set(idx, ((double *) buf.buf)[b++]);
                     }
                     for (LASPoint *pt : pts)
                         delete pt;
@@ -261,27 +260,6 @@ namespace geotools {
             }
             g_debug(" -- exit thread");
         }
-
-        class FileSorter {
-            private:
-                double m_colSize;
-                double m_rowSize;
-            public:
-
-                FileSorter(double colSize, double rowSize) :
-                m_colSize(colSize), m_rowSize(rowSize) {
-                }
-
-                bool operator()(const std::string &a, const std::string &b) {
-                    LASReader ar(a);
-                    LASReader br(b);
-                    Bounds ab = ar.bounds();
-                    Bounds bb = br.bounds();
-                    int idxa = ((int) (ab.miny() / m_rowSize)) * ((int) (ab.width() / m_colSize)) + ((int) (ab.minx() / m_colSize));
-                    int idxb = ((int) (bb.miny() / m_rowSize)) * ((int) (bb.width() / m_colSize)) + ((int) (bb.minx() / m_colSize));
-                    return idxa < idxb;
-                }
-            };
             
         void PointStats::pointstats(const PointStatsConfig &config, const Callbacks *callbacks) {
 
@@ -294,10 +272,10 @@ namespace geotools {
             }
 
             // Initialize the point stream; it expects a vector. 
-            FinalizedPointStream ps(config.sourceFiles, g_abs(config.resolution));
+            LASMultiReader ps(config.sourceFiles, g_abs(config.resolution));
             Bounds bounds = ps.bounds();
-            g_debug(" -- pointstats - work bounds: " << bounds.print() << "; " << ps.cols() << "x" << ps.rows());
-            bounds.align(-13795354.863, 6222585.59777, config.resolution, -config.resolution);
+            g_debug(" -- pointstats - work bounds: " << bounds.print() << "; " << ps.bounds().cols(config.resolution) << "x" << ps.bounds().rows(config.resolution));
+            bounds.align(config.originX, config.originY, config.resolution, -config.resolution);
             // TODO: Snap?
             
             // Initialize the filter group.
@@ -321,7 +299,7 @@ namespace geotools {
                 g_debug(" -- configuring grid");
                 std::vector<std::unique_ptr<MemRaster<float> > > rasters;
                 for(int b = 0; b < bands; ++b) {
-                    std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(ps.cols(), ps.rows(), true));
+                    std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(ps.bounds().cols(config.resolution), ps.bounds().rows(config.resolution), true));
                     mr->fill(-9999.0);
                     mr->nodata(-9999.0);
                     rasters.push_back(std::move(mr));
@@ -337,7 +315,7 @@ namespace geotools {
             // Initialize the thread group for runner.
             std::list<std::thread> threads;
             m_running = true;
-            size_t finalIdx = 0;
+            uint64_t finalIdx = 0;
 
             // Start the runner threads.
             for (uint32_t i = 0; i < g_max(1, config.threads - 1); ++i) {
@@ -348,10 +326,13 @@ namespace geotools {
             // Begin streaming the points into the cache for processing.
             g_debug(" -- streaming points");
             LASPoint pt;
+            Bounds b = ps.bounds();
+            int cols = b.cols(config.resolution);
             while (ps.next(pt, &finalIdx)) {
                 {
                     std::unique_lock<std::mutex> lk(m_cmtx);
-                    m_cache[ps.toIdx(pt)].push_back(new LASPoint(pt));
+                    uint64_t idx = b.toRow(pt.y, config.resolution) * cols + b.toCol(pt.x, config.resolution);
+                    m_cache[idx].push_back(new LASPoint(pt));
                 }
                 if (finalIdx) {
                     std::unique_lock<std::mutex> lk(m_qmtx);

@@ -149,6 +149,22 @@ int Bounds::rows(double resolution) const {
     return g_max(1, (int) std::ceil(height() / resolution));
 }
 
+int Bounds::toCol(double x, double resolution) const {
+    if(resolution > 0) {
+        return (int) ((x - minx()) / width() * resolution);
+    } else {
+        return (int) ((x - maxx()) / width() * resolution);
+    }
+}
+            
+int Bounds::toRow(double y, double resolution) const {
+    if(resolution > 0) {
+        return (int) ((y - miny()) / height() * resolution);
+    } else {
+        return (int) ((y - maxy()) / height() * resolution);
+    }
+}
+
 void Bounds::extend(const Bounds &b) {
     m_minx = g_min(b.minx(), m_minx);
     m_maxx = g_max(b.maxx(), m_maxx);
@@ -265,6 +281,7 @@ void Bounds::align(double x, double y, double xres, double yres) {
         y += yres;
     m_maxy = y;
 }
+
 
 double Util::computeArea(double x1, double y1, double z1, 
         double x2, double y2, double z2, 

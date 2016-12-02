@@ -171,7 +171,9 @@ void PointStatsForm::setupUi(QWidget *form) {
     spnQuantileFilterTo->setValue(m_config.quantileFilterTo);
     spnQuantiles->setValue(m_config.quantiles);
     spnQuantile->setValue(m_config.quantile);
-
+    spnOriginX->setValue(m_config.originX);
+    spnOriginY->setValue(m_config.originY);
+    
     int i = 0;
     int defaultIdx = -1;
     for (const auto &it : types) {
@@ -227,18 +229,32 @@ void PointStatsForm::setupUi(QWidget *form) {
     connect(chkSnapToGrid, SIGNAL(toggled(bool)), this, SLOT(snapToGridChanged(bool)));
     connect(cboAttribute, SIGNAL(currentIndexChanged(int)), this, SLOT(attributeSelected(int)));
     connect(cboGapFunction, SIGNAL(currentIndexChanged(int)), this, SLOT(gapFunctionSelected(int)));
-    connect(spnThreads, SIGNAL(valueChanged(int)), SLOT(threadsChanged(int)));
-    connect(spnQuantile, SIGNAL(valueChanged(int)), SLOT(quantileChanged(int)));
-    connect(spnQuantiles, SIGNAL(valueChanged(int)), SLOT(quantilesChanged(int)));
-    connect(spnMaxAngle, SIGNAL(valueChanged(int)), SLOT(maxAngleChanged(int)));
+    connect(spnThreads, SIGNAL(valueChanged(int)), this, SLOT(threadsChanged(int)));
+    connect(spnQuantile, SIGNAL(valueChanged(int)), this, SLOT(quantileChanged(int)));
+    connect(spnQuantiles, SIGNAL(valueChanged(int)), this, SLOT(quantilesChanged(int)));
+    connect(spnMaxAngle, SIGNAL(valueChanged(int)),this,  SLOT(maxAngleChanged(int)));
+    connect(spnOriginX, SIGNAL(valueChanged(double)), this, SLOT(originXChanged(double)));
+    connect(spnOriginY, SIGNAL(valueChanged(double)), this, SLOT(originYChanged(double)));
+    connect(spnQuantileFilter, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterChanged(int)));
+    connect(spnQuantileFilterFrom, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterFromChanged(int)));
+    connect(spnQuantileFilterTo, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterToChanged(int)));
+    
     connect((PointStatsCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
     connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
-    connect(spnQuantileFilter, SIGNAL(valueChanged(int)), SLOT(quantileFilterChanged(int)));
-    connect(spnQuantileFilterFrom, SIGNAL(valueChanged(int)), SLOT(quantileFilterFromChanged(int)));
-    connect(spnQuantileFilterTo, SIGNAL(valueChanged(int)), SLOT(quantileFilterToChanged(int)));
-
     updateTypeUi();
+}
+
+void PointStatsform::originXChanged(double x) {
+    m_config.originX = x;
+    g_debug(" -- originX " << x);
+    checkRun();
+}
+
+void PointStatsform::originYChanged(double y) {
+    m_config.originY = y;
+    g_debug(" -- originY " << y);
+    checkRun();
 }
 
 void PointStatsForm::quantileFilterChanged(int quantiles) {
