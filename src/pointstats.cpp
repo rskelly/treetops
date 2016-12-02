@@ -228,6 +228,7 @@ namespace geotools {
             uint64_t idx;
             std::list<LASPoint*> pts;
             while (m_running || !m_bq.empty()) {
+                if(*m_cancel) break;
                 {
                     std::unique_lock<std::mutex> lk(m_qmtx);
                     m_cdn.wait(lk);
@@ -236,7 +237,7 @@ namespace geotools {
                     idx = m_bq.front();
                     m_bq.pop();
                 }
-
+                if(*m_cancel) break;
                 {
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     pts.assign(m_cache[idx].begin(), m_cache[idx].end());
@@ -261,21 +262,28 @@ namespace geotools {
             g_debug(" -- exit thread");
         }
             
-        void PointStats::pointstats(const PointStatsConfig &config, const Callbacks *callbacks) {
+        bool _cancel = false;
+        
+        void PointStats::pointstats(const PointStatsConfig &config, const Callbacks *callbacks, bool *cancel) {
 
             checkConfig(config);
 
+            m_cancel = cancel == nullptr ? &_cancel : cancel;
+            
             if (config.threads > 0) {
                 g_debug(" -- pointstats running with " << g_max(1, config.threads - 1) << " threads");
             } else {
                 g_argerr("Run with >=1 threads.");
             }
 
+            if(*cancel) return;
+            
             // Initialize the point stream; it expects a vector. 
             LASMultiReader ps(config.sourceFiles, g_abs(config.resolution));
             Bounds bounds = ps.bounds();
-            g_debug(" -- pointstats - work bounds: " << bounds.print() << "; " << ps.bounds().cols(config.resolution) << "x" << ps.bounds().rows(config.resolution));
             bounds.align(config.originX, config.originY, config.resolution, -config.resolution);
+            int cols = bounds.cols(config.resolution);
+            int rows = bounds.rows(config.resolution);
             // TODO: Snap?
             
             // Initialize the filter group.
@@ -287,6 +295,7 @@ namespace geotools {
 
             // Create a computer, grid and mutex for each statistic.
             for (size_t i = 0; i < config.types.size(); ++i) {
+                if(*cancel) return;
                 // Create computers for each stat
                 g_debug(" -- configuring computer " << (int) config.types[i]);
                 std::unique_ptr<CellStats> cs(getComputer(config.types[i], config));
@@ -299,7 +308,7 @@ namespace geotools {
                 g_debug(" -- configuring grid");
                 std::vector<std::unique_ptr<MemRaster<float> > > rasters;
                 for(int b = 0; b < bands; ++b) {
-                    std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(ps.bounds().cols(config.resolution), ps.bounds().rows(config.resolution), true));
+                    std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(cols, rows, true));
                     mr->fill(-9999.0);
                     mr->nodata(-9999.0);
                     rasters.push_back(std::move(mr));
@@ -315,8 +324,9 @@ namespace geotools {
             // Initialize the thread group for runner.
             std::list<std::thread> threads;
             m_running = true;
-            uint64_t finalIdx = 0;
-
+            uint64_t finalIdx;
+            bool final;
+            
             // Start the runner threads.
             for (uint32_t i = 0; i < g_max(1, config.threads - 1); ++i) {
                 std::thread t(_runner, this);
@@ -327,14 +337,14 @@ namespace geotools {
             g_debug(" -- streaming points");
             LASPoint pt;
             Bounds b = ps.bounds();
-            int cols = b.cols(config.resolution);
-            while (ps.next(pt, &finalIdx)) {
+            while (ps.next(pt, &final, &finalIdx)) {
+                if(*cancel) return;
                 {
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     uint64_t idx = b.toRow(pt.y, config.resolution) * cols + b.toCol(pt.x, config.resolution);
                     m_cache[idx].push_back(new LASPoint(pt));
                 }
-                if (finalIdx) {
+                if (final) {
                     std::unique_lock<std::mutex> lk(m_qmtx);
                     m_bq.push(finalIdx);
                     m_cdn.notify_one();
@@ -343,7 +353,7 @@ namespace geotools {
 
             m_running = false;
             while (!m_bq.empty())
-                m_cdn.notify_one();
+                m_cdn.notify_all();
             g_debug("done");
 
             // Shut down and join the runners.
@@ -352,6 +362,7 @@ namespace geotools {
 
             // Write the grids to files.
             for (size_t i = 0; i < m_mem.size(); ++i) {
+                if(*cancel) return;
                 // Normalize the grids if desired.
                 if (config.normalize) {
                     g_debug(" -- normalizing");
@@ -363,6 +374,7 @@ namespace geotools {
                 g_debug(" -- preparing " << config.dstFiles[i]);
                 int band = 0;
                 for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i]) {
+                    if(*cancel) return;
                     std::string file;
                     if(config.dstFiles.size()) {
                         std::stringstream ss;

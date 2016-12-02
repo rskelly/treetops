@@ -522,9 +522,12 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="btnExit">
+       <widget class="QPushButton" name="btnRun">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
-         <string>Exit</string>
+         <string>Run</string>
         </property>
        </widget>
       </item>
@@ -539,12 +542,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnRun">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
+       <widget class="QPushButton" name="btnExit">
         <property name="text">
-         <string>Run</string>
+         <string>Exit</string>
         </property>
        </widget>
       </item>

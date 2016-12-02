@@ -40,6 +40,8 @@ void _loadConfig(PointStatsConfig &config) {
     config.quantiles = qs.value("quantiles", dummy.quantiles).toInt();
     config.rebuild = qs.value("rebuild", dummy.rebuild).toBool();
     config.resolution = qs.value("resolution", dummy.resolution).toDouble();
+    config.originX = qs.value("originX", dummy.originX).toDouble();
+    config.originY = qs.value("originY", dummy.originY).toDouble();
     config.snap = qs.value("snap", dummy.snap).toBool();
     config.threads = qs.value("threads", dummy.threads).toInt();
     config.vsrid = qs.value("vsid", dummy.vsrid).toInt();
@@ -74,6 +76,8 @@ void _saveConfig(PointStatsConfig &config) {
     qs.setValue("quantiles", config.quantiles);
     qs.setValue("rebuild", config.rebuild);
     qs.setValue("resolution", config.resolution);
+    qs.setValue("originX", config.originX);
+    qs.setValue("originY", config.originY);
     qs.setValue("snap", config.snap);
     qs.setValue("threads", config.threads);
     qs.setValue("vsid", config.vsrid);
@@ -112,7 +116,7 @@ void WorkerThread::run() {
     try {
         m_error = "";
         geotools::point::PointStats l;
-        l.pointstats(m_parent->m_config, m_parent->m_callbacks);
+        l.pointstats(m_parent->m_config, m_parent->m_callbacks, &m_parent->m_cancel);
     } catch (const std::exception &e) {
         m_error = e.what();
     }
@@ -148,6 +152,9 @@ void PointStatsForm::setupUi(QWidget *form) {
     Ui::PointStatsForm::setupUi(form);
 
     m_form = form;
+    m_filter = QString("LAS Files (*.las)");
+    m_cancel = false;
+    
     if (_settings.contains("last_dir")) {
         m_last.setPath(_settings.value("last_dir").toString());
     } else {
@@ -159,13 +166,12 @@ void PointStatsForm::setupUi(QWidget *form) {
 
     _loadConfig(m_config);
     
-    g_debug("x");
-    
     spnResolution->setValue(m_config.resolution);
     spnMaxAngle->setValue(m_config.angleLimit);
     spnThreads->setValue(m_config.threads);
     spnThreads->setMaximum(g_max(1, omp_get_num_procs()));
     chkSnapToGrid->setChecked(m_config.snap);
+    spnGapThreshold->setValue(m_config.gapThreshold);
     spnQuantileFilter->setValue(m_config.quantileFilter);
     spnQuantileFilterFrom->setValue(m_config.quantileFilterFrom);
     spnQuantileFilterTo->setValue(m_config.quantileFilterTo);
@@ -173,15 +179,15 @@ void PointStatsForm::setupUi(QWidget *form) {
     spnQuantile->setValue(m_config.quantile);
     spnOriginX->setValue(m_config.originX);
     spnOriginY->setValue(m_config.originY);
+    if(m_config.dstFiles.size())
+        txtDestFile->setText(m_config.dstFiles[0].c_str());
     
     int i = 0;
     int defaultIdx = -1;
     for (const auto &it : types) {
         cboType->addItem(it.first.c_str(), QVariant(it.second));
-        if (std::find(m_config.types.begin(), m_config.types.end(), it.second) != m_config.types.end()) {
+        if (std::find(m_config.types.begin(), m_config.types.end(), it.second) != m_config.types.end())
             defaultIdx = i;
-            break;
-        }
         ++i;
     }
     cboType->setCurrentIndex(defaultIdx);
@@ -215,20 +221,21 @@ void PointStatsForm::setupUi(QWidget *form) {
         lstClasses->addItem(item);
     }
 
-    connect(btnSelectFiles, SIGNAL(clicked()), this, SLOT(selectFilesClicked()));
-    connect(btnRemoveSelected, SIGNAL(clicked()), this, SLOT(removeFilesClicked()));
-    connect(btnClearFiles, SIGNAL(clicked()), this, SLOT(clearFilesClicked()));
+    m_fileList.init(this, btnAddFiles, btnRemoveAllFiles, btnRemoveSelectedFiles, 
+            lstFiles, m_last, m_filter);
+    m_fileList.setFiles(m_config.sourceFiles);
+    
     connect(btnCancel, SIGNAL(clicked()), this, SLOT(cancelClicked()));
     connect(btnRun, SIGNAL(clicked()), this, SLOT(runClicked()));
+    connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
     connect(btnDestFile, SIGNAL(clicked()), this, SLOT(destFileClicked()));
-    connect(lstFiles, SIGNAL(itemSelectionChanged()), this, SLOT(fileListSelectionChanged()));
-    connect(lstClasses, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(classItemClicked(QListWidgetItem*)));
     connect(btnCRSConfig, SIGNAL(clicked()), this, SLOT(crsConfigClicked()));
     connect(cboType, SIGNAL(currentIndexChanged(int)), this, SLOT(typeSelected(int)));
     connect(spnResolution, SIGNAL(valueChanged(double)), this, SLOT(resolutionChanged(double)));
     connect(chkSnapToGrid, SIGNAL(toggled(bool)), this, SLOT(snapToGridChanged(bool)));
     connect(cboAttribute, SIGNAL(currentIndexChanged(int)), this, SLOT(attributeSelected(int)));
     connect(cboGapFunction, SIGNAL(currentIndexChanged(int)), this, SLOT(gapFunctionSelected(int)));
+    connect(spnGapThreshold, SIGNAL(valueChanged(double)), this, SLOT(gapThresholdChanged(double)));
     connect(spnThreads, SIGNAL(valueChanged(int)), this, SLOT(threadsChanged(int)));
     connect(spnQuantile, SIGNAL(valueChanged(int)), this, SLOT(quantileChanged(int)));
     connect(spnQuantiles, SIGNAL(valueChanged(int)), this, SLOT(quantilesChanged(int)));
@@ -238,20 +245,29 @@ void PointStatsForm::setupUi(QWidget *form) {
     connect(spnQuantileFilter, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterChanged(int)));
     connect(spnQuantileFilterFrom, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterFromChanged(int)));
     connect(spnQuantileFilterTo, SIGNAL(valueChanged(int)), this, SLOT(quantileFilterToChanged(int)));
-    
+    connect(lstClasses, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(classItemClicked(QListWidgetItem*)));
+    connect(txtDestFile, SIGNAL(textChanged(QString)), this, SLOT(destFileChanged(QString)));
+    connect(&m_fileList, SIGNAL(fileListChanged()), this, SLOT(fileListChanged()));
+
     connect((PointStatsCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
     connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
     updateTypeUi();
+    checkRun();
 }
 
-void PointStatsform::originXChanged(double x) {
+void PointStatsForm::fileListChanged() {
+    m_config.sourceFiles = m_fileList.files();
+    checkRun();
+}
+
+void PointStatsForm::originXChanged(double x) {
     m_config.originX = x;
     g_debug(" -- originX " << x);
     checkRun();
 }
 
-void PointStatsform::originYChanged(double y) {
+void PointStatsForm::originYChanged(double y) {
     m_config.originY = y;
     g_debug(" -- originY " << y);
     checkRun();
@@ -283,6 +299,7 @@ void PointStatsForm::classItemClicked(QListWidgetItem *item) {
         m_config.classes.erase(c);
     }
     g_debug(" -- classes " << m_config.classes.size());
+    checkRun();
 }
 
 void PointStatsForm::threadsChanged(int threads) {
@@ -323,6 +340,11 @@ void PointStatsForm::gapFunctionSelected(int index) {
     checkRun();
 }
 
+void PointStatsForm::gapThresholdChanged(double t) {
+    m_config.gapThreshold = t;
+    g_debug(" -- gap threshold " << m_config.gapThreshold);
+    checkRun();
+}
 void PointStatsForm::snapToGridChanged(bool state) {
     m_config.snap = state;
     g_debug(" -- snap " << m_config.snap);
@@ -347,6 +369,8 @@ void PointStatsForm::updateTypeUi() {
     lblGapFunction->setVisible(type == TYPE_GAP_FRACTION);
     lblAttribute->setVisible(type != TYPE_GAP_FRACTION);
     cboAttribute->setVisible(type != TYPE_GAP_FRACTION);
+    spnGapThreshold->setVisible(type == TYPE_GAP_FRACTION);
+    lblGapThreshold->setVisible(type == TYPE_GAP_FRACTION);
 }
 
 void PointStatsForm::typeSelected(int index) {
@@ -378,22 +402,21 @@ void PointStatsForm::crsConfigClicked() {
     checkRun();
 }
 
-void PointStatsForm::fileListSelectionChanged() {
-    updateFileButtons();
+void PointStatsForm::destFileChanged(QString file) {
+    if(m_config.dstFiles.size()) {
+        m_config.dstFiles[0] = file.toStdString();
+    } else {
+        m_config.dstFiles.push_back(file.toStdString());
+    }
+    g_debug(" -- dest file " << m_config.dstFiles[0]);
     checkRun();
 }
 
 void PointStatsForm::destFileClicked() {
     QString res = QFileDialog::getSaveFileName(this, "Save File", m_last.path(), "GeoTiff (*.tif *.tiff)");
-    if(m_config.dstFiles.size()) {
-        m_config.dstFiles[0] = res.toStdString();
-    } else {
-        m_config.dstFiles.push_back(res.toStdString());
-    }
     m_last.setPath(res);
     _settings.setValue("last_dir", m_last.path());
     txtDestFile->setText(res);
-    g_debug(" -- dest file " << m_config.dstFiles[0]);
     checkRun();
 }
 
@@ -402,17 +425,15 @@ void PointStatsForm::runClicked() {
     if (m_workerThread->isRunning())
         return;
 
-    btnRun->setEnabled(false);
-    btnCancel->setEnabled(false);
-
     // TODO: Bounds
     Bounds bounds;
     m_workerThread->init(this, bounds);
     m_workerThread->start();
-
+    checkRun();
 }
 
 void PointStatsForm::done() {
+    g_debug(" -- done");
     if (m_workerThread->hasError()) {
         QMessageBox err((QWidget *) this);
         err.setText("Error");
@@ -420,72 +441,25 @@ void PointStatsForm::done() {
         err.exec();
     }
     checkRun();
-    btnCancel->setEnabled(true);
 }
 
 void PointStatsForm::cancelClicked() {
-    g_trace("quit");
+    g_debug("cancel");
+    m_cancel = true;
+}
+
+void PointStatsForm::exitClicked() {
+    g_debug("quit");
     m_form->close();
-}
-
-void PointStatsForm::updateFileList() {
-    while (lstFiles->count())
-        lstFiles->takeItem(0);
-    for (const std::string &file : m_config.sourceFiles)
-        lstFiles->addItem(QString(file.c_str()));
-    updateFileButtons();
-    checkRun();
-}
-
-void PointStatsForm::updateFileButtons() {
-    btnClearFiles->setEnabled(lstFiles->count() > 0);
-    btnRemoveSelected->setEnabled(lstFiles->selectedItems().size() > 0);
-}
-
-void PointStatsForm::removeFilesClicked() {
-    std::vector<std::string> lst;
-    unsigned int i = 0;
-    for (const std::string &file : m_config.sourceFiles) {
-        QListWidgetItem *item = lstFiles->item(i);
-        if (!item->isSelected())
-            lst.push_back(file);
-        ++i;
-    }
-    m_config.sourceFiles.clear();
-    m_config.sourceFiles.assign(lst.begin(), lst.end());
-    g_debug(" -- source files " << m_config.sourceFiles.size());
-    updateFileList();
-    checkRun();
-}
-
-void PointStatsForm::clearFilesClicked() {
-    m_config.sourceFiles.clear();
-    g_debug(" -- source files " << m_config.sourceFiles.size());
-    updateFileList();
-    checkRun();
-}
-
-void PointStatsForm::selectFilesClicked() {
-    QFileDialog d(m_form);
-    d.setDirectory(m_last);
-    d.setFileMode(QFileDialog::ExistingFiles);
-    d.setNameFilter(QString("LAS Files (*.las)"));
-    if (d.exec()) {
-        QStringList files = d.selectedFiles();
-        m_last = d.directory();
-        _settings.setValue("last_dir", m_last.path());
-        std::set<std::string> tmp(m_config.sourceFiles.begin(), m_config.sourceFiles.end());
-        for (int i = 0; i < files.size(); ++i)
-            tmp.insert(files[i].toStdString());
-        m_config.sourceFiles.clear();
-        m_config.sourceFiles.assign(tmp.begin(), tmp.end());
-    }
-    g_debug(" -- source files " << m_config.sourceFiles.size());
-    updateFileList();
-    checkRun();
 }
 
 void PointStatsForm::checkRun() {
     // TODO: Check runnable.
-    btnRun->setEnabled(true);
+    bool canRun = !m_workerThread->isRunning();
+    bool canExit = !m_workerThread->isRunning();
+    bool canCancel = m_workerThread->isRunning();
+    
+    btnRun->setEnabled(canRun);
+    btnCancel->setEnabled(canCancel);
+    btnExit->setEnabled(canExit);
 }

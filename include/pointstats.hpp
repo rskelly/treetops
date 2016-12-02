@@ -43,21 +43,6 @@ namespace geotools {
 
         namespace pointstats_config {
 
-            extern double defaultResolution;
-            extern bool defaultSnapToGrid;
-            extern bool defaultNormalize;
-            extern uint8_t defaultType;
-            extern uint8_t defaultAngleLimit;
-            extern uint8_t defaultAttribute;
-            extern uint8_t defaultGapFraction;
-            extern uint32_t defaultQuantile;
-            extern uint32_t defaultQuantiles;
-            extern uint32_t defaultFilterQuantiles;
-            extern uint32_t defaultFilterQuantileFrom;
-            extern uint32_t defaultFilterQuantileTo;
-            extern uint32_t defaultThreads;
-
-            extern std::set<uint8_t> defaultClasses;
             extern std::map<std::string, uint8_t> types;
             extern std::map<std::string, uint8_t> attributes;
             extern std::map<std::string, uint8_t> gapFractionTypes;
@@ -153,6 +138,7 @@ namespace geotools {
             std::condition_variable m_cdn;
 
             bool m_running;
+            bool *m_cancel;
             std::unordered_map<size_t, std::list<geotools::las::LASPoint*> > m_cache;
             std::queue<size_t> m_idxq;
             std::vector<std::unique_ptr<geotools::point::stats::CellStats> > m_computers;
@@ -195,7 +181,7 @@ namespace geotools {
             /**
              * Execute the gridding process.
              */
-            void pointstats(const PointStatsConfig &config, const Callbacks *callbacks = nullptr);
+            void pointstats(const PointStatsConfig &config, const Callbacks *callbacks = nullptr, bool *cancel = nullptr);
         };
 
     } // las

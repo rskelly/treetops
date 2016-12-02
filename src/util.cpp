@@ -142,26 +142,30 @@ double Bounds::depth() const {
 }
 
 int Bounds::cols(double resolution) const {
-    return g_max(1, (int) std::ceil(width() / resolution));
+    return (int) g_abs(width() / resolution) + 1;
 }
 
 int Bounds::rows(double resolution) const {
-    return g_max(1, (int) std::ceil(height() / resolution));
+    return (int) g_abs(height() / resolution) + 1;
 }
 
 int Bounds::toCol(double x, double resolution) const {
+    if(width() == 0.0)
+        return 0;
     if(resolution > 0) {
-        return (int) ((x - minx()) / width() * resolution);
+        return (int) ((x - m_minx) / width() * g_abs(width() / resolution));
     } else {
-        return (int) ((x - maxx()) / width() * resolution);
+        return (int) ((x - m_maxx) / width() * g_abs(width() / resolution));
     }
 }
             
 int Bounds::toRow(double y, double resolution) const {
+    if(height() == 0.0)
+        return 0;
     if(resolution > 0) {
-        return (int) ((y - miny()) / height() * resolution);
+        return (int) ((y - m_miny) / height() * g_abs(height() / resolution));
     } else {
-        return (int) ((y - maxy()) / height() * resolution);
+        return (int) ((y - m_maxy) / height() * g_abs(height() / resolution));
     }
 }
 

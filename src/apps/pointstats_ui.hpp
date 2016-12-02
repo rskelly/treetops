@@ -12,6 +12,7 @@
 #include "util.hpp"
 #include "pointstats.hpp"
 #include "ui_pointstats.h"
+#include "filelist.hpp"
 
 namespace geotools {
 
@@ -38,6 +39,9 @@ namespace geotools {
             WorkerThread *m_workerThread;
             geotools::util::Callbacks *m_callbacks;
             geotools::point::PointStatsConfig m_config;
+            FileList m_fileList;
+            QString m_filter;
+            bool m_cancel;
             
             void updateFileList();
             void updateFileButtons();
@@ -50,14 +54,12 @@ namespace geotools {
             ~PointStatsForm();
 
         public slots:
-            void fileListSelectionChanged();
-            void selectFilesClicked();
-            void removeFilesClicked();
-            void clearFilesClicked();
             void destFileClicked();
+            void destFileChanged(QString);
             void snapToGridChanged(bool);
             void cancelClicked();
             void runClicked();
+            void exitClicked();
             void crsConfigClicked();
             void typeSelected(int);
             void threadsChanged(int);
@@ -73,6 +75,8 @@ namespace geotools {
             void quantileFilterChanged(int);
             void maxAngleChanged(int);
             void classItemClicked(QListWidgetItem*);
+            void fileListChanged();
+            void gapThresholdChanged(double);
             void done();
         };
 

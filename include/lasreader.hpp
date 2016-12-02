@@ -189,8 +189,8 @@ private:
         for(const std::string &file : files) {
             std::unique_ptr<LASReader> r(new LASReader(file));
             m_files.push_back(file);
-            m_readers.push_back(std::move(r));
             m_bounds.extend(r->bounds());
+            m_readers.push_back(std::move(r));
         }
         buildFinalizer();
         m_cols = bounds().cols(m_resolution);
@@ -199,16 +199,22 @@ private:
     void buildFinalizer() {
         if(m_finalizer.get())
             delete m_finalizer.release();
-        m_finalizer.reset(new MemRaster<uint32_t>((int) g_abs(m_bounds.width() / m_resolution), 
-                (int) g_abs(m_bounds.height() / m_resolution), true));
+        int cols = m_bounds.cols(m_resolution);
+        int rows = m_bounds.rows(m_resolution);
+        g_debug(" -- finalizer: " << cols << ", " << rows);
+        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, true));
         m_finalizer->fill(0);
         LASPoint pt;
-        uint64_t finalIdx;
-        while(next(pt, &finalIdx)) {
-            int col = (int) ((pt.x - m_bounds.minx()) / m_resolution);
-            int row = (int) ((pt.y - m_bounds.miny()) / m_resolution);
-            m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
+        try {
+            while(next(pt, nullptr, nullptr)) {
+                int col = m_bounds.toCol(pt.x, m_resolution);
+                int row = m_bounds.toRow(pt.y, m_resolution);
+                m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
+            }
+        } catch(const std::exception &ex) {
+            g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header.");
         }
+        g_debug(" -- finalizer: " << m_finalizer->cols() << ", " << m_finalizer->rows() << "; " << m_bounds.print());
         reset();
     }
     
@@ -231,7 +237,7 @@ public:
         return m_bounds;
     }
     
-    bool next(LASPoint &pt, uint64_t *finalIdx) {
+    bool next(LASPoint &pt, bool *final, uint64_t *finalIdx) {
         if(!m_reader || !m_reader->next(pt)) {
             if(m_idx >= m_readers.size())
                 return false;
@@ -240,12 +246,18 @@ public:
             if(!m_reader->next(pt))
                 return false;
         }
-        int col = (int) ((pt.x - m_bounds.minx()) / m_resolution);
-        int row = (int) ((pt.y - m_bounds.miny()) / m_resolution);
-        uint32_t count = m_finalizer->get(col, row);
-        m_finalizer->set(col, row, count - 1);
-        if(count == 1)
-            *finalIdx = (uint64_t) row * m_cols + col;
+        if(finalIdx != nullptr) {
+            int col = m_bounds.toCol(pt.x, m_resolution);
+            int row = m_bounds.toRow(pt.y, m_resolution);
+            uint32_t count = m_finalizer->get(col, row);
+            //g_debug(" -- pt " << pt.x << ", " << pt.y << "; " << col << ", " << row << "; " << count << "; " << m_cols);
+            m_finalizer->set(col, row, count - 1);
+            if(count == 1) {
+                *finalIdx = (uint64_t) row * m_cols + col;
+                *final = true;
+                g_debug(" -- final " << *finalIdx);
+            }
+        }
         return true;
     }
 };
