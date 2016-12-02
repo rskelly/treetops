@@ -627,13 +627,7 @@ namespace geotools {
                 }
                 
             public:
-                const static unsigned char IR = GAP_IR;
-                const static unsigned char BLA = GAP_BLA;
-                const static unsigned char BLB = GAP_BLB;
-                const static unsigned char RR = GAP_RR;
-                const static unsigned char FR = GAP_FR;
-                const static unsigned char CCF = GAP_CCF;
-                
+
                 CellGapFraction(unsigned char type, double threshold) : CellStats(),
                     m_type(type),
                     m_threshold(threshold) {
@@ -645,7 +639,7 @@ namespace geotools {
                 
                 int bands() const {
                     switch(m_type) {
-                        case CCF:
+                        case GAP_CCF:
                             return 20;
                         default:
                             return 1;
@@ -659,23 +653,26 @@ namespace geotools {
                         result[0] = -9999.0;
                     } else {
                         switch (m_type) {
-                            case BLA: 
+                            case GAP_BLA: 
                                 fcLidarBLa(filt, result);
                                 break;
-                            case BLB: 
+                            case GAP_BLB: 
                                 fcLidarBLb(filt, result);
                                 break;
-                            case IR: 
+                            case GAP_IR: 
                                 fcLidarIR(filt, result);
                                 break;
-                            case RR: 
+                            case GAP_RR: 
                                 fcLidarRR(filt, result);
                                 break;
-                            case FR: 
+                            case GAP_FR: 
                                 fcLidarFR(filt, result);
                                 break;
-                            case CCF:
+                            case GAP_CCF:
                                 ccf(filt, result);
+                                break;
+                            case GAP_GAP:
+                                gap(filt, result);
                                 break;
                             default:
                                 g_argerr("Unknown Gap Fraction method: " << m_type);

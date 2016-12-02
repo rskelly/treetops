@@ -34,28 +34,11 @@ namespace geotools {
             Q_OBJECT
         private:
             QWidget *m_form;
-            std::string m_destFile;
-            std::list<std::string> m_sourceFiles;
-            std::set<unsigned char> m_classes;
-            bool m_fill;
-            bool m_snap;
-            int m_vsrid;
-            int m_hsrid;
-            int m_attribute;
-            int m_type;
-            int m_quantile;
-            int m_quantiles;
-            double m_resolution;
-            uint32_t m_threads;
-            unsigned char m_angleLimit;
-            unsigned char m_gapFunction;
-            uint32_t m_quantileFilter;
-            uint32_t m_quantileFilterFrom;
-            uint32_t m_quantileFilterTo;
             QDir m_last;
-            geotools::util::Callbacks *m_callbacks;
             WorkerThread *m_workerThread;
-
+            geotools::util::Callbacks *m_callbacks;
+            geotools::point::PointStatsConfig m_config;
+            
             void updateFileList();
             void updateFileButtons();
             void updateTypeUi();

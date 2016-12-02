@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
             } else if (s == "-v") {
                 g_loglevel(G_LOG_DEBUG);
             } else if (s == "-g") {
-                config.gapFractionType = argv[++i];
+                config.gapFractionType = config.parseGap(argv[++i]);
             } else if(s == "-gt") {
                 config.gapThreshold = atof(argv[++i]);
             } else if (s == "-C") {

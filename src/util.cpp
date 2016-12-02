@@ -245,6 +245,27 @@ std::string Bounds::toString() const {
     return ss.str();
 }
 
+void Bounds::align(double x, double y, double xres, double yres) {
+    xres = g_abs(xres);
+    yres = g_abs(yres);
+    while(x < m_minx)
+        x += xres;
+    while(x > m_minx)
+        x -= xres;
+    m_minx = x;
+    while(x < m_maxx)
+        x += xres;
+    m_maxx = x;
+    while(y < m_miny)
+        y += yres;
+    while(y > m_miny)
+        y -= yres;
+    m_miny = y;
+    while(y < m_maxy)
+        y += yres;
+    m_maxy = y;
+}
+
 double Util::computeArea(double x1, double y1, double z1, 
         double x2, double y2, double z2, 
         double x3, double y3, double z3) {

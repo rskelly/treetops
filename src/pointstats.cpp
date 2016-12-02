@@ -45,22 +45,6 @@ namespace geotools {
 
         namespace pointstats_config {
 
-            double defaultResolution = 10.0;
-            bool defaultSnapToGrid = true;
-            bool defaultNormalize = false;
-            uint8_t defaultType = TYPE_MEAN;
-            uint8_t defaultAttribute = ATT_HEIGHT;
-            uint8_t defaultAngleLimit = 180;
-            uint8_t defaultGapFraction = GAP_BLB;
-            uint32_t defaultQuantile = 49;
-            uint32_t defaultQuantiles = 100;
-            uint32_t defaultFilterQuantiles = 100;
-            uint32_t defaultFilterQuantileFrom = 0;
-            uint32_t defaultFilterQuantileTo = 99;
-            uint32_t defaultThreads = 1;
-
-            std::set<uint8_t> defaultClasses = {2};
-
             std::map<std::string, uint8_t> types = {
                 {"Minimum", TYPE_MIN},
                 {"Maximum", TYPE_MAX},
@@ -94,6 +78,28 @@ namespace geotools {
 
         } // config
 
+        PointStatsConfig::PointStatsConfig() {
+            fill(false),
+            snap(false),
+            rebuild(false),
+            normalize(false),
+            resolution(10.0),
+            originX(0.0),
+            originY(0.0),
+            gapThreshold(0.0),
+            threads(1),
+            hsrid(0),
+            vsrid(0),
+            attribute(ATT_HEIGHT),
+            angleLimit(90),
+            quantile(0),
+            quantiles(1),
+            gapFractionType(GAP_GAP),
+            quantileFilter(0),
+            quantileFilterFrom(0),
+            quantileFilterTo(0) {
+        }
+        
         uint8_t PointStatsConfig::parseAtt(const std::string &attStr) {
             if ("intensity" == attStr) {
                 return ATT_INTENSITY;
@@ -202,7 +208,7 @@ namespace geotools {
                 case TYPE_KURTOSIS: return new CellKurtosis();
                 case TYPE_SKEW: return new CellSkewness();
                 case TYPE_QUANTILE: return new CellQuantile(config.quantile, config.quantiles);
-                case TYPE_GAP_FRACTION: return new CellGapFraction(config.gapFractionType, config.threshold);
+                case TYPE_GAP_FRACTION: return new CellGapFraction(config.gapFractionType, config.gapThreshold);
                 default:
                     g_argerr("Invalid statistic type: " << type);
             }
@@ -219,7 +225,7 @@ namespace geotools {
         }
 
         void PointStats::runner() {
-            size_t idx;
+            uint64_t idx;
             std::list<LASPoint*> pts;
             while (m_running || !m_bq.empty()) {
                 {
@@ -235,26 +241,18 @@ namespace geotools {
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     pts.assign(m_cache[idx].begin(), m_cache[idx].end());
                     m_cache.erase(idx);
-                    /*
-                    int cnt = 0;
-                    for(const auto &it : m_cache)
-                            cnt += it.second.size();
-                    g_debug(" -- cache size " << cnt);
-                     */
                 }
 
                 if (!pts.empty()) {
                     for (size_t i = 0; i < m_computers.size(); ++i) {
                         std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
                         int bands = m_computers[i]->bands();
-                        g_debug(" -- bands " << bands);
-                        double *value = (double *) calloc(sizeof(double), bands);
+                        Buffer buf(sizeof(double) * bands);
+                        double *value = (double *) buf.data();
                         m_computers[i]->compute(pts, value);
-                        g_debug(" -- computed " << value[0] << " point " << pts.size());
                         int b = 0;
                         for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
                             m->set(idx, value[b++]);
-                        free(value);
                     }
                     for (LASPoint *pt : pts)
                         delete pt;
@@ -295,16 +293,13 @@ namespace geotools {
                 g_argerr("Run with >=1 threads.");
             }
 
-            // Initialize and spatially sort the file list.
-            FileSorter fileSorter(config.resolution, -config.resolution);
-            std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
-            std::sort(files.begin(), files.end(), fileSorter);
-
             // Initialize the point stream; it expects a vector. 
-            FinalizedPointStream ps(files, g_abs(config.resolution));
+            FinalizedPointStream ps(config.sourceFiles, g_abs(config.resolution));
             Bounds bounds = ps.bounds();
             g_debug(" -- pointstats - work bounds: " << bounds.print() << "; " << ps.cols() << "x" << ps.rows());
-
+            bounds.align(-13795354.863, 6222585.59777, config.resolution, -config.resolution);
+            // TODO: Snap?
+            
             // Initialize the filter group.
             CellStatsFilter *filter = nullptr;
             if (config.hasClasses())
@@ -316,11 +311,10 @@ namespace geotools {
             for (size_t i = 0; i < config.types.size(); ++i) {
                 // Create computers for each stat
                 g_debug(" -- configuring computer " << (int) config.types[i]);
-                CellStats *stats = getComputer(config.types[i], config);
-                int bands = stats->bands();
+                std::unique_ptr<CellStats> cs(getComputer(config.types[i], config));
+                int bands = cs->bands();
                 if (filter)
-                    stats->setFilter(filter);
-                std::unique_ptr<CellStats> cs(stats);
+                    cs->setFilter(filter);
                 m_computers.push_back(std::move(cs));
 
                 // Create raster grid for each stat.
@@ -388,9 +382,15 @@ namespace geotools {
                 g_debug(" -- preparing " << config.dstFiles[i]);
                 int band = 0;
                 for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i]) {
-                    std::stringstream file;
-                    file << config.dstFiles[i] << "_" << ++band << ".tif";
-                    Raster<float> grid(file.str().c_str(), 1, bounds, config.resolution,
+                    std::string file;
+                    if(config.dstFiles.size()) {
+                        std::stringstream ss;
+                        ss << config.dstFiles[i] << "_" << ++band << ".tif";
+                        file = ss.str();
+                    } else {
+                        file = config.dstFiles[i];
+                    }
+                    Raster<float> grid(file.c_str(), 1, bounds, config.resolution,
                         -config.resolution, -9999, config.hsrid);
                     // Write grid to file.
                     g_debug(" -- writing " << config.types[i]);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>752</width>
-    <height>534</height>
+    <width>783</width>
+    <height>535</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <rect>
      <x>10</x>
      <y>14</y>
-     <width>731</width>
+     <width>763</width>
      <height>511</height>
     </rect>
    </property>
@@ -115,7 +115,7 @@
             <item>
              <widget class="QDoubleSpinBox" name="spnResolution">
               <property name="decimals">
-               <number>6</number>
+               <number>10</number>
               </property>
               <property name="minimum">
                <double>0.000001000000000</double>

@@ -1,5 +1,5 @@
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QFileDialog>
+#include <QWidget>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
 
@@ -14,41 +14,85 @@ using namespace geotools::point::pointstats_config;
 
 QSettings _settings("PointStats", "GeoTools");
 
+std::string _str(const QVariant &v) {
+    return v.toString().toStdString();
+}
+
+QString _str(const std::string &s) {
+    return s.c_str();
+}
+
 void _loadConfig(PointStatsConfig &config) {
     PointStatsConfig dummy;
     QSettings qs("PointStatsConfig", "GeoTools");
-    QSettings::SettingsMap map = qs.value(QString("settings"));
-    config.angleLimit = map.value("angleLimit", dummy.angleLimit).toInt();
-    config.attribute = map["attribute"].toInt();
-    config.bounds.fromString(qs.value(QString("bounds"), QString(dummy.bounds.toString())).toString().toStdString());
-    Util::intSplit(config.classes, qs.value(QString("classes"), "").toString().toStdString());
-    Util::splitString(qs.value(QString("dstFiles"), "").toString().toStdString(), config.dstFiles);
-    config.fill = qs.value(QString("fill"), false).toBool();
-    config.gapFractionType = qs.value(QString("gapFractionType"), true).toInt();
-    config.angleLimit = qs.value(QString("angleLimit"), true).toInt();
-    config.angleLimit = qs.value(QString("angleLimit"), true).toInt();
-            
-    config.dropNegative = qs.value(QString("dropNegative"), true).toBool();
-    config.dropGround = qs.value(QString("dropGround"), true).toBool();
-    config.threads = qs.value(QString("threads"), 1).toInt();
-    config.buffer = qs.value(QString("buffer"), 10.0).toDouble();
-    config.outputDir = qs.value(QString("outputDir")).toString().toStdString();
-    QStringList files = qs.value(QString("sourceFiles")).toStringList();
+    config.angleLimit = qs.value("angleLimit", dummy.angleLimit).toInt();
+    config.attribute = qs.value("attribute", dummy.attribute).toInt();
+    config.bounds.fromString(_str(qs.value("bounds", _str(dummy.bounds.toString()))));
+    config.fill = qs.value("fill", dummy.fill).toBool();
+    config.gapFractionType = qs.value("gapFractionType", dummy.gapFractionType).toInt();
+    config.gapThreshold = qs.value("gapThreshold", dummy.gapThreshold).toDouble();
+    config.hsrid = qs.value("hsrid", dummy.hsrid).toInt();
+    config.normalize = qs.value("normalize", dummy.normalize).toBool();
+    config.quantile = qs.value("quantile", dummy.quantile).toInt();
+    config.quantileFilter = qs.value("quantileFilter", dummy.quantileFilter).toInt();
+    config.quantileFilterFrom = qs.value("quantileFilterFrom", dummy.quantileFilterFrom).toInt();
+    config.quantileFilterTo = qs.value("quantileFilterTo", dummy.quantileFilterTo).toInt();
+    config.quantiles = qs.value("quantiles", dummy.quantiles).toInt();
+    config.rebuild = qs.value("rebuild", dummy.rebuild).toBool();
+    config.resolution = qs.value("resolution", dummy.resolution).toDouble();
+    config.snap = qs.value("snap", dummy.snap).toBool();
+    config.threads = qs.value("threads", dummy.threads).toInt();
+    config.vsrid = qs.value("vsid", dummy.vsrid).toInt();
+    QStringList files = qs.value("sourceFiles").toStringList();
     for(const QString &file : files)
         config.sourceFiles.push_back(file.toStdString());
+    QList<QVariant> types = qs.value("types").toList();
+    for(const QVariant &type : types)
+        config.types.push_back(type.toInt());
+    QList<QVariant> classes = qs.value("classes").toList();
+    for(const QVariant &cls : classes)
+        config.classes.insert(cls.toInt());
+    QStringList dstFiles = qs.value("dstFiles").toStringList();
+    for(const QString &file : dstFiles)
+        config.dstFiles.push_back(_str(file));
 }
 
-void _saveConfig(PointNormalizeConfig &config) {
+void _saveConfig(PointStatsConfig &config) {
     QSettings qs("PointStatsConfig", "GeoTools");
-    qs.setValue(QString("dropNegative"), config.dropNegative);
-    qs.setValue(QString("dropGround"), config.dropGround);
-    qs.setValue(QString("threads"), config.threads);
-    qs.setValue(QString("buffer"), config.buffer);
-    qs.setValue(QString("outputDir"), QString(config.outputDir.c_str()));
-    QStringList files;
+    qs.setValue("angleLimit", config.angleLimit);
+    qs.setValue("attribute", config.attribute);
+    qs.setValue("bounds", _str(config.bounds.toString()));
+    qs.setValue("fill", config.fill);
+    qs.setValue("gapFractionType", config.gapFractionType);
+    qs.setValue("gapThreshold", config.gapThreshold);
+    qs.setValue("hsrid", config.hsrid);
+    qs.setValue("normalize", config.normalize);
+    qs.setValue("quantile", config.quantile);
+    qs.setValue("quantileFilter", config.quantileFilter);
+    qs.setValue("quantileFilterFrom", config.quantileFilterFrom);
+    qs.setValue("quantileFilterTo", config.quantileFilterTo);
+    qs.setValue("quantiles", config.quantiles);
+    qs.setValue("rebuild", config.rebuild);
+    qs.setValue("resolution", config.resolution);
+    qs.setValue("snap", config.snap);
+    qs.setValue("threads", config.threads);
+    qs.setValue("vsid", config.vsrid);
+    QList<QVariant> classes;
+    for(const uint8_t &cls : config.classes)
+        classes << QVariant(cls);
+    qs.setValue("classes", classes);
+    QStringList dstFiles;
+    for(const std::string &file : config.dstFiles)
+        dstFiles << file.c_str();
+    qs.setValue("dstFiles", dstFiles);
+    QStringList sourceFiles;
     for(const std::string &file : config.sourceFiles)
-        files << QString(file.c_str());
-    qs.setValue(QString("sourceFiles"), files);
+        sourceFiles << file.c_str();
+    qs.setValue("sourceFiles", sourceFiles);
+    QList<QVariant> types;
+    for(const uint8_t &type : config.types)
+        types << QVariant(type);
+    qs.setValue("types", types);
 }
 
 void PointStatsCallbacks::stepCallback(float status) const {
@@ -68,27 +112,7 @@ void WorkerThread::run() {
     try {
         m_error = "";
         geotools::point::PointStats l;
-
-        geotools::point::PointStatsConfig config;
-        config.dstFiles.push_back(m_parent->m_destFile);
-        config.sourceFiles.assign(m_parent->m_sourceFiles.begin(), m_parent->m_sourceFiles.end());
-        config.classes = m_parent->m_classes;
-        config.hsrid = m_parent->m_hsrid;
-        config.attribute = m_parent->m_attribute;
-        config.types.push_back(m_parent->m_type);
-        config.resolution = m_parent->m_resolution;
-        config.bounds = m_bounds;
-        config.angleLimit = m_parent->m_angleLimit;
-        config.fill = m_parent->m_fill;
-        config.snap = m_parent->m_snap;
-        config.threads = m_parent->m_threads;
-        config.gapFractionType = m_parent->m_gapFunction;
-
-        config.quantileFilterFrom = m_parent->m_quantileFilterFrom;
-        config.quantileFilterTo = m_parent->m_quantileFilterTo;
-        config.quantileFilter = m_parent->m_quantileFilter;
-
-        l.pointstats(config, m_parent->m_callbacks);
+        l.pointstats(m_parent->m_config, m_parent->m_callbacks);
     } catch (const std::exception &e) {
         m_error = e.what();
     }
@@ -103,8 +127,11 @@ std::string WorkerThread::getError() {
 }
 
 PointStatsForm::PointStatsForm(QWidget *p) :
-QWidget(p),
-m_vsrid(0), m_hsrid(0) {
+    QWidget(p),
+    m_form(nullptr), 
+    m_last(QDir::home()),
+    m_workerThread(nullptr),
+    m_callbacks(nullptr) {
 }
 
 PointStatsForm::~PointStatsForm() {
@@ -113,6 +140,7 @@ PointStatsForm::~PointStatsForm() {
         m_workerThread->exit(0);
         delete m_workerThread;
     }
+    _saveConfig(m_config);
 }
 
 void PointStatsForm::setupUi(QWidget *form) {
@@ -120,8 +148,8 @@ void PointStatsForm::setupUi(QWidget *form) {
     Ui::PointStatsForm::setupUi(form);
 
     m_form = form;
-    if (_settings.contains(_last_dir)) {
-        m_last.setPath(_settings.value(_last_dir).toString());
+    if (_settings.contains("last_dir")) {
+        m_last.setPath(_settings.value("last_dir").toString());
     } else {
         m_last = QDir::home();
     }
@@ -129,59 +157,48 @@ void PointStatsForm::setupUi(QWidget *form) {
     m_workerThread = new WorkerThread();
     m_callbacks = new PointStatsCallbacks();
 
-    m_resolution = defaultResolution;
-    spnResolution->setValue(m_resolution);
-
-    m_angleLimit = defaultAngleLimit;
-    spnMaxAngle->setValue(m_angleLimit);
-
-    m_threads = defaultThreads;
-    spnThreads->setValue(m_threads);
+    _loadConfig(m_config);
+    
+    g_debug("x");
+    
+    spnResolution->setValue(m_config.resolution);
+    spnMaxAngle->setValue(m_config.angleLimit);
+    spnThreads->setValue(m_config.threads);
     spnThreads->setMaximum(g_max(1, omp_get_num_procs()));
+    chkSnapToGrid->setChecked(m_config.snap);
+    spnQuantileFilter->setValue(m_config.quantileFilter);
+    spnQuantileFilterFrom->setValue(m_config.quantileFilterFrom);
+    spnQuantileFilterTo->setValue(m_config.quantileFilterTo);
+    spnQuantiles->setValue(m_config.quantiles);
+    spnQuantile->setValue(m_config.quantile);
 
-    m_snap = defaultSnapToGrid;
-    chkSnapToGrid->setCheckState(m_snap ? Qt::Checked : Qt::Unchecked);
-
-    m_quantileFilter = defaultFilterQuantiles;
-    m_quantileFilterTo = defaultFilterQuantileTo;
-    m_quantileFilterFrom = defaultFilterQuantileFrom;
-    spnQuantileFilter->setValue(m_quantileFilter);
-    spnQuantileFilterFrom->setValue(m_quantileFilterFrom);
-    spnQuantileFilterTo->setValue(m_quantileFilterTo);
-
-    m_quantile = defaultQuantile;
-    m_quantiles = defaultQuantiles;
-    spnQuantiles->setValue(m_quantiles);
-    spnQuantile->setValue(m_quantile);
-
-    m_type = defaultType;
     int i = 0;
     int defaultIdx = -1;
     for (const auto &it : types) {
-        cboType->addItem(QString::fromStdString(it.first), QVariant(it.second));
-        if (it.second == m_type)
+        cboType->addItem(it.first.c_str(), QVariant(it.second));
+        if (std::find(m_config.types.begin(), m_config.types.end(), it.second) != m_config.types.end()) {
             defaultIdx = i;
+            break;
+        }
         ++i;
     }
     cboType->setCurrentIndex(defaultIdx);
 
-    m_gapFunction = defaultGapFraction;
     i = 0;
     defaultIdx = -1;
     for (const auto &it : gapFractionTypes) {
-        cboGapFunction->addItem(QString::fromStdString(it.first), QVariant(it.second));
-        if (it.second == m_gapFunction)
+        cboGapFunction->addItem(it.first.c_str(), QVariant(it.second));
+        if (it.second == m_config.gapFractionType)
             defaultIdx = i;
         ++i;
     }
     cboGapFunction->setCurrentIndex(defaultIdx);
 
-    m_attribute = defaultAttribute;
     i = 0;
     defaultIdx = -1;
     for (const auto &it : attributes) {
-        cboAttribute->addItem(QString::fromStdString(it.first), QVariant(it.second));
-        if (it.second == m_attribute)
+        cboAttribute->addItem(it.first.c_str(), QVariant(it.second));
+        if (it.second == m_config.attribute)
             defaultIdx = i;
         ++i;
     }
@@ -192,9 +209,7 @@ void PointStatsForm::setupUi(QWidget *form) {
         str.setNum(i);
         QListWidgetItem *item = new QListWidgetItem(str, lstClasses);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(defaultClasses.count(i) > 0 ? Qt::Checked : Qt::Unchecked);
-        if (defaultClasses.count(i) > 0)
-            m_classes.insert(i);
+        item->setCheckState(m_config.classes.find(i) != m_config.classes.end() ? Qt::Checked : Qt::Unchecked);
         lstClasses->addItem(item);
     }
 
@@ -227,103 +242,123 @@ void PointStatsForm::setupUi(QWidget *form) {
 }
 
 void PointStatsForm::quantileFilterChanged(int quantiles) {
-    m_quantileFilter = quantiles;
+    m_config.quantileFilter = quantiles;
+    g_debug(" -- quantileFilter " << quantiles);
     checkRun();
 }
 
 void PointStatsForm::quantileFilterFromChanged(int quantiles) {
-    m_quantileFilterFrom = quantiles;
+    m_config.quantileFilterFrom = quantiles;
+    g_debug(" -- quantileFilterFrom " << quantiles);
     checkRun();
 }
 
 void PointStatsForm::quantileFilterToChanged(int quantiles) {
-    m_quantileFilterTo = quantiles;
+    m_config.quantileFilterTo = quantiles;
+    g_debug(" -- quantileFilterTo " << quantiles);
     checkRun();
 }
 
 void PointStatsForm::classItemClicked(QListWidgetItem *item) {
     unsigned char c = (unsigned char) item->text().toUShort();
     if (item->checkState() == Qt::Checked) {
-        m_classes.insert(c);
+        m_config.classes.insert(c);
     } else {
-        m_classes.erase(c);
+        m_config.classes.erase(c);
     }
+    g_debug(" -- classes " << m_config.classes.size());
 }
 
 void PointStatsForm::threadsChanged(int threads) {
-    m_threads = threads;
+    m_config.threads = threads;
+    g_debug(" -- threads " << m_config.threads);
     checkRun();
 }
 
 void PointStatsForm::maxAngleChanged(int q) {
-    m_angleLimit = q;
+    m_config.angleLimit = q;
+    g_debug(" -- angle " << m_config.angleLimit);
     checkRun();
 }
 
 void PointStatsForm::quantileChanged(int q) {
-    m_quantile = q;
+    m_config.quantile = q;
+    g_debug(" -- quantile " << m_config.quantile);
     checkRun();
 }
 
 void PointStatsForm::quantilesChanged(int q) {
-    m_quantiles = q;
+    m_config.quantiles = q;
+    g_debug(" -- quantiles " << m_config.quantiles);
     checkRun();
 }
 
 void PointStatsForm::attributeSelected(int index) {
     std::string att = cboAttribute->itemText(index).toStdString();
-    m_attribute = attributes[att];
+    m_config.attribute = attributes[att];
+    g_debug(" -- att " << m_config.attribute);
     checkRun();
 }
 
 void PointStatsForm::gapFunctionSelected(int index) {
     std::string gap = cboGapFunction->itemText(index).toStdString();
-    m_gapFunction = gapFractionTypes[gap];
+    m_config.gapFractionType = gapFractionTypes[gap];
+    g_debug(" -- gap type " << m_config.gapFractionType);
     checkRun();
 }
 
 void PointStatsForm::snapToGridChanged(bool state) {
-    m_snap = state;
+    m_config.snap = state;
+    g_debug(" -- snap " << m_config.snap);
     checkRun();
 }
 
 void PointStatsForm::resolutionChanged(double res) {
-    m_resolution = res;
+    m_config.resolution = res;
+    g_debug(" -- resolution " << m_config.resolution);
     checkRun();
 }
 
 void PointStatsForm::updateTypeUi() {
     // TODO: See state machine framework
-    spnQuantile->setVisible(m_type == TYPE_QUANTILE);
-    spnQuantiles->setVisible(m_type == TYPE_QUANTILE);
-    lblQuantile->setVisible(m_type == TYPE_QUANTILE);
-    lblQuantiles->setVisible(m_type == TYPE_QUANTILE);
-    cboGapFunction->setVisible(m_type == TYPE_GAP_FRACTION);
-    lblGapFunction->setVisible(m_type == TYPE_GAP_FRACTION);
-    lblAttribute->setVisible(m_type != TYPE_GAP_FRACTION);
-    cboAttribute->setVisible(m_type != TYPE_GAP_FRACTION);
+    if(!m_config.types.size()) return;
+    uint8_t type = m_config.types[0];
+    spnQuantile->setVisible(type == TYPE_QUANTILE);
+    spnQuantiles->setVisible(type == TYPE_QUANTILE);
+    lblQuantile->setVisible(type == TYPE_QUANTILE);
+    lblQuantiles->setVisible(type == TYPE_QUANTILE);
+    cboGapFunction->setVisible(type == TYPE_GAP_FRACTION);
+    lblGapFunction->setVisible(type == TYPE_GAP_FRACTION);
+    lblAttribute->setVisible(type != TYPE_GAP_FRACTION);
+    cboAttribute->setVisible(type != TYPE_GAP_FRACTION);
 }
 
 void PointStatsForm::typeSelected(int index) {
     std::string type = cboType->itemText(index).toStdString();
-    m_type = types[type];
+    if(m_config.types.size()) {
+        m_config.types[0] = types[type];
+    } else {
+        m_config.types.push_back(types[type]);
+    }
+    g_debug(" -- type " << m_config.types[0]);
     updateTypeUi();
     checkRun();
 }
 
 void PointStatsForm::crsConfigClicked() {
     CRSSelector cs(m_form);
-    cs.setHorizontalSRID(m_hsrid);
-    cs.setVerticalSRID(m_vsrid);
+    cs.setHorizontalSRID(m_config.hsrid);
+    cs.setVerticalSRID(m_config.vsrid);
     if (cs.exec()) {
-        m_vsrid = cs.getVerticalSRID();
-        m_hsrid = cs.getHorizontalSRID();
+        m_config.vsrid = cs.getVerticalSRID();
+        m_config.hsrid = cs.getHorizontalSRID();
         std::stringstream ss;
-        ss << "epsg:" << m_hsrid;
-        if (m_vsrid > 0)
-            ss << "+" << m_vsrid;
+        ss << "epsg:" << m_config.hsrid;
+        if (m_config.vsrid > 0)
+            ss << "+" << m_config.vsrid;
         txtCRSConfig->setText(QString(ss.str().c_str()));
     }
+    g_debug(" -- crs " << m_config.hsrid << "; " << m_config.vsrid);
     checkRun();
 }
 
@@ -334,10 +369,15 @@ void PointStatsForm::fileListSelectionChanged() {
 
 void PointStatsForm::destFileClicked() {
     QString res = QFileDialog::getSaveFileName(this, "Save File", m_last.path(), "GeoTiff (*.tif *.tiff)");
-    m_destFile = res.toStdString();
+    if(m_config.dstFiles.size()) {
+        m_config.dstFiles[0] = res.toStdString();
+    } else {
+        m_config.dstFiles.push_back(res.toStdString());
+    }
     m_last.setPath(res);
-    _settings.setValue(_last_dir, m_last.path());
+    _settings.setValue("last_dir", m_last.path());
     txtDestFile->setText(res);
+    g_debug(" -- dest file " << m_config.dstFiles[0]);
     checkRun();
 }
 
@@ -375,7 +415,7 @@ void PointStatsForm::cancelClicked() {
 void PointStatsForm::updateFileList() {
     while (lstFiles->count())
         lstFiles->takeItem(0);
-    for (const std::string &file : m_sourceFiles)
+    for (const std::string &file : m_config.sourceFiles)
         lstFiles->addItem(QString(file.c_str()));
     updateFileButtons();
     checkRun();
@@ -389,20 +429,22 @@ void PointStatsForm::updateFileButtons() {
 void PointStatsForm::removeFilesClicked() {
     std::vector<std::string> lst;
     unsigned int i = 0;
-    for (const std::string &file : m_sourceFiles) {
+    for (const std::string &file : m_config.sourceFiles) {
         QListWidgetItem *item = lstFiles->item(i);
         if (!item->isSelected())
             lst.push_back(file);
         ++i;
     }
-    m_sourceFiles.clear();
-    m_sourceFiles.assign(lst.begin(), lst.end());
+    m_config.sourceFiles.clear();
+    m_config.sourceFiles.assign(lst.begin(), lst.end());
+    g_debug(" -- source files " << m_config.sourceFiles.size());
     updateFileList();
     checkRun();
 }
 
 void PointStatsForm::clearFilesClicked() {
-    m_sourceFiles.clear();
+    m_config.sourceFiles.clear();
+    g_debug(" -- source files " << m_config.sourceFiles.size());
     updateFileList();
     checkRun();
 }
@@ -415,13 +457,14 @@ void PointStatsForm::selectFilesClicked() {
     if (d.exec()) {
         QStringList files = d.selectedFiles();
         m_last = d.directory();
-        _settings.setValue(_last_dir, m_last.path());
-        std::set<std::string> tmp(m_sourceFiles.begin(), m_sourceFiles.end());
+        _settings.setValue("last_dir", m_last.path());
+        std::set<std::string> tmp(m_config.sourceFiles.begin(), m_config.sourceFiles.end());
         for (int i = 0; i < files.size(); ++i)
             tmp.insert(files[i].toStdString());
-        m_sourceFiles.clear();
-        m_sourceFiles.assign(tmp.begin(), tmp.end());
+        m_config.sourceFiles.clear();
+        m_config.sourceFiles.assign(tmp.begin(), tmp.end());
     }
+    g_debug(" -- source files " << m_config.sourceFiles.size());
     updateFileList();
     checkRun();
 }

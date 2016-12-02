@@ -202,6 +202,7 @@ namespace geotools {
             
             void fromString(const std::string&);
 
+            void align(double x, double y, double xres, double yres);
         };
 
         class Util;

@@ -79,6 +79,8 @@ namespace geotools {
             bool rebuild;
             bool normalize;
             double resolution;
+            double originX;
+            double originY;
             double gapThreshold;
             uint32_t threads;
             uint16_t hsrid;
