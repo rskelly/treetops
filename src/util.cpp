@@ -141,12 +141,12 @@ double Bounds::depth() const {
     return maxz() - minz();
 }
 
-int Bounds::cols(double resolution) const {
-    return (int) g_abs(width() / resolution) + 1;
+int Bounds::maxCol(double resolution) const {
+    return (int) g_abs(width() / resolution);
 }
 
-int Bounds::rows(double resolution) const {
-    return (int) g_abs(height() / resolution) + 1;
+int Bounds::maxRow(double resolution) const {
+    return (int) g_abs(height() / resolution);
 }
 
 int Bounds::toCol(double x, double resolution) const {

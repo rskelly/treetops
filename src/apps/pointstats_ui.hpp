@@ -47,7 +47,8 @@ namespace geotools {
             void updateFileButtons();
             void updateTypeUi();
             void checkRun();
-
+            void updateSnapUi();
+            
         public:
             PointStatsForm(QWidget *p = Q_NULLPTR);
             void setupUi(QWidget *Form);
@@ -56,7 +57,7 @@ namespace geotools {
         public slots:
             void destFileClicked();
             void destFileChanged(QString);
-            void snapToGridChanged(bool);
+            void snapModeChanged(int);
             void cancelClicked();
             void runClicked();
             void exitClicked();

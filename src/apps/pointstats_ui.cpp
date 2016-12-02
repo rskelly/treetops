@@ -42,7 +42,7 @@ void _loadConfig(PointStatsConfig &config) {
     config.resolution = qs.value("resolution", dummy.resolution).toDouble();
     config.originX = qs.value("originX", dummy.originX).toDouble();
     config.originY = qs.value("originY", dummy.originY).toDouble();
-    config.snap = qs.value("snap", dummy.snap).toBool();
+    config.snapMode = qs.value("snapMode", dummy.snapMode).toInt();
     config.threads = qs.value("threads", dummy.threads).toInt();
     config.vsrid = qs.value("vsid", dummy.vsrid).toInt();
     QStringList files = qs.value("sourceFiles").toStringList();
@@ -78,7 +78,7 @@ void _saveConfig(PointStatsConfig &config) {
     qs.setValue("resolution", config.resolution);
     qs.setValue("originX", config.originX);
     qs.setValue("originY", config.originY);
-    qs.setValue("snap", config.snap);
+    qs.setValue("snapMode", config.snapMode);
     qs.setValue("threads", config.threads);
     qs.setValue("vsid", config.vsrid);
     QList<QVariant> classes;
@@ -170,7 +170,6 @@ void PointStatsForm::setupUi(QWidget *form) {
     spnMaxAngle->setValue(m_config.angleLimit);
     spnThreads->setValue(m_config.threads);
     spnThreads->setMaximum(g_max(1, omp_get_num_procs()));
-    chkSnapToGrid->setChecked(m_config.snap);
     spnGapThreshold->setValue(m_config.gapThreshold);
     spnQuantileFilter->setValue(m_config.quantileFilter);
     spnQuantileFilterFrom->setValue(m_config.quantileFilterFrom);
@@ -192,6 +191,15 @@ void PointStatsForm::setupUi(QWidget *form) {
     }
     cboType->setCurrentIndex(defaultIdx);
 
+    i = 0;
+    defaultIdx = -1;
+    for(const auto &it : snapModes) {
+        cboSnapMode->addItem(it.first.c_str(), QVariant(it.second));
+        if(it.second == m_config.snapMode)
+            defaultIdx = i;
+    }
+    cboSnapMode->setCurrentIndex(defaultIdx);
+    
     i = 0;
     defaultIdx = -1;
     for (const auto &it : gapFractionTypes) {
@@ -231,8 +239,8 @@ void PointStatsForm::setupUi(QWidget *form) {
     connect(btnDestFile, SIGNAL(clicked()), this, SLOT(destFileClicked()));
     connect(btnCRSConfig, SIGNAL(clicked()), this, SLOT(crsConfigClicked()));
     connect(cboType, SIGNAL(currentIndexChanged(int)), this, SLOT(typeSelected(int)));
+    connect(cboSnapMode, SIGNAL(currentIndexChanged(int)), this, SLOT(snapModeChanged(int)));
     connect(spnResolution, SIGNAL(valueChanged(double)), this, SLOT(resolutionChanged(double)));
-    connect(chkSnapToGrid, SIGNAL(toggled(bool)), this, SLOT(snapToGridChanged(bool)));
     connect(cboAttribute, SIGNAL(currentIndexChanged(int)), this, SLOT(attributeSelected(int)));
     connect(cboGapFunction, SIGNAL(currentIndexChanged(int)), this, SLOT(gapFunctionSelected(int)));
     connect(spnGapThreshold, SIGNAL(valueChanged(double)), this, SLOT(gapThresholdChanged(double)));
@@ -345,12 +353,6 @@ void PointStatsForm::gapThresholdChanged(double t) {
     g_debug(" -- gap threshold " << m_config.gapThreshold);
     checkRun();
 }
-void PointStatsForm::snapToGridChanged(bool state) {
-    m_config.snap = state;
-    g_debug(" -- snap " << m_config.snap);
-    checkRun();
-}
-
 void PointStatsForm::resolutionChanged(double res) {
     m_config.resolution = res;
     g_debug(" -- resolution " << m_config.resolution);
@@ -373,6 +375,14 @@ void PointStatsForm::updateTypeUi() {
     lblGapThreshold->setVisible(type == TYPE_GAP_FRACTION);
 }
 
+void PointStatsForm::updateSnapUi() {
+    bool showOrigin = m_config.snapMode == SNAP_ORIGIN;
+    lblOriginX->setVisible(showOrigin);
+    spnOriginX->setVisible(showOrigin);
+    lblOriginY->setVisible(showOrigin);
+    spnOriginY->setVisible(showOrigin);
+}
+
 void PointStatsForm::typeSelected(int index) {
     std::string type = cboType->itemText(index).toStdString();
     if(m_config.types.size()) {
@@ -382,6 +392,14 @@ void PointStatsForm::typeSelected(int index) {
     }
     g_debug(" -- type " << m_config.types[0]);
     updateTypeUi();
+    checkRun();
+}
+
+void PointStatsForm::snapModeChanged(int index) {
+    std::string type = cboSnapMode->itemText(index).toStdString();
+    m_config.snapMode = snapModes[type];
+    g_debug(" -- snap " << type << "; " << m_config.snapMode);
+    updateSnapUi();
     checkRun();
 }
 

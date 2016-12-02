@@ -80,31 +80,23 @@ void CRSSelector::initUi() {
 }
 
 void CRSSelector::updateFields() {
-    //if (m_hcomp && m_hsrid > 0) {
+    if (m_hcomp) {
         QString h;
         h.setNum(m_hsrid);
         txtHorizontalCRS->setText(h);
         m_hcomp->complete();
-    //}
-    //if (m_vcomp && m_vsrid > 0) {
+    }
+    if (m_vcomp) {
         QString v;
         v.setNum(m_vsrid);
         txtVerticalDatum->setText(v);
         m_vcomp->complete();
-    //}
+    }
 }
 
 void CRSSelector::textUpdate() {
     bool activate = m_hcomp->currentIndex().isValid();
     btnSelect->setEnabled(activate);
-    /*
-    // TODO: Takes focus away from text field.
-    if(activate) {
-        btnSelect->setFocus(Qt::FocusReason::OtherFocusReason);
-    } else {
-        btnCancel->setFocus(Qt::FocusReason::OtherFocusReason);
-    }
-     */
 }
 
 void CRSSelector::keyPressEvent(QKeyEvent *e) {
@@ -123,11 +115,11 @@ void CRSSelector::selectClicked() {
     m_hsrid = 0;
     m_vsrid = 0;
     int hidx = m_hlst.indexOf(m_hcomp->currentCompletion());
-    if (hidx >= 0)
-        m_hsrid = std::next(m_hcrs.begin(), hidx)->first;
+    if (hidx > 0)
+        m_hsrid = std::next(m_hcrs.begin(), hidx - 1)->first;
     int vidx = m_vlst.indexOf(m_vcomp->currentCompletion());
-    if (vidx >= 0)
-        m_vsrid = std::next(m_vcrs.begin(), vidx)->first;
+    if (vidx > 0)
+        m_vsrid = std::next(m_vcrs.begin(), vidx - 1)->first;
     g_debug("vsrid: " << hidx << ", " << m_vsrid << "; hsrid: " << vidx << ", " << m_hsrid);
     accept();
 }

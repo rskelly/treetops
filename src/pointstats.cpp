@@ -75,12 +75,18 @@ namespace geotools {
                 {"CCF", GAP_CCF},
                 {"GAP", GAP_GAP}
             };
+            
+            std::map<std::string, uint8_t> snapModes = {
+                {"None" , SNAP_NONE},
+                {"Grid" , SNAP_GRID},
+                {"Origin" , SNAP_ORIGIN}
+            };
 
         } // config
 
         PointStatsConfig::PointStatsConfig() : 
             fill(false),
-            snap(false),
+            snapMode(SNAP_NONE),
             rebuild(false),
             normalize(false),
             resolution(10.0),
@@ -227,29 +233,30 @@ namespace geotools {
         void PointStats::runner() {
             uint64_t idx;
             std::list<LASPoint*> pts;
-            while (m_running || !m_bq.empty()) {
+            while (m_running) {
                 if(*m_cancel) break;
                 {
                     std::unique_lock<std::mutex> lk(m_qmtx);
-                    m_cdn.wait(lk);
-                    if (m_bq.empty())
-                        continue;
+                    while(m_bq.empty())
+                        m_cdn.wait(lk);
                     idx = m_bq.front();
                     m_bq.pop();
+                    //g_debug(" -- computing cell " << idx << ", " << std::this_thread::get_id());// << ", " << pts.size());
                 }
                 if(*m_cancel) break;
                 {
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     pts.assign(m_cache[idx].begin(), m_cache[idx].end());
                     m_cache.erase(idx);
+                    g_debug(" -- cache size " << m_cache.size());
                 }
-
+                if(*m_cancel) break;
                 if (!pts.empty()) {
                     for (size_t i = 0; i < m_computers.size(); ++i) {
-                        std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
                         int bands = m_computers[i]->bands();
                         Buffer buf(sizeof(double) * bands);
                         m_computers[i]->compute(pts, (double *) buf.buf);
+                        std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
                         int b = 0;
                         for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
                             m->set(idx, ((double *) buf.buf)[b++]);
@@ -278,14 +285,28 @@ namespace geotools {
 
             if(*cancel) return;
             
+            if(callbacks)
+                callbacks->overallCallback(0.1f);
+            
             // Initialize the point stream; it expects a vector. 
             LASMultiReader ps(config.sourceFiles, g_abs(config.resolution));
             Bounds bounds = ps.bounds();
-            bounds.align(config.originX, config.originY, config.resolution, -config.resolution);
-            int cols = bounds.cols(config.resolution);
-            int rows = bounds.rows(config.resolution);
-            // TODO: Snap?
+            switch(config.snapMode) {
+                case SNAP_ORIGIN:
+                    bounds.align(config.originX, config.originY, config.resolution, -config.resolution);
+                    break;
+                case SNAP_GRID:
+                    bounds.snap(config.resolution);
+                    break;
+            }
+            ps.setBounds(bounds);
+            ps.init();
+            int cols = bounds.maxCol(config.resolution) + 1;
+            int rows = bounds.maxRow(config.resolution) + 1;
             
+            if(callbacks)
+                callbacks->overallCallback(0.2f);
+
             // Initialize the filter group.
             CellStatsFilter *filter = nullptr;
             if (config.hasClasses())
@@ -321,6 +342,9 @@ namespace geotools {
                 m_mtx.push_back(std::move(m));
             }
 
+            if(callbacks)
+                callbacks->overallCallback(0.3f);
+
             // Initialize the thread group for runner.
             std::list<std::thread> threads;
             m_running = true;
@@ -336,26 +360,31 @@ namespace geotools {
             // Begin streaming the points into the cache for processing.
             g_debug(" -- streaming points");
             LASPoint pt;
+            uint64_t finalizedCount = 0;
             Bounds b = ps.bounds();
             while (ps.next(pt, &final, &finalIdx)) {
                 if(*cancel) return;
                 {
-                    std::unique_lock<std::mutex> lk(m_cmtx);
                     uint64_t idx = b.toRow(pt.y, config.resolution) * cols + b.toCol(pt.x, config.resolution);
+                    std::unique_lock<std::mutex> lk(m_cmtx);
                     m_cache[idx].push_back(new LASPoint(pt));
                 }
                 if (final) {
-                    std::unique_lock<std::mutex> lk(m_qmtx);
-                    m_bq.push(finalIdx);
+                    {
+                        std::unique_lock<std::mutex> lk(m_qmtx);
+                        m_bq.push(finalIdx);
+                    }
                     m_cdn.notify_one();
+                    if(callbacks)
+                        callbacks->overallCallback(((float) ++finalizedCount / ps.cellCount()) * 0.6f + 0.3f);
                 }
             }
 
-            m_running = false;
             while (!m_bq.empty())
-                m_cdn.notify_all();
-            g_debug("done");
+                m_cdn.notify_one();
+            g_debug(" -- done " << finalizedCount << " of " << ((uint64_t) cols * rows));
 
+            m_running = false;
             // Shut down and join the runners.
             for (std::thread &t : threads)
                 t.join();

@@ -77,7 +77,11 @@
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="1" column="0">
-       <widget class="QListWidget" name="lstFiles"/>
+       <widget class="QListWidget" name="lstFiles">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ContiguousSelection</enum>
+        </property>
+       </widget>
       </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label_5">
@@ -161,16 +165,6 @@
       <item row="0" column="1">
        <widget class="QLineEdit" name="txtDestFile"/>
       </item>
-      <item row="2" column="1">
-       <widget class="QCheckBox" name="chkSnapToGrid">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
       <item row="11" column="2">
        <widget class="QToolButton" name="btnCRSConfig">
         <property name="text">
@@ -243,7 +237,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_6">
         <property name="text">
-         <string>Snap to Grid</string>
+         <string>Snap to</string>
         </property>
        </widget>
       </item>
@@ -476,7 +470,7 @@
        </widget>
       </item>
       <item row="4" column="0">
-       <widget class="QLabel" name="label_3">
+       <widget class="QLabel" name="lblOriginY">
         <property name="text">
          <string>Origin Y</string>
         </property>
@@ -508,7 +502,7 @@
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="lblOriginX">
         <property name="text">
          <string>Origin X</string>
         </property>
@@ -525,6 +519,13 @@
        <widget class="QLabel" name="lblGapThreshold">
         <property name="text">
          <string>Gap Threshold</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cboSnapMode">
+        <property name="currentText">
+         <string/>
         </property>
        </widget>
       </item>

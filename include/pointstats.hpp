@@ -14,7 +14,6 @@
 #include "util.hpp"
 #include "laspoint.hpp"
 #include "cellstats.hpp"
-#include "finalizedpointstream.hpp"
 
 #define TYPE_MIN 1
 #define TYPE_MAX 2
@@ -32,6 +31,10 @@
 #define TYPE_RUGOSITY 14
 #define TYPE_GAP_FRACTION 17
 
+#define SNAP_NONE 0
+#define SNAP_GRID 1
+#define SNAP_ORIGIN 2
+
 #define LAS_EXT ".las"
 
 #define ATT_HEIGHT 1
@@ -46,7 +49,7 @@ namespace geotools {
             extern std::map<std::string, uint8_t> types;
             extern std::map<std::string, uint8_t> attributes;
             extern std::map<std::string, uint8_t> gapFractionTypes;
-
+            extern std::map<std::string, uint8_t> snapModes;
         }
 
         /**
@@ -60,7 +63,7 @@ namespace geotools {
             std::set<uint8_t> classes;
             geotools::util::Bounds bounds;
             bool fill;
-            bool snap;
+            uint8_t snapMode;
             bool rebuild;
             bool normalize;
             double resolution;
@@ -140,12 +143,11 @@ namespace geotools {
             bool m_running;
             bool *m_cancel;
             std::unordered_map<size_t, std::list<geotools::las::LASPoint*> > m_cache;
-            std::queue<size_t> m_idxq;
             std::vector<std::unique_ptr<geotools::point::stats::CellStats> > m_computers;
             std::vector<std::vector<std::unique_ptr<geotools::raster::MemRaster<float> > > > m_mem;
             std::vector<std::unique_ptr<std::mutex> > m_mtx;
-            std::unique_ptr<geotools::las::FinalizedPointStream> m_ps;
             std::queue<size_t> m_bq;
+            std::queue<size_t> m_idxq;
 
             /**
              * Check the configuration for validity. 

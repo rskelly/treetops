@@ -142,10 +142,11 @@ public:
         if (m_buf.get())
             delete m_buf.release();
         m_buf.reset(new Buffer(m_batchSize * m_pointLength));
-        g_debug(" -- loading " << m_batchSize << "; " << m_pointCount << "; " << m_pointLength);
+        //g_debug(" -- loading " << m_batchSize << "; " << m_pointCount << "; " << m_pointLength);
         try {
             _read((void *) m_buf->buf, m_batchSize * m_pointLength, 1, m_f);
         } catch(const std::exception &ex) {
+            g_debug(" -- " << ex.what());
             g_runerr("Failed to read batch. LAS file may be shorter than indicated by header.");
         }
         return true;
@@ -183,38 +184,45 @@ private:
     double m_resolution;
     Bounds m_bounds;
     std::list<Polygon_with_holes_2> m_finalized;
+    bool m_cancel;
+    uint64_t m_cells;
     
     void load(const std::vector<std::string> &files) {
         m_bounds.collapse();
         for(const std::string &file : files) {
+            if(m_cancel) return;
             std::unique_ptr<LASReader> r(new LASReader(file));
             m_files.push_back(file);
             m_bounds.extend(r->bounds());
             m_readers.push_back(std::move(r));
         }
-        buildFinalizer();
-        m_cols = bounds().cols(m_resolution);
+        m_cols = bounds().maxCol(m_resolution) + 1;
     }
 
     void buildFinalizer() {
         if(m_finalizer.get())
             delete m_finalizer.release();
-        int cols = m_bounds.cols(m_resolution);
-        int rows = m_bounds.rows(m_resolution);
+        m_cols = bounds().maxCol(m_resolution) + 1;
+        int cols = m_bounds.maxCol(m_resolution) + 1;
+        int rows = m_bounds.maxRow(m_resolution) + 1;
         g_debug(" -- finalizer: " << cols << ", " << rows);
         m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, true));
         m_finalizer->fill(0);
         LASPoint pt;
+        std::set<uint64_t> cells;
         try {
             while(next(pt, nullptr, nullptr)) {
+                if(m_cancel) return;
                 int col = m_bounds.toCol(pt.x, m_resolution);
                 int row = m_bounds.toRow(pt.y, m_resolution);
                 m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
+                cells.insert((uint64_t) row * m_cols + col);
             }
         } catch(const std::exception &ex) {
             g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header.");
         }
         g_debug(" -- finalizer: " << m_finalizer->cols() << ", " << m_finalizer->rows() << "; " << m_bounds.print());
+        m_cells = cells.size();
         reset();
     }
     
@@ -222,15 +230,35 @@ public:
     LASMultiReader(const std::vector<std::string> &files, double resolution = 50.0) :
         m_reader(nullptr),
         m_idx(0),
-        m_resolution(resolution) {
+        m_resolution(resolution),
+        m_cancel(false),
+        m_cells(0) {
         load(files);
     }
         
+    void init() {
+        buildFinalizer();
+    }
+
     void reset() {
         m_idx = 0;
         m_reader = nullptr;
+        m_cancel = false;
         for(const auto &r : m_readers)
             r->reset();
+    }
+    
+    uint64_t cellCount() {
+        return m_cells;
+    }
+    
+    void cancel() {
+        m_cancel = true;
+    }
+    
+    void setBounds(const Bounds &bounds) {
+        m_bounds.collapse();
+        m_bounds.extend(bounds);
     }
     
     Bounds bounds() const {
@@ -241,8 +269,9 @@ public:
         if(!m_reader || !m_reader->next(pt)) {
             if(m_idx >= m_readers.size())
                 return false;
-            if(!m_reader)
-                m_reader = m_readers[m_idx++].get();
+            if(m_reader)
+                m_reader->reset();
+            m_reader = m_readers[m_idx++].get();
             if(!m_reader->next(pt))
                 return false;
         }
@@ -251,11 +280,15 @@ public:
             int row = m_bounds.toRow(pt.y, m_resolution);
             uint32_t count = m_finalizer->get(col, row);
             //g_debug(" -- pt " << pt.x << ", " << pt.y << "; " << col << ", " << row << "; " << count << "; " << m_cols);
+            if(count == 0)
+                g_runerr("Finalizer reached zero. This is impossible!");
             m_finalizer->set(col, row, count - 1);
             if(count == 1) {
                 *finalIdx = (uint64_t) row * m_cols + col;
                 *final = true;
-                g_debug(" -- final " << *finalIdx);
+                //g_debug(" -- final " << *finalIdx);
+            } else {
+                *final = false;
             }
         }
         return true;

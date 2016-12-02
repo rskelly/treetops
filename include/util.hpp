@@ -172,9 +172,9 @@ namespace geotools {
 
             double depth() const;
 
-            int cols(double resolution) const;
+            int maxCol(double resolution) const;
 
-            int rows(double resolution) const;
+            int maxRow(double resolution) const;
 
             int toCol(double x, double resolution) const;
             

@@ -192,7 +192,11 @@
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="1" column="0">
-       <widget class="QListWidget" name="lstFiles"/>
+       <widget class="QListWidget" name="lstFiles">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ContiguousSelection</enum>
+        </property>
+       </widget>
       </item>
       <item row="2" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -314,11 +318,6 @@
     </item>
    </layout>
   </widget>
-  <zorder>label</zorder>
-  <zorder></zorder>
-  <zorder>gridLayoutWidget_3</zorder>
-  <zorder>label</zorder>
-  <zorder>gridLayoutWidget_2</zorder>
  </widget>
  <resources/>
  <connections/>

@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
             } else if (s == "-a") {
                 config.attribute= config.parseAtt(argv[++i]);
             } else if (s == "-p") {
-                config.snap = true;
+                config.snapMode = atoi(argv[++i]);
             } else if (s == "-v") {
                 g_loglevel(G_LOG_DEBUG);
             } else if (s == "-g") {
