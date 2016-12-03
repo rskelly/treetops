@@ -469,6 +469,8 @@ namespace geotools {
 
                 CellRugosity(double cellArea = 0.0, double avgDensity = 0.0) :
                     m_avgDensity(avgDensity) {
+                    if(cellArea <= 0.0)
+                        g_argerr("The cell area must be greater than zero.");
                     m_density.setArea(cellArea);
                 }
 
@@ -499,8 +501,8 @@ namespace geotools {
 
                         // POBF surface area.
                         double parea = polyArea(hull, plane, centroid);
-                        //double df = densityFactor(filt);
-                        result[0] =  (tarea / parea); //* df;
+                        double df = m_cellArea > 0.0 ? densityFactor(filt) : 1.0;
+                        result[0] =  (tarea / parea) * df;
                     }
                 }
             };
@@ -648,7 +650,6 @@ namespace geotools {
                 
                 void compute(const std::list<LASPoint*> &values, double *result) {
                     std::list<LASPoint*> filt = filtered(values);
-                    g_debug(" -- gap filtered " << filt.size());
                     if (!filt.size()) {
                         result[0] = -9999.0;
                     } else {
