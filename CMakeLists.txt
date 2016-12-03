@@ -100,6 +100,7 @@ else()
 	target_link_libraries (util boost_system boost_filesystem geotools)
 endif()
 add_library (raster SHARED src/raster.cpp)
+add_library (cellstats SHARED src/cellstats.cpp)
 target_link_libraries (raster gdal util geotools)
 
 
@@ -150,7 +151,7 @@ target_link_libraries (spectral-app PUBLIC spectral)
 
 
 add_library(pointstats SHARED src/pointstats.cpp src/lasutil.cpp src/laspoint.cpp)
-target_link_libraries (pointstats gdal geos gmp CGAL laszip las boost_system boost_filesystem raster util geotools)
+target_link_libraries (pointstats gdal geos gmp CGAL laszip las boost_system boost_filesystem raster util geotools cellstats)
 if(${WITH_GUI})
 	add_executable (pointstats-app src/apps/pointstats.cpp src/apps/pointstats_ui.cpp src/apps/crs_selector_ui.cpp src/apps/filelist.cpp)
 	target_link_libraries (pointstats-app PUBLIC pointstats Qt5::Gui Qt5::Core Qt5::Widgets)

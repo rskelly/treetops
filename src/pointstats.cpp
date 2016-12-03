@@ -60,7 +60,8 @@ namespace geotools {
                 {"Rugosity", TYPE_RUGOSITY},
                 {"Kurtosis", TYPE_KURTOSIS},
                 {"Skewness", TYPE_SKEW},
-                {"Gap Fraction", TYPE_GAP_FRACTION}
+                {"Gap Fraction", TYPE_GAP_FRACTION}, 
+                {"CoV", TYPE_COV}
             };
             std::map<std::string, uint8_t> attributes = {
                 {"Height", ATT_HEIGHT},

@@ -30,6 +30,7 @@
 #define TYPE_KURTOSIS 15
 #define TYPE_RUGOSITY 14
 #define TYPE_GAP_FRACTION 17
+#define TYPE_COV 18
 
 #define SNAP_NONE 0
 #define SNAP_GRID 1
