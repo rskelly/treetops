@@ -86,8 +86,6 @@ int main(int argc, char **argv) {
                 config.gapFractionType = config.parseGap(argv[++i]);
             } else if(s == "-gt") {
                 config.gapThreshold = atof(argv[++i]);
-            } else if (s == "-C") {
-                config.rebuild = false;
             } else if (s == "--angle-limit") {
                 config.angleLimit = (unsigned char) atoi(argv[++i]);
             } else if (s == "--threads") {

@@ -29,8 +29,8 @@
 
 #include "pointstats.hpp"
 #include "lasutil.hpp"
+#include "lasreader.hpp"
 #include "laspoint.hpp"
-#include "finalizedpointstream.hpp"
 #include "cellstats.hpp"
 
 using namespace geotools::util;
@@ -81,17 +81,21 @@ namespace geotools {
                 {"Grid" , SNAP_GRID},
                 {"Origin" , SNAP_ORIGIN}
             };
+            
+            std::map<std::string, uint8_t> areaModes = {
+                {"Full Cell", AREA_CELL},
+                {"Radius", AREA_RADIUS}
+            };
 
         } // config
 
         PointStatsConfig::PointStatsConfig() : 
-            fill(false),
             snapMode(SNAP_NONE),
-            rebuild(false),
             normalize(false),
             resolution(10.0),
             originX(0.0),
             originY(0.0),
+            gapFractionType(GAP_GAP),
             gapThreshold(0.0),
             threads(1),
             hsrid(0),
@@ -100,10 +104,11 @@ namespace geotools {
             angleLimit(90),
             quantile(0),
             quantiles(1),
-            gapFractionType(GAP_GAP),
             quantileFilter(0),
             quantileFilterFrom(0),
-            quantileFilterTo(0) {
+            quantileFilterTo(0),
+            areaMode(AREA_CELL),
+            areaSize(0) {
         }
         
         uint8_t PointStatsConfig::parseAtt(const std::string &attStr) {
@@ -187,7 +192,9 @@ namespace geotools {
                 g_argerr("Angle limit must be greater than zero.");
             if (config.dstFiles.size() != config.types.size())
                 g_argerr("There should be one output file for each type.");
-
+            if(config.areaMode != AREA_CELL && config.areaSize <= 0) 
+                g_argerr("If area mode is not cell, a size must be given.");
+          
             g_debug("Resolution: " << config.resolution);
             g_debug("Files: " << config.sourceFiles.size());
             g_debug("Destinations: " << config.dstFiles.size());
@@ -349,7 +356,7 @@ namespace geotools {
             bool final;
             
             // Start the runner threads.
-            for (uint32_t i = 0; i < g_max(1, config.threads - 1); ++i) {
+            for (int i = 0; i < g_max(1, config.threads - 1); ++i) {
                 std::thread t(_runner, this);
                 threads.push_back(std::move(t));
             }

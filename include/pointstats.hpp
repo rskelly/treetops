@@ -35,6 +35,9 @@
 #define SNAP_GRID 1
 #define SNAP_ORIGIN 2
 
+#define AREA_CELL 0
+#define AREA_RADIUS 1
+
 #define LAS_EXT ".las"
 
 #define ATT_HEIGHT 1
@@ -50,6 +53,8 @@ namespace geotools {
             extern std::map<std::string, uint8_t> attributes;
             extern std::map<std::string, uint8_t> gapFractionTypes;
             extern std::map<std::string, uint8_t> snapModes;
+            extern std::map<std::string, uint8_t> areaModes;
+            
         }
 
         /**
@@ -57,31 +62,56 @@ namespace geotools {
          */
         class PointStatsConfig {
         public:
-            std::vector<std::string> dstFiles;
-            std::vector<std::string> sourceFiles;
-            std::vector<uint8_t> types;
-            std::set<uint8_t> classes;
+            // The work boundaries.
             geotools::util::Bounds bounds;
-            bool fill;
+            // The output file list.
+            std::vector<std::string> dstFiles;
+            // The input file list.
+            std::vector<std::string> sourceFiles;
+            // The list of statistics to compute.
+            std::vector<uint8_t> types;
+            // The list of classes to accept. If none
+            // are given, all classes are used.
+            std::set<uint8_t> classes;
+            // Determines how the grid is aligned.
             uint8_t snapMode;
-            bool rebuild;
+            // If true, output raster is normalized so 
+            // one standard deviation = 1, and the mean is zero.
             bool normalize;
+            // The output resolution. Cells are square.
             double resolution;
+            // The alignment origin.
             double originX;
             double originY;
+            // The gap fraction method to use.
+            uint8_t gapFractionType;
+            // The minimum height of points considered for gap fraction.
             double gapThreshold;
-            uint32_t threads;
+            // The number of threads of execution.
+            uint16_t threads;
+            // The horizontal and vertical spatial reference IDs.
+            // Applied to the output rasters.
             uint16_t hsrid;
             uint16_t vsrid;
+            // The attribute: height or intensity.
             uint8_t attribute;
+            // The scan angle limit. Nadir is zero.
             uint8_t angleLimit;
+            // For quantiles: gives the value at the given quantile.
             uint8_t quantile;
+            // The number of quantiles.
             uint8_t quantiles;
-            uint8_t gapFractionType;
+            // For quantile filtering: The number of quantiles.
             uint32_t quantileFilter;
+            // The lower quantile.
             uint32_t quantileFilterFrom;
+            // The upper quantile.
             uint32_t quantileFilterTo;
-
+            // Determines how the neighbourhood is defined.
+            uint8_t areaMode;
+            // The size of the neighbourhood.
+            double areaSize;
+            
             PointStatsConfig();
             
             /**

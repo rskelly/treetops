@@ -501,7 +501,7 @@ namespace geotools {
 
                         // POBF surface area.
                         double parea = polyArea(hull, plane, centroid);
-                        double df = m_cellArea > 0.0 ? densityFactor(filt) : 1.0;
+                        double df = m_avgDensity > 0.0 ? densityFactor(filt) : 1.0;
                         result[0] =  (tarea / parea) * df;
                     }
                 }

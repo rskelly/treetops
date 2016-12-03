@@ -45,9 +45,10 @@ namespace geotools {
             
             void updateFileList();
             void updateFileButtons();
-            void updateTypeUi();
             void checkRun();
             void updateSnapUi();
+            void updateAreaUi();
+            void updateTypeUi();
             
         public:
             PointStatsForm(QWidget *p = Q_NULLPTR);
@@ -78,6 +79,8 @@ namespace geotools {
             void classItemClicked(QListWidgetItem*);
             void fileListChanged();
             void gapThresholdChanged(double);
+            void areaModeChanged(int);
+            void areaSizeChanged(double);
             void done();
         };
 

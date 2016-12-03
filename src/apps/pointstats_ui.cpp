@@ -28,7 +28,6 @@ void _loadConfig(PointStatsConfig &config) {
     config.angleLimit = qs.value("angleLimit", dummy.angleLimit).toInt();
     config.attribute = qs.value("attribute", dummy.attribute).toInt();
     config.bounds.fromString(_str(qs.value("bounds", _str(dummy.bounds.toString()))));
-    config.fill = qs.value("fill", dummy.fill).toBool();
     config.gapFractionType = qs.value("gapFractionType", dummy.gapFractionType).toInt();
     config.gapThreshold = qs.value("gapThreshold", dummy.gapThreshold).toDouble();
     config.hsrid = qs.value("hsrid", dummy.hsrid).toInt();
@@ -38,13 +37,14 @@ void _loadConfig(PointStatsConfig &config) {
     config.quantileFilterFrom = qs.value("quantileFilterFrom", dummy.quantileFilterFrom).toInt();
     config.quantileFilterTo = qs.value("quantileFilterTo", dummy.quantileFilterTo).toInt();
     config.quantiles = qs.value("quantiles", dummy.quantiles).toInt();
-    config.rebuild = qs.value("rebuild", dummy.rebuild).toBool();
     config.resolution = qs.value("resolution", dummy.resolution).toDouble();
     config.originX = qs.value("originX", dummy.originX).toDouble();
     config.originY = qs.value("originY", dummy.originY).toDouble();
     config.snapMode = qs.value("snapMode", dummy.snapMode).toInt();
     config.threads = qs.value("threads", dummy.threads).toInt();
     config.vsrid = qs.value("vsid", dummy.vsrid).toInt();
+    config.areaMode = qs.value("areaMode", dummy.areaMode).toInt();
+    config.areaSize = qs.value("areaSize", dummy.areaSize).toDouble();
     QStringList files = qs.value("sourceFiles").toStringList();
     for(const QString &file : files)
         config.sourceFiles.push_back(file.toStdString());
@@ -64,7 +64,6 @@ void _saveConfig(PointStatsConfig &config) {
     qs.setValue("angleLimit", config.angleLimit);
     qs.setValue("attribute", config.attribute);
     qs.setValue("bounds", _str(config.bounds.toString()));
-    qs.setValue("fill", config.fill);
     qs.setValue("gapFractionType", config.gapFractionType);
     qs.setValue("gapThreshold", config.gapThreshold);
     qs.setValue("hsrid", config.hsrid);
@@ -74,13 +73,14 @@ void _saveConfig(PointStatsConfig &config) {
     qs.setValue("quantileFilterFrom", config.quantileFilterFrom);
     qs.setValue("quantileFilterTo", config.quantileFilterTo);
     qs.setValue("quantiles", config.quantiles);
-    qs.setValue("rebuild", config.rebuild);
     qs.setValue("resolution", config.resolution);
     qs.setValue("originX", config.originX);
     qs.setValue("originY", config.originY);
     qs.setValue("snapMode", config.snapMode);
     qs.setValue("threads", config.threads);
     qs.setValue("vsid", config.vsrid);
+    qs.setValue("areaMode", config.areaMode);
+    qs.setValue("areaSize", config.areaSize);
     QList<QVariant> classes;
     for(const uint8_t &cls : config.classes)
         classes << QVariant(cls);
@@ -178,6 +178,7 @@ void PointStatsForm::setupUi(QWidget *form) {
     spnQuantile->setValue(m_config.quantile);
     spnOriginX->setValue(m_config.originX);
     spnOriginY->setValue(m_config.originY);
+    spnAreaSize->setValue(m_config.areaSize);
     if(m_config.dstFiles.size())
         txtDestFile->setText(m_config.dstFiles[0].c_str());
     
@@ -193,10 +194,21 @@ void PointStatsForm::setupUi(QWidget *form) {
 
     i = 0;
     defaultIdx = -1;
+    for(const auto &it : areaModes) {
+        cboAreaMode->addItem(it.first.c_str(), QVariant(it.second));
+        if(it.second == m_config.areaMode)
+            defaultIdx = i;
+        ++i;
+    }
+    cboAreaMode->setCurrentIndex(defaultIdx);
+    
+    i = 0;
+    defaultIdx = -1;
     for(const auto &it : snapModes) {
         cboSnapMode->addItem(it.first.c_str(), QVariant(it.second));
         if(it.second == m_config.snapMode)
             defaultIdx = i;
+        ++i;
     }
     cboSnapMode->setCurrentIndex(defaultIdx);
     
@@ -240,7 +252,9 @@ void PointStatsForm::setupUi(QWidget *form) {
     connect(btnCRSConfig, SIGNAL(clicked()), this, SLOT(crsConfigClicked()));
     connect(cboType, SIGNAL(currentIndexChanged(int)), this, SLOT(typeSelected(int)));
     connect(cboSnapMode, SIGNAL(currentIndexChanged(int)), this, SLOT(snapModeChanged(int)));
+    connect(cboAreaMode, SIGNAL(currentIndexChanged(int)), this, SLOT(areaModeChanged(int)));
     connect(spnResolution, SIGNAL(valueChanged(double)), this, SLOT(resolutionChanged(double)));
+    connect(spnAreaSize, SIGNAL(valueChanged(double)), this, SLOT(areaSizeChanged(double)));
     connect(cboAttribute, SIGNAL(currentIndexChanged(int)), this, SLOT(attributeSelected(int)));
     connect(cboGapFunction, SIGNAL(currentIndexChanged(int)), this, SLOT(gapFunctionSelected(int)));
     connect(spnGapThreshold, SIGNAL(valueChanged(double)), this, SLOT(gapThresholdChanged(double)));
@@ -261,6 +275,22 @@ void PointStatsForm::setupUi(QWidget *form) {
     connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
     updateTypeUi();
+    updateAreaUi();
+    updateSnapUi();
+    checkRun();
+}
+
+void PointStatsForm::areaModeChanged(int index) {
+     std::string mode = cboAreaMode->itemText(index).toStdString();
+    m_config.areaMode = areaModes[mode];
+    g_debug(" -- area mode " << m_config.areaMode);
+    updateAreaUi();
+    checkRun();
+}
+
+void PointStatsForm::areaSizeChanged(double size) {
+    m_config.areaSize = size;
+    g_debug(" -- area size " << m_config.areaSize);
     checkRun();
 }
 
@@ -381,6 +411,12 @@ void PointStatsForm::updateSnapUi() {
     spnOriginX->setVisible(showOrigin);
     lblOriginY->setVisible(showOrigin);
     spnOriginY->setVisible(showOrigin);
+}
+
+void PointStatsForm::updateAreaUi() {
+    bool show = m_config.areaMode != AREA_CELL;
+    lblAreaSize->setVisible(show);
+    spnAreaSize->setVisible(show);
 }
 
 void PointStatsForm::typeSelected(int index) {
