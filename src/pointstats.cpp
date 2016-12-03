@@ -233,8 +233,7 @@ namespace geotools {
         void PointStats::runner() {
             uint64_t idx;
             std::list<LASPoint*> pts;
-            while (m_running) {
-                if(*m_cancel) break;
+            while (m_running && !*m_cancel) {
                 {
                     std::unique_lock<std::mutex> lk(m_qmtx);
                     while(m_bq.empty())
@@ -243,14 +242,12 @@ namespace geotools {
                     m_bq.pop();
                     //g_debug(" -- computing cell " << idx << ", " << std::this_thread::get_id());// << ", " << pts.size());
                 }
-                if(*m_cancel) break;
                 {
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     pts.assign(m_cache[idx].begin(), m_cache[idx].end());
                     m_cache.erase(idx);
                     g_debug(" -- cache size " << m_cache.size());
                 }
-                if(*m_cancel) break;
                 if (!pts.empty()) {
                     for (size_t i = 0; i < m_computers.size(); ++i) {
                         int bands = m_computers[i]->bands();
