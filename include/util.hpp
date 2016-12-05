@@ -19,7 +19,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/filesystem.hpp>
 
-#include "geotools.h"
+#include "geotools.hpp"
 
 #ifdef _MSC_VER
 #include <float.h>

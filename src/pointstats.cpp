@@ -39,6 +39,27 @@ using namespace geotools::point;
 using namespace geotools::las;
 using namespace geotools::point::stats;
 
+class FileSorter {
+private:
+    double m_colSize;
+    double m_rowSize;
+public:
+
+    FileSorter(double colSize, double rowSize) :
+        m_colSize(colSize), m_rowSize(rowSize) {
+    }
+
+    bool operator()(const std::string &a, const std::string &b) {
+        LASReader ar(a);
+        LASReader br(b);
+        Bounds ab = ar.bounds();
+        Bounds bb = br.bounds();
+        int idxa = ((int) (ab.miny() / m_rowSize)) * ((int) (ab.width() / m_colSize)) + ((int) (ab.minx() / m_colSize));
+        int idxb = ((int) (bb.miny() / m_rowSize)) * ((int) (bb.width() / m_colSize)) + ((int) (bb.minx() / m_colSize));
+        return idxa < idxb;
+    }
+};
+
 namespace geotools {
 
     namespace point {
@@ -242,33 +263,56 @@ namespace geotools {
             uint64_t idx;
             std::list<LASPoint*> pts;
             while (m_running && !*m_cancel) {
+
+                if(*m_cancel) break;
+
                 {
+                    // If the queue is empty, wait here until wake-up
                     std::unique_lock<std::mutex> lk(m_qmtx);
                     while(m_bq.empty())
                         m_cdn.wait(lk);
-                    idx = m_bq.front();
-                    m_bq.pop();
-                    //g_debug(" -- computing cell " << idx << ", " << std::this_thread::get_id());// << ", " << pts.size());
                 }
-                {
-                    std::unique_lock<std::mutex> lk(m_cmtx);
-                    pts.assign(m_cache[idx].begin(), m_cache[idx].end());
-                    m_cache.erase(idx);
-                    g_debug(" -- cache size " << m_cache.size());
-                }
-                if (!pts.empty()) {
-                    for (size_t i = 0; i < m_computers.size(); ++i) {
-                        int bands = m_computers[i]->bands();
-                        Buffer buf(sizeof(double) * bands);
-                        m_computers[i]->compute(pts, (double *) buf.buf);
-                        std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
-                        int b = 0;
-                        for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
-                            m->set(idx, ((double *) buf.buf)[b++]);
+
+                // Once woken up, as long as the queue isn't empty, keep going.
+                while(!m_bq.empty()) {
+                    
+                    if(*m_cancel) break;
+
+                    {
+                        // Grab an index.
+                        std::unique_lock<std::mutex> lk(m_qmtx);
+                        if(!m_bq.size()) break; // If the queue is empty once locked, skip.
+                        idx = m_bq.front();
+                        m_bq.pop();
                     }
-                    for (LASPoint *pt : pts)
-                        delete pt;
-                    pts.clear();
+
+                    if(*m_cancel) break;
+
+                    {
+                        // Get the relevant points from the cache
+                        std::unique_lock<std::mutex> lk(m_cmtx);
+                        pts.assign(m_cache[idx].begin(), m_cache[idx].end());
+                        m_cache.erase(idx);
+                        //g_debug(" -- cache size: " << m_cache.size());
+                    }
+
+                    if(*m_cancel) break;
+
+                    // Process the points.
+                    if (!pts.empty()) {
+                        for (size_t i = 0; i < m_computers.size(); ++i) {
+                            int bands = m_computers[i]->bands();
+                            Buffer buf(sizeof(double) * bands);
+                            m_computers[i]->compute(pts, (double *) buf.buf);
+                            std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
+                            int b = 0;
+                            for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
+                                m->set(idx, ((double *) buf.buf)[b++]);
+                        }
+                        for (LASPoint *pt : pts)
+                            delete pt;
+                        pts.clear();
+                    }
                 }
             }
             g_debug(" -- exit thread");
@@ -280,6 +324,7 @@ namespace geotools {
 
             checkConfig(config);
 
+            // In no cancel flag is given, use the dummy.
             m_cancel = cancel == nullptr ? &_cancel : cancel;
             
             if (config.threads > 0) {
@@ -288,13 +333,17 @@ namespace geotools {
                 g_argerr("Run with >=1 threads.");
             }
 
+            FileSorter sorter(20.0, 20.0);
+            std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
+            std::sort(files.begin(), files.end(), sorter);
+
             if(*cancel) return;
             
             if(callbacks)
                 callbacks->overallCallback(0.1f);
             
-            // Initialize the point stream; it expects a vector. 
-            LASMultiReader ps(config.sourceFiles, g_abs(config.resolution));
+            // Initialize the point stream
+            LASMultiReader ps(config.sourceFiles, config.resolution, -config.resolution);
             Bounds bounds = ps.bounds();
             switch(config.snapMode) {
                 case SNAP_ORIGIN:
@@ -307,8 +356,8 @@ namespace geotools {
             ps.setBounds(bounds);
             ps.init();
             int cols = bounds.maxCol(config.resolution) + 1;
-            int rows = bounds.maxRow(config.resolution) + 1;
-            
+            int rows = bounds.maxRow(-config.resolution) + 1;
+
             if(callbacks)
                 callbacks->overallCallback(0.2f);
 
@@ -331,7 +380,7 @@ namespace geotools {
                 m_computers.push_back(std::move(cs));
 
                 // Create raster grid for each stat.
-                g_debug(" -- configuring grid");
+                g_debug(" -- configuring grids");
                 std::vector<std::unique_ptr<MemRaster<float> > > rasters;
                 for(int b = 0; b < bands; ++b) {
                     std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(cols, rows, true));
@@ -342,7 +391,7 @@ namespace geotools {
                 m_mem.push_back(std::move(rasters));
 
                 // Create mutex for grid.
-                g_debug(" -- creating mutex");
+                g_debug(" -- creating mutexes");
                 std::unique_ptr<std::mutex> m(new std::mutex());
                 m_mtx.push_back(std::move(m));
             }
@@ -370,7 +419,7 @@ namespace geotools {
             while (ps.next(pt, &final, &finalIdx)) {
                 if(*cancel) return;
                 {
-                    uint64_t idx = b.toRow(pt.y, config.resolution) * cols + b.toCol(pt.x, config.resolution);
+                    uint64_t idx = b.toRow(pt.y, -config.resolution) * cols + b.toCol(pt.x, config.resolution);
                     std::unique_lock<std::mutex> lk(m_cmtx);
                     m_cache[idx].push_back(new LASPoint(pt));
                 }
@@ -385,8 +434,7 @@ namespace geotools {
                 }
             }
 
-            while (!m_bq.empty())
-                m_cdn.notify_one();
+            m_cdn.notify_all();
             g_debug(" -- done " << finalizedCount << " of " << ((uint64_t) cols * rows));
 
             m_running = false;

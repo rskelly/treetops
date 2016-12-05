@@ -12,7 +12,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 using namespace geotools::util;
@@ -153,9 +153,9 @@ int Bounds::toCol(double x, double resolution) const {
     if(width() == 0.0)
         return 0;
     if(resolution > 0) {
-        return (int) ((x - m_minx) / width() * g_abs(width() / resolution));
+        return (int) ((x - m_minx) / width() * (width() / resolution));
     } else {
-        return (int) ((x - m_maxx) / width() * g_abs(width() / resolution));
+        return (int) ((x - m_maxx) / width() * (width() / resolution));
     }
 }
             
@@ -163,9 +163,9 @@ int Bounds::toRow(double y, double resolution) const {
     if(height() == 0.0)
         return 0;
     if(resolution > 0) {
-        return (int) ((y - m_miny) / height() * g_abs(height() / resolution));
+        return (int) ((y - m_miny) / height() * (height() / resolution));
     } else {
-        return (int) ((y - m_maxy) / height() * g_abs(height() / resolution));
+        return (int) ((y - m_maxy) / height() * (height() / resolution));
     }
 }
 

@@ -3,7 +3,6 @@
 #include <QMessageBox>
 #include <QSettings>
 
-#include "geotools.h"
 #include "pointstats.hpp"
 #include "pointstats_ui.hpp"
 #include "crs_selector_ui.hpp"

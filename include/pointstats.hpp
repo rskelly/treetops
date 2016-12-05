@@ -9,7 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "raster.hpp"
 #include "util.hpp"
 #include "laspoint.hpp"

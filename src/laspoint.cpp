@@ -3,7 +3,6 @@
 
 #include "liblas/liblas.hpp"
 
-#include "geotools.h"
 #include "laspoint.hpp"
 #include "util.hpp"
 

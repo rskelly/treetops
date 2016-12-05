@@ -23,7 +23,7 @@
 #include <ogr_spatialref.h>
 #include <eigen3/Eigen/Core>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 using namespace geotools::util;
