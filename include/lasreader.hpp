@@ -207,7 +207,7 @@ private:
         int cols = m_bounds.maxCol(m_resolutionX) + 1;
         int rows = m_bounds.maxRow(m_resolutionY) + 1;
         g_debug(" -- finalizer: " << cols << ", " << rows);
-        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, true));
+        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, false));
         m_finalizer->fill(0);
         LASPoint pt;
         std::set<uint64_t> cells;

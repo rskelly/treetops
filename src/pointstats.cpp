@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <cmath>
 #include <thread>
+#include <chrono>
 
 #include <ogr_spatialref.h>
 #include <gdal_priv.h>
@@ -237,7 +238,7 @@ namespace geotools {
                 case TYPE_PSTDDEV: return new CellPopulationStdDev();
                 case TYPE_PVARIANCE: return new CellPopulationVariance();
                 case TYPE_DENSITY: return new CellDensity(g_sq(config.resolution));
-                case TYPE_RUGOSITY: return new CellRugosity(g_sq(config.resolution), 20.0);
+                case TYPE_RUGOSITY: return new CellRugosity(g_sq(config.resolution), 0.0);
                 case TYPE_MAX: return new CellMax();
                 case TYPE_MIN: return new CellMin();
                 case TYPE_KURTOSIS: return new CellKurtosis();
@@ -253,7 +254,10 @@ namespace geotools {
             ps->runner();
         }
 
-        PointStats::PointStats() {
+        PointStats::PointStats() :
+            m_finalizedCount(0),
+            m_cellCount(0),
+            m_callbacks(nullptr) {
         }
 
         PointStats::~PointStats() {
@@ -262,57 +266,46 @@ namespace geotools {
         void PointStats::runner() {
             uint64_t idx;
             std::list<LASPoint*> pts;
-            while (m_running && !*m_cancel) {
-
-                if(*m_cancel) break;
-
+            while (true) {
+                while(m_bq.empty() && m_running && !*m_cancel)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if(!m_running || *m_cancel)
+                    break;
                 {
-                    // If the queue is empty, wait here until wake-up
+                    // Grab an index.
                     std::unique_lock<std::mutex> lk(m_qmtx);
-                    while(m_bq.empty())
-                        m_cdn.wait(lk);
+                    if(m_bq.empty())
+                        continue;
+                    idx = m_bq.front();
+                    m_bq.pop();
+                }
+                
+                {
+                    // Get the relevant points from the cache
+                    std::unique_lock<std::mutex> lk(m_cmtx);
+                    pts.assign(m_cache[idx].begin(), m_cache[idx].end());
+                    m_cache.erase(idx);
+                    //g_debug(" -- cache size: " << m_cache.size());
                 }
 
-                // Once woken up, as long as the queue isn't empty, keep going.
-                while(!m_bq.empty()) {
-                    
-                    if(*m_cancel) break;
-
-                    {
-                        // Grab an index.
-                        std::unique_lock<std::mutex> lk(m_qmtx);
-                        if(!m_bq.size()) break; // If the queue is empty once locked, skip.
-                        idx = m_bq.front();
-                        m_bq.pop();
+                // Process the points.
+                if (!pts.empty()) {
+                    for (size_t i = 0; i < m_computers.size(); ++i) {
+                        int bands = m_computers[i]->bands();
+                        Buffer buf(sizeof(double) * bands);
+                        m_computers[i]->compute(pts, (double *) buf.buf);
+                        std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
+                        int b = 0;
+                        for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
+                            m->set(idx, ((double *) buf.buf)[b++]);
                     }
+                    for (LASPoint *pt : pts)
+                        delete pt;
+                    pts.clear();
 
-                    if(*m_cancel) break;
+                    if(m_callbacks)
+                        m_callbacks->overallCallback(((float) ++m_finalizedCount / m_cellCount) * 0.6f + 0.3f);
 
-                    {
-                        // Get the relevant points from the cache
-                        std::unique_lock<std::mutex> lk(m_cmtx);
-                        pts.assign(m_cache[idx].begin(), m_cache[idx].end());
-                        m_cache.erase(idx);
-                        //g_debug(" -- cache size: " << m_cache.size());
-                    }
-
-                    if(*m_cancel) break;
-
-                    // Process the points.
-                    if (!pts.empty()) {
-                        for (size_t i = 0; i < m_computers.size(); ++i) {
-                            int bands = m_computers[i]->bands();
-                            Buffer buf(sizeof(double) * bands);
-                            m_computers[i]->compute(pts, (double *) buf.buf);
-                            std::unique_lock<std::mutex> flk(*(m_mtx[i].get()));
-                            int b = 0;
-                            for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i])
-                                m->set(idx, ((double *) buf.buf)[b++]);
-                        }
-                        for (LASPoint *pt : pts)
-                            delete pt;
-                        pts.clear();
-                    }
                 }
             }
             g_debug(" -- exit thread");
@@ -326,19 +319,13 @@ namespace geotools {
 
             // In no cancel flag is given, use the dummy.
             m_cancel = cancel == nullptr ? &_cancel : cancel;
-            
-            if (config.threads > 0) {
-                g_debug(" -- pointstats running with " << g_max(1, config.threads - 1) << " threads");
-            } else {
-                g_argerr("Run with >=1 threads.");
-            }
+            m_callbacks = callbacks;
 
             FileSorter sorter(20.0, 20.0);
             std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
             std::sort(files.begin(), files.end(), sorter);
 
-            if(*cancel) return;
-            
+            if(*cancel) return;            
             if(callbacks)
                 callbacks->overallCallback(0.1f);
             
@@ -355,6 +342,8 @@ namespace geotools {
             }
             ps.setBounds(bounds);
             ps.init();
+            m_cellCount = ps.cellCount();
+
             int cols = bounds.maxCol(config.resolution) + 1;
             int rows = bounds.maxRow(-config.resolution) + 1;
 
@@ -365,8 +354,6 @@ namespace geotools {
             CellStatsFilter *filter = nullptr;
             if (config.hasClasses())
                 filter = new ClassFilter(config.classes);
-            //if(config.hasQuantileFilter())
-            //	tmp = tmp->chain(new QuantileFilter(config.quantileFilter, config.quantileFilterFrom, config.quantileFilterTo));
 
             // Create a computer, grid and mutex for each statistic.
             for (size_t i = 0; i < config.types.size(); ++i) {
@@ -414,10 +401,9 @@ namespace geotools {
             // Begin streaming the points into the cache for processing.
             g_debug(" -- streaming points");
             LASPoint pt;
-            uint64_t finalizedCount = 0;
             Bounds b = ps.bounds();
-            while (ps.next(pt, &final, &finalIdx)) {
-                if(*cancel) return;
+            m_finalizedCount = 0;
+            while (ps.next(pt, &final, &finalIdx) && !*m_cancel) {
                 {
                     uint64_t idx = b.toRow(pt.y, -config.resolution) * cols + b.toCol(pt.x, config.resolution);
                     std::unique_lock<std::mutex> lk(m_cmtx);
@@ -428,14 +414,17 @@ namespace geotools {
                         std::unique_lock<std::mutex> lk(m_qmtx);
                         m_bq.push(finalIdx);
                     }
-                    m_cdn.notify_one();
-                    if(callbacks)
-                        callbacks->overallCallback(((float) ++finalizedCount / ps.cellCount()) * 0.6f + 0.3f);
+                }
+                if(m_bq.size() > 10000) {
+                    while(m_bq.size() > 100  && !*m_cancel)
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
             }
 
-            m_cdn.notify_all();
-            g_debug(" -- done " << finalizedCount << " of " << ((uint64_t) cols * rows));
+            while(!m_bq.empty() &&  !*m_cancel)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+            g_debug(" -- done " << m_finalizedCount << " of " << m_cellCount);
 
             m_running = false;
             // Shut down and join the runners.

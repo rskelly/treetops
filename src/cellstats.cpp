@@ -139,7 +139,6 @@ double CellDensity::area() {
 
 void CellDensity::compute(const std::list<LASPoint*> &values, double *result) {
     std::list<LASPoint*> filt = filtered(values);
-    g_debug(" -- density filtered " << filt.size());
     if (!filt.size()) {
         result[0] = -9999.0;
     } else {

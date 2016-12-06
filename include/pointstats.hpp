@@ -170,6 +170,7 @@ namespace geotools {
             std::mutex m_cmtx;
             std::mutex m_qmtx;
             std::condition_variable m_cdn;
+            std::condition_variable m_cdn0;
 
             bool m_running;
             bool *m_cancel;
@@ -179,6 +180,9 @@ namespace geotools {
             std::vector<std::unique_ptr<std::mutex> > m_mtx;
             std::queue<size_t> m_bq;
             std::queue<size_t> m_idxq;
+            uint64_t m_finalizedCount;
+            uint64_t m_cellCount;
+            const geotools::util::Callbacks *m_callbacks;
 
             /**
              * Check the configuration for validity. 
