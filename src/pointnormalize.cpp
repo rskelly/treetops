@@ -86,10 +86,6 @@ public:
 	std::vector<std::string> getFiles(const Bounds &bounds) {
 		std::vector<std::string> files;
 		for (const auto &pr : m_bounds) {
-			std::cerr << std::setprecision(9);
-			g_debug(
-					" -- check: " << pr.second.print() << "; " << bounds.print()
-							<< "; " << pr.second.intersects(bounds));
 			if (pr.second.intersects(bounds))
 				files.push_back(pr.first);
 		}
@@ -166,9 +162,6 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 		bounds.extend(bounds.maxx() + config.buffer,
 				bounds.maxy() + config.buffer);
 		std::vector<std::string> bufFiles = fileSearch.getFiles(bounds);
-		g_debug(
-				"Normalize: " << bufFiles.size()
-						<< " files to satisfy the buffer");
 
 		for (const std::string &file : bufFiles) {
 			if (*cancel)
@@ -220,7 +213,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 		uint64_t ptCount = objPts.size();
 		std::atomic<uint64_t> curPt(0);
 
-#pragma omp parallel for
+		#pragma omp parallel for
 		for (uint64_t i = 0; i < ptCount; ++i) {
 			if (*cancel)
 				continue;
@@ -235,7 +228,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 				Point_3 p(pt.x, pt.y, pt.z);
 				hint = dt.locate(p, hint);
 				if (dt.is_infinite(hint)) {
-					g_warn("Not found in mesh: " << pt.x << ", " << pt.y);
+					//g_warn("Not found in mesh: " << pt.x << ", " << pt.y);
 					continue;
 				}
 				double area = 0.0;
@@ -250,7 +243,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 					total += h * p3.z();
 				}
 				if (std::isnan(area)) {
-					g_warn("Area is nan: " << area << "; " << total);
+					//g_warn("Area is nan: " << area << "; " << total);
 					continue;
 				}
 				double z = p.z() - total / area;
@@ -258,7 +251,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 					continue;
 				pt.z = z;
 			}
-#pragma omp critical(__las_write)
+			#pragma omp critical(__las_write)
 			{
 				lbounds[0] = g_min(lbounds[0], pt.x);
 				lbounds[1] = g_min(lbounds[1], pt.y);
@@ -274,17 +267,12 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 			}
 		}
 
-		g_debug(
-				" -- setting original count "
-						<< outHeader.GetPointRecordsCount() << " to "
-						<< ptCount);
 		outHeader.SetPointRecordsCount(finalPtCount);
 		for (int i = 0; i < 5; ++i)
 			outHeader.SetPointRecordsByReturnCount(i + 1,
 					finalPtCountByReturn[i]);
 		outHeader.SetMin(lbounds[0], lbounds[1], lbounds[2]);
 		outHeader.SetMax(lbounds[3], lbounds[4], lbounds[5]);
-		lasWriter.SetHeader(outHeader);
 		lasWriter.WriteHeader();
 
 		outstr.close();
