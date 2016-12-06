@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-#include "geotools.h"
+#include "geotools.hpp"
 
 namespace geotools {
 

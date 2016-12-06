@@ -6,7 +6,7 @@
 #include <set>
 #include <map>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "raster.hpp"
 #include "util.hpp"
 

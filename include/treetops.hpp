@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 namespace geotools {
@@ -124,7 +124,7 @@ namespace geotools {
 
         } // util
 
-        class DLL_EXPORT Treetops {
+        class G_DLL_EXPORT Treetops {
         private:
             geotools::util::Callbacks *m_callbacks;
 

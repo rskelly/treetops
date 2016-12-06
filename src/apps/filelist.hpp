@@ -21,48 +21,48 @@
 #include <QDir>
 
 namespace geotools {
-    
-    namespace ui {
-        
-        class FileList : public QObject {
-            Q_OBJECT
-        private:
-            std::vector<std::string> m_files;
-            QPushButton *m_btnAddFiles;
-            QPushButton *m_btnRemoveSelectedFiles;
-            QPushButton *m_btnRemoveAllFiles;
-            QListWidget *m_lstFiles;
-            QWidget *m_parent;
-            QDir m_last;
-            QString m_filter;
 
-            void updateFileList();
-            void updateButtons();
+namespace ui {
 
-        public:
-            FileList();
+class FileList: public QObject {
+	Q_OBJECT
+private:
+	std::vector<std::string> m_files;
+	QPushButton *m_btnAddFiles;
+	QPushButton *m_btnRemoveSelectedFiles;
+	QPushButton *m_btnRemoveAllFiles;
+	QListWidget *m_lstFiles;
+	QWidget *m_parent;
+	QDir m_last;
+	QString m_filter;
 
-            void init(QWidget *parent, QPushButton *btnAddFiles, QPushButton *btnRemoveAllFiles, 
-                    QPushButton *btnRemoveSelectedFiles, QListWidget *lstFiles, QDir &last, 
-                    QString &filter);
+	void updateFileList();
+	void updateButtons();
 
-            std::vector<std::string> files();
-            void setFiles(const std::vector<std::string> &files);
-            
-            virtual ~FileList();
+public:
+	FileList();
 
-        public slots:
-            void fileListSelectionChanged();
-            void removeSelectedFilesClicked();
-            void removeAllFilesClicked();
-            void addFilesClicked();
-            
-        signals:
-            void fileListChanged();
-            
-        };
+	void init(QWidget *parent, QPushButton *btnAddFiles,
+			QPushButton *btnRemoveAllFiles, QPushButton *btnRemoveSelectedFiles,
+			QListWidget *lstFiles, QDir &last, QString &filter);
 
-    }
+	std::vector<std::string> files();
+	void setFiles(const std::vector<std::string> &files);
+
+	virtual ~FileList();
+
+public slots:
+	void fileListSelectionChanged();
+	void removeSelectedFilesClicked();
+	void removeAllFilesClicked();
+	void addFilesClicked();
+
+	signals:
+	void fileListChanged();
+
+};
+
+}
 }
 
 #endif /* FILELIST_HPP */

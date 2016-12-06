@@ -170,6 +170,7 @@ public:
     uint64_t pointCount() {
         return m_pointCount;
     }
+   
 
 };
 
@@ -183,7 +184,7 @@ private:
     std::unique_ptr<MemRaster<uint32_t> > m_finalizer;
     double m_resolution;
     Bounds m_bounds;
-    std::list<Polygon_with_holes_2> m_finalized;
+    std::vector<Bounds> m_blockBounds;
     bool m_cancel;
     uint64_t m_cells;
     
@@ -194,6 +195,7 @@ private:
             std::unique_ptr<LASReader> r(new LASReader(file));
             m_files.push_back(file);
             m_bounds.extend(r->bounds());
+            m_blockBounds.push_back(r->bounds());
             m_readers.push_back(std::move(r));
         }
         m_cols = bounds().maxCol(m_resolution) + 1;
@@ -202,8 +204,7 @@ private:
     void buildFinalizer() {
         if(m_finalizer.get())
             delete m_finalizer.release();
-        m_cols = bounds().maxCol(m_resolution) + 1;
-        int cols = m_bounds.maxCol(m_resolution) + 1;
+        int cols = m_cols = m_bounds.maxCol(m_resolution) + 1;
         int rows = m_bounds.maxRow(m_resolution) + 1;
         g_debug(" -- finalizer: " << cols << ", " << rows);
         m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, true));
@@ -263,6 +264,10 @@ public:
     
     Bounds bounds() const {
         return m_bounds;
+    }
+    
+    std::vector<Bounds> blockBounds() const {
+        return m_blockBounds;
     }
     
     bool next(LASPoint &pt, bool *final, uint64_t *finalIdx) {

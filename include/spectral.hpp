@@ -5,7 +5,7 @@
 #include <string>
 #include <set>
 
-#include "geotools.h"
+#include "geotools.hpp"
 
 namespace geotools {
 

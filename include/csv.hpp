@@ -13,6 +13,9 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
+
+#include "geotools.hpp"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -73,7 +76,8 @@ namespace geotools {
             CSVReader(const std::string &filename, uint32_t buflen = 2048) : 
                 m_filename(filename),
                 m_buf(nullptr),
-                m_buflen(buflen) {
+                m_buflen(buflen),
+				m_type(0) {
             }
             bool next(std::unordered_map<std::string, std::string> &row) {
                 if(!m_str.get()) {

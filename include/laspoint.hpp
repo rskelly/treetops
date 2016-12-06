@@ -8,6 +8,8 @@
 
 #include "util.hpp"
 
+#define LASPOINT_SIZE 79
+
 using namespace geotools::util;
 
 namespace geotools {
@@ -16,15 +18,6 @@ namespace geotools {
 
         class LASPoint {
         private:
-
-            // Determine the scale factors used by all
-            // points (coordinates are stored as ints in 
-            // the LAS format.)
-            //static double m_scaleX, m_scaleY, m_scaleZ;
-
-            // Indicates the size taken up by a single
-            // LASPoint in memory or on disc.
-            const static uint64_t m_dataSize = 20;
 
             void readLAS0(char *buf);
             void readLAS1(char *buf);
@@ -37,7 +30,7 @@ namespace geotools {
             double x, y, z;
             uint16_t intensity;
             uint8_t returnNum, numReturns;
-            bool scanDirection;
+            uint8_t scanDirection;
             bool isEdge;
             uint8_t cls;
             uint8_t clsFlags;
@@ -62,13 +55,14 @@ namespace geotools {
 
             ~LASPoint();
 
-            void write(liblas::Point &pt) const;
-            
             // Sets the scale values used by all points.
             static void setScale(double x, double y, double z);
 
-            // Set fields from a liblas Point object.
-            void update(const liblas::Point &pt);
+            // Configure a liblas point from this point's values.
+            void toLibLAS(liblas::Point &pt) const;
+
+            // Configure this point from a liblas point's values.
+            void fromLibLAS(const liblas::Point &pt);
 
             bool operator<(const LASPoint&) const;
             bool operator>(const LASPoint&) const;

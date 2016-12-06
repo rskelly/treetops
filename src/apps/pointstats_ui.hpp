@@ -16,87 +16,85 @@
 
 namespace geotools {
 
-    namespace ui {
+namespace ui {
 
-        class PointStatsCallbacks : public QObject, public geotools::util::Callbacks {
-            Q_OBJECT
-        public:
-            void stepCallback(float status) const;
-            void overallCallback(float status) const;
-        signals:
-            void stepProgress(int) const;
-            void overallProgress(int) const;
-        };
+class PointStatsCallbacks: public QObject, public geotools::util::Callbacks {
+	Q_OBJECT
+public:
+	void stepCallback(float status) const;
+	void overallCallback(float status) const;signals:
+	void stepProgress(int) const;
+	void overallProgress(int) const;
+};
 
-        class WorkerThread;
+class WorkerThread;
 
-        class PointStatsForm : public QWidget, public Ui::PointStatsForm {
-            friend class WorkerThread;
-            Q_OBJECT
-        private:
-            QWidget *m_form;
-            QDir m_last;
-            WorkerThread *m_workerThread;
-            geotools::util::Callbacks *m_callbacks;
-            geotools::point::PointStatsConfig m_config;
-            FileList m_fileList;
-            QString m_filter;
-            bool m_cancel;
-            
-            void updateFileList();
-            void updateFileButtons();
-            void checkRun();
-            void updateSnapUi();
-            void updateAreaUi();
-            void updateTypeUi();
-            
-        public:
-            PointStatsForm(QWidget *p = Q_NULLPTR);
-            void setupUi(QWidget *Form);
-            ~PointStatsForm();
+class PointStatsForm: public QWidget, public Ui::PointStatsForm {
+	friend class WorkerThread;Q_OBJECT
+private:
+	QWidget *m_form;
+	QDir m_last;
+	WorkerThread *m_workerThread;
+	geotools::util::Callbacks *m_callbacks;
+	geotools::point::PointStatsConfig m_config;
+	FileList m_fileList;
+	QString m_filter;
+	bool m_cancel;
 
-        public slots:
-            void destFileClicked();
-            void destFileChanged(QString);
-            void snapModeChanged(int);
-            void cancelClicked();
-            void runClicked();
-            void exitClicked();
-            void crsConfigClicked();
-            void typeSelected(int);
-            void threadsChanged(int);
-            void quantileChanged(int);
-            void quantilesChanged(int);
-            void attributeSelected(int);
-            void resolutionChanged(double);
-            void gapFunctionSelected(int);
-            void originXChanged(double);
-            void originYChanged(double);
-            void quantileFilterFromChanged(int);
-            void quantileFilterToChanged(int);
-            void quantileFilterChanged(int);
-            void maxAngleChanged(int);
-            void classItemClicked(QListWidgetItem*);
-            void fileListChanged();
-            void gapThresholdChanged(double);
-            void areaModeChanged(int);
-            void areaSizeChanged(double);
-            void done();
-        };
+	void updateFileList();
+	void updateFileButtons();
+	void checkRun();
+	void updateSnapUi();
+	void updateAreaUi();
+	void updateTypeUi();
 
-        class WorkerThread : public QThread {
-        private:
-            geotools::util::Bounds m_bounds;
-            PointStatsForm *m_parent;
-            std::string m_error;
-            void run();
-        public:
-            void init(PointStatsForm *parent, const geotools::util::Bounds &bounds);
-            bool hasError();
-            std::string getError();
-        };
+public:
+	PointStatsForm(QWidget *p = Q_NULLPTR);
+	void setupUi(QWidget *Form);
+	~PointStatsForm();
 
-    }
+public slots:
+	void destFileClicked();
+	void destFileChanged(QString);
+	void snapModeChanged(int);
+	void cancelClicked();
+	void runClicked();
+	void exitClicked();
+	void crsConfigClicked();
+	void typeSelected(int);
+	void threadsChanged(int);
+	void quantileChanged(int);
+	void quantilesChanged(int);
+	void attributeSelected(int);
+	void resolutionChanged(double);
+	void gapFunctionSelected(int);
+	void originXChanged(double);
+	void originYChanged(double);
+	void quantileFilterFromChanged(int);
+	void quantileFilterToChanged(int);
+	void quantileFilterChanged(int);
+	void maxAngleChanged(int);
+	void classItemClicked(QListWidgetItem*);
+	void fileListChanged();
+	void gapThresholdChanged(double);
+	void areaModeChanged(int);
+	void areaSizeChanged(double);
+	void done();
+};
+
+class WorkerThread: public QThread {
+private:
+	geotools::util::Bounds m_bounds;
+	PointStatsForm *m_parent;
+	std::string m_error;
+	void run();
+public:
+	void init(PointStatsForm *parent, const geotools::util::Bounds &bounds);
+	bool hasError();
+	std::string getError();
+};
+
+}
 
 }
 

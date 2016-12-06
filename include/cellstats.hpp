@@ -24,7 +24,7 @@ namespace geotools {
                 CellStatsFilter *m_chain;
                 const std::list<LASPoint*> *m_points;
 
-                virtual bool keepImpl(const LASPoint *) const = 0;
+                virtual bool keepImpl(double x, double y, const LASPoint *) const = 0;
 
                 virtual void init();
 
@@ -35,7 +35,7 @@ namespace geotools {
 
                 void setPoints(const std::list<LASPoint*> *points);
 
-                bool keep(const LASPoint *pt) const;
+                bool keep(double x, double y, const LASPoint *pt) const;
 
                 virtual ~CellStatsFilter() = 0;
             };
@@ -45,7 +45,7 @@ namespace geotools {
                 std::set<unsigned char> m_classes;
 
             protected:
-                bool keepImpl(const LASPoint *pt) const;
+                bool keepImpl(double x, double y, const LASPoint *pt) const;
 
                 void init();
                 
@@ -55,6 +55,22 @@ namespace geotools {
                 ~ClassFilter();
             };
 
+            class RadiusFilter : public CellStatsFilter {
+            private:
+                double m_radius;
+
+            protected:
+                bool keepImpl(double x, double y, const LASPoint *pt) const;
+
+                void init();
+                
+            public:
+                RadiusFilter(double radius);
+
+                ~RadiusFilter();
+                
+            };
+            
             class QuantileFilter : public CellStatsFilter {
             private:
                 int m_quantiles;
@@ -64,7 +80,7 @@ namespace geotools {
                 double m_max;
 
             protected:
-                bool keepImpl(const LASPoint *pt) const;
+                bool keepImpl(double x, double y, const LASPoint *pt) const;
 
                 void init();
                 
@@ -83,13 +99,13 @@ namespace geotools {
 
                 void setFilter(CellStatsFilter *filter);
                 
-                std::list<LASPoint*> filtered(const std::list<LASPoint*> &values);
+                std::list<LASPoint*> filtered(double x, double y, const std::list<LASPoint*> &values);
 
-                virtual void compute(const std::list<LASPoint*>&, double*);
+                virtual void compute(double x, double y, const std::list<LASPoint*>&, double*);
 
                 virtual int bands() const;
                 
-                ~CellStats();
+                virtual ~CellStats();
             };
 
             class CellDensity : public CellStats {
@@ -98,7 +114,7 @@ namespace geotools {
             public:
                 CellDensity(double area = 0.0);
 
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
                 
                 void setArea(double area);
 
@@ -107,55 +123,55 @@ namespace geotools {
 
             class CellMean : public CellStats {
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellCount : public CellStats {
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellMedian : public CellStats {
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellMin : public CellStats {
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellMax : public CellStats {
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellSampleVariance : public CellStats {
             private:
                 CellMean m_mean;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellPopulationVariance : public CellStats {
             private:
                 CellMean m_mean;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellSampleStdDev : public CellStats {
             private:
                 CellSampleVariance m_variance;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellPopulationStdDev : public CellStats {
             private:
                 CellPopulationVariance m_variance;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellSkewness : public CellStats {
@@ -163,7 +179,7 @@ namespace geotools {
                 CellMean m_mean;
                 CellSampleStdDev m_stdDev;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellKurtosis : public CellStats {
@@ -171,7 +187,7 @@ namespace geotools {
                 CellMean m_mean;
                 CellSampleStdDev m_stdDev;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellCoV : public CellStats {
@@ -179,7 +195,7 @@ namespace geotools {
                 CellMean m_mean;
                 CellSampleStdDev m_stdDev;
             public:
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             class CellQuantile : public CellStats {
@@ -189,7 +205,7 @@ namespace geotools {
             public:
                 CellQuantile(unsigned char quantile, unsigned char quantiles);
                 
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
             // Using Du Preez, 2014 - Arc-Chord Ratio (ACR) Index.
@@ -201,7 +217,7 @@ namespace geotools {
             public:
                 CellRugosity(double cellArea = 0.0, double avgDensity = 0.0);
 
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
             };
 
              // Adapted from:
@@ -216,7 +232,7 @@ namespace geotools {
             public:
                 CellGapFraction(unsigned char type, double threshold);
 
-                void compute(const std::list<LASPoint*>&, double*);
+                void compute(double x, double y, const std::list<LASPoint*>&, double*);
 
                 void threshold(double t);
                 

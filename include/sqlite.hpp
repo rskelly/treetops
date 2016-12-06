@@ -1,14 +1,15 @@
 #ifndef __SQLITE_HPP__
 #define __SQLITE_HPP__
 
+#include <sqlite3.h>
+#include <spatialite.h>
+
 #include <sstream>
 #include <iomanip>
 #include <vector>
 
-#include <sqlite3.h>
-#include <spatialite.h>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 using namespace geotools::util;

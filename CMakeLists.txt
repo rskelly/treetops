@@ -160,7 +160,7 @@ else()
 	target_link_libraries (pointstats-app PUBLIC pointstats)
 endif()
 
-add_library(pointnormalize SHARED src/pointnormalize.cpp src/pointstream.cpp src/lasutil.cpp src/laspoint.cpp)
+add_library(pointnormalize SHARED src/pointnormalize.cpp src/lasutil.cpp src/laspoint.cpp)
 target_link_libraries (pointnormalize gdal CGAL gmp laszip las boost_system boost_filesystem raster geotools)
 if(${WITH_GUI})
 	add_executable (pointnormalize-app src/apps/pointnormalize.cpp src/apps/pointnormalize_ui.cpp src/apps/filelist.cpp)
@@ -170,8 +170,8 @@ else()
 	target_link_libraries (pointnormalize-app PUBLIC pointnormalize)
 endif()
 
-add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
-target_link_libraries (lasboundary PUBLIC las gdal las laszip geos boost_system boost_filesystem raster util geotools)
+#add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
+#target_link_libraries (lasboundary PUBLIC las gdal las laszip geos boost_system boost_filesystem raster util geotools)
 
 
 add_library(lasvalidate SHARED src/lasvalidate.cpp src/lasutil.cpp)
@@ -180,20 +180,20 @@ add_executable (lasvalidate-app src/apps/lasvalidate.cpp)
 target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 
 
-add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
-target_link_libraries (pointzonalstats gdal las laszip geos boost_system boost_filesystem raster util geotools)
+#add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
+#target_link_libraries (pointzonalstats gdal las laszip geos boost_system boost_filesystem raster util geotools)
 
 
 add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
 target_link_libraries (lasmerge las laszip boost_system boost_filesystem util geotools)
 
 
-add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
-target_link_libraries (lasreclass las laszip boost_system boost_filesystem util geotools)
+#add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
+#target_link_libraries (lasreclass las laszip boost_system boost_filesystem util geotools)
 
 
-add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
-target_link_libraries (lasclip gdal las laszip geos boost_system boost_filesystem util geotools)
+#add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
+#target_link_libraries (lasclip gdal las laszip geos boost_system boost_filesystem util geotools)
 
 
 add_executable (las2csrs src/las2csrs.cpp src/lasutil.cpp)
@@ -223,13 +223,13 @@ install (TARGETS lasvalidate DESTINATION lib)
 install (TARGETS lasvalidate-app DESTINATION bin)
 install (FILES include/lasvalidate.hpp DESTINATION include)
 
-install (TARGETS pointzonalstats DESTINATION bin)
+#install (TARGETS pointzonalstats DESTINATION bin)
 
 install (TARGETS lasmerge DESTINATION bin)
 
-install (TARGETS lasreclass DESTINATION bin)
+#install (TARGETS lasreclass DESTINATION bin)
 
-install (TARGETS lasclip DESTINATION bin)
+#install (TARGETS lasclip DESTINATION bin)
 
 install (TARGETS las2csrs DESTINATION bin)
 install (DIRECTORY share/ DESTINATION share PATTERN "share/*")

@@ -4,14 +4,14 @@
 #include <vector>
 #include <string>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 namespace geotools {
 
     namespace raster {
 
-        class DLL_EXPORT Mosaic {
+        class G_DLL_EXPORT Mosaic {
         private:
             geotools::util::Callbacks *m_callbacks;
 

@@ -9,11 +9,11 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "geotools.h"
 #include "raster.hpp"
 #include "util.hpp"
 #include "laspoint.hpp"
 #include "cellstats.hpp"
+#include "geotools.hpp"
 
 #define TYPE_MIN 1
 #define TYPE_MAX 2
@@ -180,6 +180,10 @@ namespace geotools {
             std::queue<size_t> m_bq;
             std::queue<size_t> m_idxq;
 
+            double m_tlx, m_tly; // Top left corner of bounds.
+            double m_resolutionX, m_resolutionY;
+            int m_cols, m_rows; // Cols, rows in the grid.
+            
             /**
              * Check the configuration for validity. 
              * Throw an exception if it's invalid or absent.

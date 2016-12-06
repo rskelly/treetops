@@ -17,9 +17,9 @@
 #endif
 
 #ifdef _MSC_VER
-#define DLL_EXPORT __declspec(dllexport)
+#define G_DLL_EXPORT __declspec(dllexport)
 #else
-#define DLL_EXPORT
+#define G_DLL_EXPORT
 #endif
 
 #define G_PI 3.14159265358979323846
@@ -47,15 +47,17 @@ extern int g__loglevel;
 #define G_LOG_NONE 0
 
 #define g_loglevel(x) {g__loglevel = x;}
-/*
+
+#ifdef _MSC_VER
+#define g_log(x, y) { if(g__loglevel >= y) std::cerr << std::setprecision(12) << x << std::endl; }
+#else
 #define g_log(x, y) _Pragma("omp critical") \
         { \
                 if(g__loglevel >= y) { \
                         std::cerr << std::setprecision(12) << x << std::endl; \
                 } \
         }
- */
-#define g_log(x, y) { if(g__loglevel >= y) std::cerr << std::setprecision(12) << x << std::endl; }
+#endif
 #define g_trace(x) g_log("TRACE:   " << x, G_LOG_TRACE)
 #define g_debug(x) g_log("DEBUG:   " << x, G_LOG_DEBUG)
 #define g_warn(x)  g_log("WARNING: " << x, G_LOG_WARN)

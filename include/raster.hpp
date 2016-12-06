@@ -23,7 +23,7 @@
 #include <ogr_spatialref.h>
 #include <eigen3/Eigen/Core>
 
-#include "geotools.h"
+#include "geotools.hpp"
 #include "util.hpp"
 
 using namespace geotools::util;
@@ -34,7 +34,7 @@ namespace geotools {
 
         // Simple class to represent a single grid cell.
 
-        class DLL_EXPORT Cell {
+        class G_DLL_EXPORT Cell {
         public:
             int32_t col;
             int32_t row;
@@ -45,13 +45,13 @@ namespace geotools {
         // a pixel should be filled.
 
         template <class T>
-        class DLL_EXPORT FillOperator {
+        class G_DLL_EXPORT FillOperator {
         public:
             virtual bool fill(T value) const = 0;
         };
 
         template <class T>
-        class DLL_EXPORT TargetOperator : public FillOperator<T> {
+        class G_DLL_EXPORT TargetOperator : public FillOperator<T> {
         private:
             T m_match;
         public:
@@ -63,7 +63,7 @@ namespace geotools {
         // Abstract class for grids (rasters).
 
         template <class T>
-        class DLL_EXPORT Grid {
+        class G_DLL_EXPORT Grid {
         protected:
             T m_min;
             T m_max;
@@ -319,7 +319,7 @@ namespace geotools {
         // Handles allocation and deallocation of memory.
 
         template <class T>
-        class DLL_EXPORT MemRaster : public Grid<T> {
+        class G_DLL_EXPORT MemRaster : public Grid<T> {
         private:
             T *m_grid;
             int32_t m_cols;
@@ -420,7 +420,7 @@ namespace geotools {
         };
 
         template <class T>
-        class DLL_EXPORT BlockCache {
+        class G_DLL_EXPORT BlockCache {
         private:
             GDALRasterBand *m_band;
             size_t m_size;
@@ -505,7 +505,7 @@ namespace geotools {
         };
 
         template <class T>
-        class DLL_EXPORT Raster : public Grid<T> {
+        class G_DLL_EXPORT Raster : public Grid<T> {
         private:
             int32_t m_cols, m_rows;     // Raster cols/rows
             int32_t m_bandn;            // The band number

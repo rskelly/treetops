@@ -26,7 +26,7 @@
 #include "ogr_geometry.h"
 #include "ogrsf_frmts.h"
 
-#include "geotools.h"
+#include "geotools.hpp"
 
 using namespace boost::algorithm;
 
