@@ -8,7 +8,6 @@
 
 #include "cpl_conv.h"
 
-#include "geotools.hpp"
 #include "util.hpp"
 #include "csv.hpp"
 #include "crs_selector_ui.hpp"

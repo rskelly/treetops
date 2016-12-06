@@ -103,7 +103,7 @@ public:
 	 */
 	double sum() {
 		double sum = 0;
-		for (int i = 0; i < m_values.size(); ++i)
+		for (size_t i = 0; i < m_values.size(); ++i)
 			sum += m_values[i];
 		return sum;
 	}
@@ -140,7 +140,7 @@ public:
 		if (count() > 0) {
 			double m = mean();
 			double s = 0.0;
-			for (int i = 0; i < m_values.size(); ++i)
+			for (size_t i = 0; i < m_values.size(); ++i)
 				s += g_sq(m_values[i] - m);
 			return s / (count() - 1.0);
 		}
@@ -183,8 +183,8 @@ void rasterstats(std::string &clsfile, std::vector<std::string> &files) {
 	Raster<unsigned char> clsrast(clsfile);
 
 	// Loop over every pair of files.
-	for (int f0 = 0; f0 < files.size(); ++f0) {
-		for (int f1 = f0 + 1; f1 < files.size(); ++f1) {
+	for (size_t f0 = 0; f0 < files.size(); ++f0) {
+		for (size_t f1 = f0 + 1; f1 < files.size(); ++f1) {
 
 			Raster<float> frast0(files[f0]);
 			Raster<float> frast1(files[f1]);
@@ -200,15 +200,6 @@ void rasterstats(std::string &clsfile, std::vector<std::string> &files) {
 			double miny = g_max(frast0.miny(), frast1.miny());
 			double maxx = g_min(frast0.maxx(), frast1.maxx());
 			double maxy = g_min(frast0.maxy(), frast1.maxy());
-
-			int cols = (int) (maxx - minx) / frast0.resolutionX();
-			int rows = (int) (miny - maxy) / frast0.resolutionY();
-
-			//std::cerr << files[f0] << ": " << frast0.minx() << ", " << frast0.miny() << ", " << frast0.maxx() << ", " << frast0.maxy() << std::endl;
-			//std::cerr << files[f1] << ": " << frast1.minx() << ", " << frast1.miny() << ", " << frast1.maxx() << ", " << frast1.maxy() << std::endl;
-			//std::cerr << "range: " << minx << ", " << miny << ", " << maxx << ", " << maxy << std::endl;
-
-			int stop = 1;
 
 			for (double y = miny; y < maxy;
 					y += std::abs(frast0.resolutionY())) {

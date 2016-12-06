@@ -9,5 +9,8 @@ data/*
 makefiles
 tests/output
 nbproject
-
-
+.cproject
+/tmp/
+/triangle
+.settings
+.project

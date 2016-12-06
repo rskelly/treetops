@@ -39,7 +39,7 @@ void CellStatsFilter::init() {
 
 CellStatsFilter* CellStatsFilter::chain(CellStatsFilter *next) {
 	m_chain = next;
-	return next;
+	return this;
 }
 
 void CellStatsFilter::setPoints(const std::list<LASPoint*> *points) {
@@ -94,10 +94,7 @@ QuantileFilter::~QuantileFilter() {
 }
 
 bool RadiusFilter::keepImpl(double x, double y, const LASPoint *pt) const {
-	g_debug(
-			" -- radius " << (g_sq(pt->x - x) + g_sq(pt->y - y)) << " <-> "
-					<< g_sq(m_radius));
-	return g_sq(pt->x - x) + g_sq(pt->y - y) <= g_sq(m_radius);
+	return (g_sq(pt->x - x) + g_sq(pt->y - y)) <= g_sq(m_radius);
 }
 
 void RadiusFilter::init() {
@@ -159,7 +156,6 @@ double CellDensity::area() {
 void CellDensity::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
 	std::list<LASPoint*> filt = filtered(x, y, values);
-	g_debug(" -- density filtered " << filt.size());
 	if (!filt.size()) {
 		result[0] = -9999.0;
 	} else {

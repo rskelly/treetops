@@ -182,7 +182,8 @@ private:
     uint32_t m_idx;
     uint32_t m_cols;
     std::unique_ptr<MemRaster<uint32_t> > m_finalizer;
-    double m_resolution;
+    double m_resolutionX;
+    double m_resolutionY;
     Bounds m_bounds;
     std::vector<Bounds> m_blockBounds;
     bool m_cancel;
@@ -198,24 +199,25 @@ private:
             m_blockBounds.push_back(r->bounds());
             m_readers.push_back(std::move(r));
         }
-        m_cols = bounds().maxCol(m_resolution) + 1;
+        m_cols = bounds().maxCol(m_resolutionX) + 1;
     }
 
     void buildFinalizer() {
         if(m_finalizer.get())
             delete m_finalizer.release();
-        int cols = m_cols = m_bounds.maxCol(m_resolution) + 1;
-        int rows = m_bounds.maxRow(m_resolution) + 1;
+        int cols = m_bounds.maxCol(m_resolutionX) + 1;
+        int rows = m_bounds.maxRow(m_resolutionY) + 1;
+        m_cols = cols;
         g_debug(" -- finalizer: " << cols << ", " << rows);
-        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, true));
+        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, false));
         m_finalizer->fill(0);
         LASPoint pt;
         std::set<uint64_t> cells;
         try {
             while(next(pt, nullptr, nullptr)) {
                 if(m_cancel) return;
-                int col = m_bounds.toCol(pt.x, m_resolution);
-                int row = m_bounds.toRow(pt.y, m_resolution);
+                int col = m_bounds.toCol(pt.x, m_resolutionX);
+                int row = m_bounds.toRow(pt.y, m_resolutionY);
                 m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
                 cells.insert((uint64_t) row * m_cols + col);
             }
@@ -228,10 +230,10 @@ private:
     }
     
 public:
-    LASMultiReader(const std::vector<std::string> &files, double resolution = 50.0) :
+    LASMultiReader(const std::vector<std::string> &files, double resolutionX, double resolutionY) :
         m_reader(nullptr),
         m_idx(0),
-        m_resolution(resolution),
+        m_resolutionX(resolutionX), m_resolutionY(resolutionY),
         m_cancel(false),
         m_cells(0) {
         load(files);
@@ -281,8 +283,8 @@ public:
                 return false;
         }
         if(finalIdx != nullptr) {
-            int col = m_bounds.toCol(pt.x, m_resolution);
-            int row = m_bounds.toRow(pt.y, m_resolution);
+            int col = m_bounds.toCol(pt.x, m_resolutionX);
+            int row = m_bounds.toRow(pt.y, m_resolutionY);
             uint32_t count = m_finalizer->get(col, row);
             //g_debug(" -- pt " << pt.x << ", " << pt.y << "; " << col << ", " << row << "; " << count << "; " << m_cols);
             if(count == 0)

@@ -152,22 +152,38 @@ int Bounds::maxRow(double resolution) const {
 }
 
 int Bounds::toCol(double x, double resolution) const {
-	if (width() == 0.0)
-		return 0;
-	if (resolution > 0) {
-		return (int) ((x - m_minx) / width() * g_abs(width() / resolution));
+    if(width() == 0.0)
+        return 0;
+    if(resolution > 0) {
+        return (int) ((x - m_minx) / width() * (width() / resolution));
+    } else {
+        return (int) ((x - m_maxx) / width() * (width() / resolution));
+    }
+}
+            
+int Bounds::toRow(double y, double resolution) const {
+    if(height() == 0.0)
+        return 0;
+    if(resolution > 0) {
+        return (int) ((y - m_miny) / height() * (height() / resolution));
+    } else {
+        return (int) ((y - m_maxy) / height() * (height() / resolution));
+    }
+}
+
+double Bounds::toX(int col, double resolution) const {
+	if(resolution > 0) {
+		return m_minx + resolution * col;
 	} else {
-		return (int) ((m_maxx - x) / width() * g_abs(width() / resolution));
+		return m_maxx + resolution * col;
 	}
 }
 
-int Bounds::toRow(double y, double resolution) const {
-	if (height() == 0.0)
-		return 0;
-	if (resolution > 0) {
-		return (int) ((y - m_miny) / height() * g_abs(height() / resolution));
+double Bounds::toY(int row, double resolution) const {
+	if(resolution > 0) {
+		return m_miny + resolution * row;
 	} else {
-		return (int) ((m_maxy - y) / height() * g_abs(height() / resolution));
+		return m_maxy + resolution * row;
 	}
 }
 

@@ -31,7 +31,7 @@ public:
 	 * Construct the Px with the position.
 	 */
 	Px(unsigned int id, double x, double y) :
-			id(id), x(x), y(y) {
+			x(x), y(y), id(id) {
 	}
 
 	/**
@@ -146,8 +146,8 @@ void processSpectralFile(const SpectralConfig &config,
 		Raster<unsigned int> idxRaster(config.indexFilename);
 		Raster<unsigned short> specRaster(specFilename, bands[0]);
 
-		for (int row = block; row < g_min(endRow, block + 100); ++row) {
-			for (int b = 0; b < bands.size(); ++b) {
+		for (size_t row = block; row < g_min(endRow, block + 100); ++row) {
+			for (size_t b = 0; b < bands.size(); ++b) {
 				int band = bands[b];
 				specRaster.setBand(band);
 				for (int col = startCol; col < endCol; ++col) {

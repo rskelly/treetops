@@ -132,6 +132,10 @@ namespace geotools {
             
             int toRow(double y, double resolution) const;
             
+            double toX(int col, double resolution) const;
+
+            double toY(int row, double resolution) const;
+
             void extend(const geotools::util::Bounds &b);
 
             void extendX(double x);

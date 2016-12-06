@@ -7,13 +7,12 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <condition_variable>
 
+#include "geotools.hpp"
 #include "raster.hpp"
 #include "util.hpp"
 #include "laspoint.hpp"
 #include "cellstats.hpp"
-#include "geotools.hpp"
 
 #define TYPE_MIN 1
 #define TYPE_MAX 2
@@ -169,21 +168,25 @@ namespace geotools {
         private:
             std::mutex m_cmtx;
             std::mutex m_qmtx;
-            std::condition_variable m_cdn;
 
-            bool m_running;
-            bool *m_cancel;
             std::unordered_map<size_t, std::list<geotools::las::LASPoint*> > m_cache;
             std::vector<std::unique_ptr<geotools::point::stats::CellStats> > m_computers;
             std::vector<std::vector<std::unique_ptr<geotools::raster::MemRaster<float> > > > m_mem;
             std::vector<std::unique_ptr<std::mutex> > m_mtx;
             std::queue<size_t> m_bq;
             std::queue<size_t> m_idxq;
+            const geotools::util::Callbacks *m_callbacks;
 
-            double m_tlx, m_tly; // Top left corner of bounds.
-            double m_resolutionX, m_resolutionY;
+            bool m_running;
+            bool *m_cancel;
+            uint64_t m_finalizedCount;
+            uint64_t m_cellCount;
             int m_cols, m_rows; // Cols, rows in the grid.
+            double m_resolutionX, m_resolutionY;
+            double m_tlx, m_tly; // Top left corner of bounds.
             
+            geotools::util::Bounds m_bounds;
+
             /**
              * Check the configuration for validity. 
              * Throw an exception if it's invalid or absent.
