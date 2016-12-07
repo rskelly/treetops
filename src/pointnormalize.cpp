@@ -227,8 +227,8 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 			} else {
 				Point_3 p(pt.x, pt.y, pt.z);
 				hint = dt.locate(p, hint);
-				if (dt.is_infinite(hint)) {
-					//g_warn("Not found in mesh: " << pt.x << ", " << pt.y);
+				if (hint == NULL || dt.is_infinite(hint)) {
+					g_warn("Not found in mesh: " << pt.x << ", " << pt.y);
 					continue;
 				}
 				double area = 0.0;

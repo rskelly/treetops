@@ -319,13 +319,13 @@ namespace geotools {
             
         bool _cancel = false;
         
-        class InitStatus {
+        class InitCallback : public LASReaderCallback {
         public:
-            Callbacks *m_callbacks;
-            InitStatus(Callbacks *callbacks) :
+            const Callbacks *m_callbacks;
+            InitCallback(const Callbacks *callbacks) :
                 m_callbacks(callbacks) {
             }
-            void operator()(float status) {
+            void status(float status) const {
                 m_callbacks->overallCallback(0.05f + status * 0.4f);
             }
         };
@@ -360,7 +360,8 @@ namespace geotools {
                     break;
             }
             ps.setBounds(m_bounds);
-            ps.init(InitStatus(callbacks));
+            InitCallback initStatus(callbacks);
+            ps.buildFinalizer(&initStatus);
             m_cellCount = ps.cellCount();
 
             m_cols = m_bounds.maxCol(m_resolutionX) + 1;

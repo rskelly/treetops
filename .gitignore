@@ -2,6 +2,7 @@
 **/*.pyc
 **/*.swp
 **/*.swo
+**/*.tif.aux.xml
 **/*.tif.xml
 **/*.qhc
 **/*.qch
