@@ -532,7 +532,7 @@ void ccf(const std::list<LASPoint*> &values, double *result, double threshold) {
 			maxZ = g_max(maxZ, pt->z);
 		double htIncrement = (maxZ - threshold) / 20.0;
 		double curHeight = threshold;
-		for (int band = 0; band < 20; ++band) {
+		for (int band = 0; band <= 20; ++band) {
 			double count = 0;
 			for (const LASPoint *pt : values) {
 				if (pt->z > curHeight)
@@ -568,7 +568,7 @@ void CellGapFraction::threshold(double t) {
 int CellGapFraction::bands() const {
 	switch (m_type) {
 	case GAP_CCF:
-		return 20;
+		return 21;
 	default:
 		return 1;
 	}

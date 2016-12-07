@@ -63,9 +63,10 @@ private:
     }
 
     void load() {
+        g_debug("LASReader: open " << m_file);
         m_f = std::fopen(m_file.c_str(), "rb");
         if (!m_f)
-            g_runerr("Failed to open " << m_file);
+            g_runerr("Failed to open " << m_file << "; errno: " << errno);
 
         std::fseek(m_f, 4, SEEK_SET);
         _read((void *) &m_sourceId, sizeof (uint16_t), 1, m_f);
@@ -124,8 +125,10 @@ public:
     }
 
     ~LASReader() {
-        if (m_f)
+        if (m_f) {
+            g_debug("LASReader: close " << m_file);
             std::fclose(m_f);
+        }
         if (m_buf.get())
             delete m_buf.release();
     }
@@ -174,10 +177,11 @@ public:
 
 };
 
+bool __lr__cancel = false;
+
 class LASMultiReader {
 private:
     std::vector<std::string> m_files;
-    std::vector<std::unique_ptr<LASReader> > m_readers;
     LASReader *m_reader;
     uint32_t m_idx;
     uint32_t m_cols;
@@ -186,77 +190,89 @@ private:
     double m_resolutionY;
     Bounds m_bounds;
     std::vector<Bounds> m_blockBounds;
-    bool m_cancel;
+    bool *m_cancel;
     uint64_t m_cells;
     
     void load(const std::vector<std::string> &files) {
         m_bounds.collapse();
         for(const std::string &file : files) {
-            if(m_cancel) return;
-            std::unique_ptr<LASReader> r(new LASReader(file));
+            if(*m_cancel) return;
+            LASReader r(file);
             m_files.push_back(file);
-            m_bounds.extend(r->bounds());
-            m_blockBounds.push_back(r->bounds());
-            m_readers.push_back(std::move(r));
+            m_bounds.extend(r.bounds());
+            m_blockBounds.push_back(r.bounds());
         }
         m_cols = bounds().maxCol(m_resolutionX) + 1;
     }
 
-    void buildFinalizer() {
+public:
+    LASMultiReader(const std::vector<std::string> &files, double resolutionX, double resolutionY, bool *cancel = nullptr) :
+        m_reader(nullptr),
+        m_idx(0),
+        m_resolutionX(resolutionX), m_resolutionY(resolutionY),
+        m_cancel(cancel),
+        m_cells(0) {
+
+        if(m_cancel == nullptr)
+            m_cancel = &__lr__cancel;
+
+        load(files);
+    }
+        
+    ~LASMultiReader() {
+        if(m_reader)
+            delete m_reader;
+    }
+
+    // Initializes the finalization grid.
+    // Pass a functor to capture status updates from 0 to 1.
+    template <class Func>
+    void init(const Func *callback = nullptr) {
         if(m_finalizer.get())
             delete m_finalizer.release();
         int cols = m_bounds.maxCol(m_resolutionX) + 1;
         int rows = m_bounds.maxRow(m_resolutionY) + 1;
         m_cols = cols;
         g_debug(" -- finalizer: " << cols << ", " << rows);
-        m_finalizer.reset(new MemRaster<uint32_t>(cols, rows, false));
-        m_finalizer->fill(0);
+        MemRaster<uint32_t> *finalizer = nullptr;
+        std::vector<bool> cells((size_t) cols * rows);
         LASPoint pt;
-        std::set<uint64_t> cells;
         try {
-            while(next(pt, nullptr, nullptr)) {
-                if(m_cancel) return;
+            finalizer = new MemRaster<uint32_t>(cols, rows, false);
+            m_finalizer->fill(0);
+            bool fileChanged;
+            uint32_t file = 0;
+            while(next(pt, nullptr, nullptr, &fileChanged)) {
+                if(*m_cancel) return;
                 int col = m_bounds.toCol(pt.x, m_resolutionX);
                 int row = m_bounds.toRow(pt.y, m_resolutionY);
-                m_finalizer->set(col, row, m_finalizer->get(col, row) + 1);
-                cells.insert((uint64_t) row * m_cols + col);
+                finalizer->set(col, row, finalizer->get(col, row) + 1);
+                cells[row * m_cols + col] = true;
+                if(callback)
+                    callback((float) ++file / m_files.size());
             }
+            m_finalizer.reset(finalizer);
         } catch(const std::exception &ex) {
+            if(finalizer)
+                delete finalizer;
             g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header.");
         }
-        g_debug(" -- finalizer: " << m_finalizer->cols() << ", " << m_finalizer->rows() << "; " << m_bounds.print());
-        m_cells = cells.size();
+
+        m_cells = 0;
+        for(bool b : cells) ++m_cells;
+            
         reset();
-    }
-    
-public:
-    LASMultiReader(const std::vector<std::string> &files, double resolutionX, double resolutionY) :
-        m_reader(nullptr),
-        m_idx(0),
-        m_resolutionX(resolutionX), m_resolutionY(resolutionY),
-        m_cancel(false),
-        m_cells(0) {
-        load(files);
-    }
-        
-    void init() {
-        buildFinalizer();
     }
 
     void reset() {
-        m_idx = 0;
+        if(m_reader)
+            delete m_reader;
         m_reader = nullptr;
-        m_cancel = false;
-        for(const auto &r : m_readers)
-            r->reset();
+        m_idx = 0;
     }
     
     uint64_t cellCount() {
         return m_cells;
-    }
-    
-    void cancel() {
-        m_cancel = true;
     }
     
     void setBounds(const Bounds &bounds) {
@@ -272,28 +288,32 @@ public:
         return m_blockBounds;
     }
     
-    bool next(LASPoint &pt, bool *final, uint64_t *finalIdx) {
+    bool next(LASPoint &pt, bool *final = nullptr, uint64_t *finalIdx = nullptr, bool *fileChanged = nullptr) {
         if(!m_reader || !m_reader->next(pt)) {
-            if(m_idx >= m_readers.size())
+            if(m_idx >= m_files.size())
                 return false;
             if(m_reader)
-                m_reader->reset();
-            m_reader = m_readers[m_idx++].get();
+                delete m_reader;
+            m_reader = new LASReader(m_files[m_idx++]);
             if(!m_reader->next(pt))
                 return false;
+            // If the file has been switched, set the indicator to true
+            if(fileChanged != nullptr)
+                *fileChanged = true;
+        } else if(fileChanged != nullptr) {
+            // If the file is not switched, set the indicator to false.
+            *fileChanged = false;
         }
         if(finalIdx != nullptr) {
             int col = m_bounds.toCol(pt.x, m_resolutionX);
             int row = m_bounds.toRow(pt.y, m_resolutionY);
             uint32_t count = m_finalizer->get(col, row);
-            //g_debug(" -- pt " << pt.x << ", " << pt.y << "; " << col << ", " << row << "; " << count << "; " << m_cols);
             if(count == 0)
                 g_runerr("Finalizer reached zero. This is impossible!");
             m_finalizer->set(col, row, count - 1);
             if(count == 1) {
                 *finalIdx = (uint64_t) row * m_cols + col;
                 *final = true;
-                //g_debug(" -- final " << *finalIdx);
             } else {
                 *final = false;
             }

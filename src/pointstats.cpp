@@ -310,7 +310,7 @@ namespace geotools {
                     pts.clear();
 
                     if(m_callbacks)
-                        m_callbacks->overallCallback(((float) ++m_finalizedCount / m_cellCount) * 0.6f + 0.3f);
+                        m_callbacks->overallCallback(((float) ++m_finalizedCount / m_cellCount) * 0.52f + 0.47f);
 
                 }
             }
@@ -319,6 +319,17 @@ namespace geotools {
             
         bool _cancel = false;
         
+        class InitStatus {
+        public:
+            Callbacks *m_callbacks;
+            InitStatus(Callbacks *callbacks) :
+                m_callbacks(callbacks) {
+            }
+            void operator()(float status) {
+                m_callbacks->overallCallback(0.05f + status * 0.4f);
+            }
+        };
+
         void PointStats::pointstats(const PointStatsConfig &config, const Callbacks *callbacks, bool *cancel) {
 
             checkConfig(config);
@@ -335,10 +346,10 @@ namespace geotools {
 
             if(*cancel) return;            
             if(callbacks)
-                callbacks->overallCallback(0.1f);
+                callbacks->overallCallback(0.01f);
             
             // Initialize the point stream
-            LASMultiReader ps(config.sourceFiles, m_resolutionX, m_resolutionY);
+            LASMultiReader ps(config.sourceFiles, m_resolutionX, m_resolutionY, m_cancel);
             m_bounds = ps.bounds();
             switch(config.snapMode) {
                 case SNAP_ORIGIN:
@@ -349,14 +360,14 @@ namespace geotools {
                     break;
             }
             ps.setBounds(m_bounds);
-            ps.init();
+            ps.init(InitStatus(callbacks));
             m_cellCount = ps.cellCount();
 
             m_cols = m_bounds.maxCol(m_resolutionX) + 1;
             m_rows = m_bounds.maxRow(m_resolutionY) + 1;
 
             if(callbacks)
-                callbacks->overallCallback(0.2f);
+                callbacks->overallCallback(0.46f);
 
             // Initialize the filter group.
             CellStatsFilter *filter = nullptr;
@@ -396,7 +407,7 @@ namespace geotools {
             }
 
             if(callbacks)
-                callbacks->overallCallback(0.3f);
+                callbacks->overallCallback(0.47f);
 
             // Initialize the thread group for runner.
             std::list<std::thread> threads;
@@ -427,7 +438,7 @@ namespace geotools {
                         m_bq.push(finalIdx);
                     }
                 }
-                if(m_bq.size() > 10000) {
+                if(m_bq.size() > 5000) {
                     while(m_bq.size() > 100  && !*m_cancel)
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
