@@ -195,7 +195,7 @@ void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {
 			int row = m_bounds.toRow(pt.y, m_resolutionY);
 			finalizer->set(col, row, finalizer->get(col, row) + 1);
 			cells[row * m_cols + col] = true;
-			if(callback)
+			if(fileChanged && callback)
 				callback->status((float) ++file / m_files.size());
 		}
 		m_finalizer.reset(finalizer);

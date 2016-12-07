@@ -326,7 +326,7 @@ namespace geotools {
                 m_callbacks(callbacks) {
             }
             void status(float status) const {
-                m_callbacks->overallCallback(0.05f + status * 0.4f);
+                m_callbacks->overallCallback(0.01f + status * 0.45f);
             }
         };
 
@@ -340,13 +340,14 @@ namespace geotools {
             m_resolutionX = config.resolution;
             m_resolutionY = -config.resolution;
 
+            if(callbacks)
+                callbacks->overallCallback(0.01f);
+
             FileSorter sorter(20.0, 20.0);
             std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
             std::sort(files.begin(), files.end(), sorter);
 
             if(*cancel) return;            
-            if(callbacks)
-                callbacks->overallCallback(0.01f);
             
             // Initialize the point stream
             LASMultiReader ps(config.sourceFiles, m_resolutionX, m_resolutionY, m_cancel);
@@ -368,7 +369,7 @@ namespace geotools {
             m_rows = m_bounds.maxRow(m_resolutionY) + 1;
 
             if(callbacks)
-                callbacks->overallCallback(0.46f);
+                callbacks->overallCallback(0.5f);
 
             // Initialize the filter group.
             CellStatsFilter *filter = nullptr;
