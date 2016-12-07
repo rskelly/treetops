@@ -93,7 +93,7 @@ public:
 	}
 };
 
-bool _cancel = false;
+bool __pn_cancel = false;
 
 void _setup(const PointNormalizeConfig &config) {
 	// Sanity checks.
@@ -124,7 +124,7 @@ void PointNormalize::normalize(const PointNormalizeConfig &config,
 	// If the cancel flag isn't given, take a reference to a dummy
 	// that is always false.
 	if (!cancel)
-		cancel = &_cancel;
+		cancel = &__pn_cancel;
 
 	// Set up
 	_setup(config);
