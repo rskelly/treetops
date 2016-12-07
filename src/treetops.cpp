@@ -41,7 +41,7 @@ using namespace geotools::treetops::config;
 using namespace geotools::treetops::util;
 using namespace geotools::treetops;
 
-bool _cancel = false;
+bool __tt_cancel = false;
 
 namespace geotools {
 
@@ -233,7 +233,7 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	config.checkSmoothing();
 
 	if (!cancel)
-		cancel = &_cancel;
+		cancel = &__tt_cancel;
 
 	Raster<float> in(config.smoothOriginalCHM);
 	Raster<float> out(config.smoothSmoothedCHM, 1, in);
@@ -245,7 +245,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	config.checkTops();
 
 	if (!cancel)
-		cancel = &_cancel;
+		cancel = &__tt_cancel;
 
 	if (m_callbacks)
 		m_callbacks->stepCallback(0.01);
@@ -286,7 +286,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	{
 		g_debug(" -- tops: processing " << omp_get_thread_num());
 		MemRaster<float> blk(original.cols(), bufSize + config.topsWindowSize);
-		blk.nodata(original.nodata());
+		blk.setNodata(original.nodata());
 		blk.fill(blk.nodata());
 
 		std::map<uint64_t, std::unique_ptr<Top> > tops0;
@@ -329,7 +329,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 						// Compute the id based on the cell.
 						uint64_t id = ((uint64_t) c << 32) | r;
 						// Get the original height from the unsmoothed raster.
-						double umax = original.get(c, r + brow);
+						double umax = original.get(c, r + brow, 1);
 
 						std::unique_ptr<Top> pt(
 								new Top(++topId, original.toCentroidX(c), // center of pixel
@@ -368,7 +368,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				if (*cancel)
 					break;
 				g_debug("inserting " << points.size() << " points");
-#pragma omp critical(__b)
+				#pragma omp critical(__b)
 				{
 					db.begin();
 					db.addPoints(points);
@@ -403,7 +403,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	config.checkCrowns();
 
 	if (!cancel)
-		cancel = &_cancel;
+		cancel = &__tt_cancel;
 
 	if (m_callbacks)
 		m_callbacks->stepCallback(0.01);
@@ -418,8 +418,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	g_debug(" -- crowns: preparing rasters");
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
-	outrast.nodata(0);
-	outrast.fill(0);
+	outrast.setNodata(0, 1);
+	outrast.fill(0, 1);
 
 	double nodata = inrast.nodata();
 

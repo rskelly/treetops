@@ -17,11 +17,14 @@ bool _cancel = false;
 
 // Implementations for Cell
 
-Cell::Cell(int32_t col, int32_t row) :
-		col(col), row(row) {
+Cell::Cell(uint16_t col, uint16_t row) :
+	col(col), row(row) {
 }
 
 // Implementations for TargetOperator (for flood fill)
+
+template<class T>
+FillOperator<T>::~FillOperator() {}
 
 template<class T>
 TargetOperator<T>::TargetOperator(T match) :
@@ -34,6 +37,9 @@ bool TargetOperator<T>::fill(T value) const {
 }
 
 template<class T>
+TargetOperator<T>::~TargetOperator() {}
+
+template<class T>
 Grid<T>::Grid() :
 		m_min(0), m_max(0), m_mean(0), m_stddev(0), m_variance(0), m_sum(0), m_count(
 				0), m_stats(false) {
@@ -42,7 +48,7 @@ Grid<T>::Grid() :
 // Implementations forthe Grid class
 
 template<class T>
-void Grid<T>::gaussianWeights(double *weights, int32_t size, double sigma) {
+void Grid<T>::gaussianWeights(double *weights, uint16_t size, double sigma) {
 	// If size is an even number, bump it up.
 	if (size % 2 == 0) {
 		++size;
@@ -62,7 +68,7 @@ void Grid<T>::gaussianWeights(double *weights, int32_t size, double sigma) {
 
 template<class T>
 void Grid<T>::computeStats() {
-	size_t i;
+	uint32_t i;
 	for (i = 0; i < size(); ++i) {
 		if (!isNoData(i)) {
 			m_min = m_max = get(i);
@@ -98,20 +104,20 @@ void Grid<T>::computeStats() {
 template<class T>
 void Grid<T>::normalize() {
 	double sum = 0.0;
-	for (size_t i = 0; i < size(); ++i) {
+	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
 		if (v != nodata() && !std::isnan(v))
 			sum += v;
 	}
 	double mean = sum / size();
 	sum = 0.0;
-	for (size_t i = 0; i < size(); ++i) {
+	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
 		if (v != nodata() && !std::isnan(v))
 			sum += std::pow(v - mean, 2.0);
 	}
 	double stdDev = std::sqrt(sum);
-	for (size_t i = 0; i < size(); ++i) {
+	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
 		if (v != nodata() && !std::isnan(v))
 			set(i, (const T) ((v - mean) / stdDev));
@@ -154,20 +160,20 @@ T Grid<T>::variance() {
 }
 
 template<class T>
-std::vector<int32_t> Grid<T>::floodFill(int32_t col, int32_t row, T target,
+std::vector<uint16_t> Grid<T>::floodFill(int32_t col, int32_t row, T target,
 		T fill) {
 	TargetOperator<T> op(target);
 	return floodFill(col, row, op, *this, fill);
 }
 
 template<class T>
-std::vector<int32_t> Grid<T>::floodFill(int32_t col, int32_t row,
+std::vector<uint16_t> Grid<T>::floodFill(int32_t col, int32_t row,
 		FillOperator<T> &op, T fill) {
 	return floodFill(col, row, op, *this, fill);
 }
 
 template<class T>
-void Grid<T>::voidFillIDW(double radius, int32_t count, double exp) {
+void Grid<T>::voidFillIDW(double radius, uint32_t count, double exp) {
 
 	if (radius <= 0.0)
 		throw std::invalid_argument("Radius must be larger than 0.");
@@ -179,7 +185,7 @@ void Grid<T>::voidFillIDW(double radius, int32_t count, double exp) {
 		throw std::invalid_argument("Exponent must be larger than 0.");
 
 	MemRaster<T> tmp(cols(), rows());
-	tmp.nodata(nodata());
+	tmp.setNodata(nodata());
 	tmp.fill(nodata());
 
 	for (int32_t r = 0; r < rows(); ++r) {
@@ -196,7 +202,7 @@ void Grid<T>::voidFillIDW(double radius, int32_t count, double exp) {
 				double d = g_sq(rad);
 				double a = 0.0;
 				double b = 0.0;
-				int32_t cnt = 0;
+				uint32_t cnt = 0;
 
 				for (int32_t r0 = (int32_t) g_max(0, r - rad);
 						r0 < (int32_t) g_min(rows(), r + rad + 1); ++r0) {
@@ -234,7 +240,7 @@ void Grid<T>::voidFillIDW(double radius, int32_t count, double exp) {
 }
 
 template<class T>
-void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size,
+void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 		Callbacks *status, bool *cancel) {
 
 	if (!cancel)
@@ -259,10 +265,10 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size,
 	g_debug(" - buffer rows: " << bufRows);
 
 	double nd = (double) nodata();
-	size_t completed = 0;
+	uint32_t completed = 0;
 
-#pragma omp parallel for
-	for (int32_t row = 0; row < rows(); row += bufRows - size) {
+	#pragma omp parallel for
+	for (int16_t row = 0; row < rows(); row += bufRows - size) {
 		if (*cancel)
 			continue;
 		MemRaster<double> weights(size, size);
@@ -270,13 +276,13 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size,
 		MemRaster<T> strip(cols(), g_min(bufRows, rows() - row));
 		MemRaster<T> smooth(cols(), g_min(bufRows, rows() - row));
 		MemRaster<T> buf(size, size);
-		strip.nodata((T) nd);
+		strip.setNodata((T) nd);
 		strip.fill((const T) nd);
-		smooth.nodata((T) nd);
+		smooth.setNodata((T) nd);
 		smooth.fill((T) nd);
 		if (*cancel)
 			continue;
-#pragma omp critical(a)
+		#pragma omp critical(a)
 		{
 			// On the first loop, read from the first row and write to size/2 down
 			// On the other loops, read from row-size/2, and write to 0 down.
@@ -298,21 +304,21 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, int32_t size,
 						if (v == nd) {
 							foundNodata = true;
 						} else {
-							t += weights[gr * size + gc] * v;
+							t += weights.get(gr * size + gc) * v;
 						}
 					}
 				}
 				if (!foundNodata)
 					smooth.set(c + size / 2, r + size / 2, (T) t);
 			}
-#pragma omp atomic
+		#pragma omp atomic
 			++completed;
 			if (status)
 				status->stepCallback((float) completed / rows());
 		}
 		if (*cancel)
 			continue;
-#pragma omp critical(b)
+		#pragma omp critical(b)
 		{
 			// The blur buffer is always written size/2 down, so read from there.
 			smoothed.writeBlock(0, row, smooth, 0, size / 2);
@@ -343,14 +349,14 @@ MemRaster<T>::MemRaster() :
 }
 
 template<class T>
-MemRaster<T>::MemRaster(int32_t cols, int32_t rows, bool mapped) {
+MemRaster<T>::MemRaster(uint16_t cols, uint16_t rows, bool mapped) {
 	init(cols, rows, mapped);
 }
 
 template<class T>
 MemRaster<T>::~MemRaster() {
 	if (m_item_dealloc) {
-		for (size_t i = 0; i < (size_t) m_cols * m_rows; ++i)
+		for (uint32_t i = 0; i < (uint32_t) m_cols * m_rows; ++i)
 			m_item_dealloc(m_grid[i]);
 	}
 	freeMem();
@@ -372,18 +378,18 @@ bool MemRaster<T>::hasGrid() const {
 }
 
 template<class T>
-int32_t MemRaster<T>::rows() const {
+uint16_t MemRaster<T>::rows() const {
 	return m_rows;
 }
 
 template<class T>
-int32_t MemRaster<T>::cols() const {
+uint16_t MemRaster<T>::cols() const {
 	return m_cols;
 }
 
 template<class T>
-size_t MemRaster<T>::size() const {
-	return (size_t) m_rows * m_cols;
+uint32_t MemRaster<T>::size() const {
+	return (uint32_t) m_rows * m_cols;
 }
 
 template<class T>
@@ -398,7 +404,7 @@ void MemRaster<T>::freeMem() {
 }
 
 template<class T>
-void MemRaster<T>::init(int32_t cols, int32_t rows, bool mapped) {
+void MemRaster<T>::init(uint16_t cols, uint16_t rows, bool mapped) {
 
 	m_grid = nullptr;
 	m_cols = -1;
@@ -433,12 +439,12 @@ void MemRaster<T>::init(int32_t cols, int32_t rows, bool mapped) {
 template<class T>
 void MemRaster<T>::fill(const T value) {
 	checkInit();
-	for (size_t i = 0; i < size(); ++i)
+	for (uint32_t i = 0; i < size(); ++i)
 		m_grid[i] = value;
 }
 
 template<class T>
-T MemRaster<T>::get(size_t idx) {
+T MemRaster<T>::get(uint32_t idx) {
 	checkInit();
 	if (idx >= size())
 		g_argerr("Index out of bounds: " << idx << "; size: " << size());
@@ -447,7 +453,7 @@ T MemRaster<T>::get(size_t idx) {
 
 template<class T>
 T MemRaster<T>::get(int32_t col, int32_t row) {
-	size_t idx = (size_t) row * m_cols + col;
+	uint32_t idx = (uint32_t) row * m_cols + col;
 	return get(idx);
 }
 
@@ -457,18 +463,18 @@ bool MemRaster<T>::isNoData(int32_t col, int32_t row) {
 }
 
 template<class T>
-bool MemRaster<T>::isNoData(size_t idx) {
+bool MemRaster<T>::isNoData(uint32_t idx) {
 	return get(idx) == m_nodata;
 }
 
 template<class T>
 void MemRaster<T>::set(int32_t col, int32_t row, const T value) {
-	size_t idx = (size_t) row * m_cols + col;
+	uint32_t idx = (uint32_t) row * m_cols + col;
 	set(idx, value);
 }
 
 template<class T>
-void MemRaster<T>::set(size_t idx, const T value) {
+void MemRaster<T>::set(uint32_t idx, const T value) {
 	checkInit();
 	if (idx >= size())
 		g_argerr(
@@ -484,16 +490,8 @@ bool MemRaster<T>::has(int32_t col, int32_t row) const {
 }
 
 template<class T>
-bool MemRaster<T>::has(size_t idx) const {
-	return idx < (size_t) m_cols * m_rows;
-}
-
-template<class T>
-T MemRaster<T>::operator[](size_t idx) {
-	checkInit();
-	if (idx >= size())
-		g_argerr("Index out of bounds: " << idx << "; size: " << size());
-	return m_grid[idx];
+bool MemRaster<T>::has(uint32_t idx) const {
+	return idx < (uint32_t) m_cols * m_rows;
 }
 
 template<class T>
@@ -525,13 +523,14 @@ T MemRaster<T>::nodata() const {
 }
 
 template<class T>
-void MemRaster<T>::nodata(T nodata) {
+void MemRaster<T>::setNodata(T nodata) {
 	m_nodata = nodata;
 }
 
 template<class T>
 void MemRaster<T>::readBlock(int32_t col, int32_t row, Grid<T> &block,
-		int32_t dstCol, int32_t dstRow, int32_t xcols, int32_t xrows) {
+		int32_t dstCol, int32_t dstRow,
+		int32_t xcols, int32_t xrows) {
 	if (&block == this)
 		g_argerr("Recursive call to readBlock.");
 	if (dstCol < 0 || dstRow < 0 || dstCol >= block.cols()
@@ -540,8 +539,8 @@ void MemRaster<T>::readBlock(int32_t col, int32_t row, Grid<T> &block,
 				"Invalid destination column or row: row: " << dstRow
 						<< "; col: " << dstCol << "; block: " << block.rows()
 						<< "," << block.rows());
-	int32_t cols = g_min(m_cols - col, block.cols() - dstCol);
-	int32_t rows = g_min(m_rows - row, block.rows() - dstRow);
+	int16_t cols = g_min(m_cols - col, block.cols() - dstCol);
+	int16_t rows = g_min(m_rows - row, block.rows() - dstRow);
 	if (block.hasGrid()) {
 		// Copy rows of he source l
 		for (int32_t r = 0; r < rows; ++r) {
@@ -558,7 +557,8 @@ void MemRaster<T>::readBlock(int32_t col, int32_t row, Grid<T> &block,
 
 template<class T>
 void MemRaster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &block,
-		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
+		int32_t srcCol, int32_t srcRow,
+		int32_t xcols, int32_t xrows) {
 	if (&block == this)
 		g_argerr("Recursive call to writeBlock.");
 	if (srcCol < 0 || srcRow < 0 || srcCol >= block.cols()
@@ -567,8 +567,8 @@ void MemRaster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &block,
 				"Invalid source column or row: row: " << srcRow << "; col: "
 						<< srcCol << "; block: " << block.rows() << ","
 						<< block.rows());
-	int32_t cols = g_min(m_cols - col, block.cols() - srcCol);
-	int32_t rows = g_min(m_rows - row, block.rows() - srcRow);
+	int16_t cols = g_min(m_cols - col, block.cols() - srcCol);
+	int16_t rows = g_min(m_rows - row, block.rows() - srcRow);
 	if (xcols > 0)
 		cols = g_min(xcols, cols);
 	if (xrows > 0)
@@ -599,60 +599,83 @@ void MemRaster<T>::readBlock(Grid<T> &block) {
 
 // Implementations for BlockCache
 
+template <class T>
+Block<T>::Block(uint64_t idx, uint16_t band,
+		uint16_t col, uint16_t row,
+		uint32_t size, uint64_t time) :
+	idx(idx),
+	band(band), col(col), row(row),
+	size(size),
+	time(time),
+	dirty(false),
+	data(nullptr) {
+	data = (T*) malloc(sizeof(T) * size);
+}
+
+template <class T>
+Block<T>::~Block() {
+	free(data);
+}
+
 template<class T>
-void BlockCache<T>::flushBlock(size_t idx) {
-	if (m_blocks.find(idx) != m_blocks.end()
-			&& m_band->GetDataset()->GetAccess() == GA_Update) {
-		T *blk = m_blocks[idx];
-		if (blk != nullptr) {
-#pragma omp critical(__gdal_io)
-			{
-				if (m_band->WriteBlock(toCol(idx) / m_bw, toRow(idx) / m_bh,
-						blk) != CE_None)
-					g_runerr("Failed to flush block.");
-			}
-			m_dirty[idx] = false;
+void BlockCache<T>::flushBlock(uint64_t idx) {
+	if(m_blocks.find(idx) != m_blocks.end())
+		flushBlock(m_blocks[idx]);
+}
+
+template<class T>
+void BlockCache<T>::flushBlock(Block<T> *blk) {
+	if (blk && m_ds->GetAccess() == GA_Update) {
+		#pragma omp critical(__gdal_io)
+		{
+			if (m_ds->GetRasterBand(blk->band)->WriteBlock(blk->col, blk->row,
+					blk->data) != CE_None)
+				g_runerr("Failed to flush block.");
 		}
+		blk->dirty = false;
 	}
 }
 
 template<class T>
-size_t BlockCache<T>::toIdx(int32_t col, int32_t row) {
-	return ((size_t) (col / m_bw) << 32) | (row / m_bh);
+uint64_t BlockCache<T>::toIdx(uint16_t band, uint16_t col, uint16_t row) const {
+	return ((uint64_t) band << 32) | ((uint64_t) (col / m_bw) << 16) | (row / m_bh);
 }
 
 template<class T>
-int32_t BlockCache<T>::toCol(size_t idx) {
-	return ((idx >> 32) & 0xffffffff) * m_bw;
+uint16_t BlockCache<T>::toCol(uint64_t idx) const {
+	return ((idx >> 16) & 0xffff) * m_bw;
 }
 
 template<class T>
-int32_t BlockCache<T>::toRow(size_t idx) {
-	return (idx & 0xffffffff) * m_bh;
+uint16_t BlockCache<T>::toRow(uint64_t idx) const {
+	return (idx & 0xffff) * m_bh;
 }
 
 template<class T>
-T* BlockCache<T>::freeOldest() {
-	T *blk = nullptr;
+uint16_t BlockCache<T>::toBand(uint64_t idx) const {
+	return ((idx >> 32) & 0xffff);
+}
+
+template<class T>
+Block<T>* BlockCache<T>::freeOldest() {
 	auto it = m_time_idx.rbegin();
-	size_t time = it->first;
-	size_t idx = it->second;
-	if (m_dirty[idx])
+	uint64_t time = it->first;
+	uint64_t idx = it->second;
+	Block<T> *blk = m_blocks[idx];
+	if(blk && blk->dirty) {
 		flushBlock(idx);
-	blk = m_blocks[idx];
-	m_blocks.erase(idx);
-	m_idx_time.erase(idx);
-	m_time_idx.erase(time);
-	m_dirty.erase(idx);
+		m_blocks.erase(idx);
+		m_time_idx.erase(time);
+	}
 	return blk;
 }
 
 template<class T>
-T* BlockCache<T>::freeOne() {
-	T *blk = nullptr;
+Block<T>* BlockCache<T>::freeOne() {
+	Block<T> *blk = nullptr;
 	while (m_blocks.size() >= m_size) {
 		if (blk)
-			free(blk);
+			delete blk;
 		blk = freeOldest();
 	}
 	return blk;
@@ -660,39 +683,41 @@ T* BlockCache<T>::freeOne() {
 
 template<class T>
 BlockCache<T>::BlockCache() :
-		m_band(nullptr), m_size(0), m_time(0), m_bw(0), m_bh(0) {
+	m_ds(nullptr),
+	m_size(0), m_time(0),
+	m_bw(0), m_bh(0) {
 }
 
 template<class T>
-int32_t BlockCache<T>::blockWidth() {
+uint16_t BlockCache<T>::blockWidth() const {
 	return m_bw;
 }
 
 template<class T>
-int32_t BlockCache<T>::blockHeight() {
+uint16_t BlockCache<T>::blockHeight() const {
 	return m_bh;
 }
 
 template<class T>
-size_t BlockCache<T>::toBlockIdx(int32_t col, int32_t row) {
+uint32_t BlockCache<T>::toBlockIdx(uint16_t col, uint16_t row) const {
 	return (row % m_bh) * m_bw + (col % m_bw);
 }
 
 template<class T>
-void BlockCache<T>::setRasterBand(GDALRasterBand *band) {
-	m_band = band;
-	band->GetBlockSize(&m_bw, &m_bh);
+void BlockCache<T>::setDataset(GDALDataset *ds) {
+	m_ds = ds;
+	m_ds->GetRasterBand(1)->GetBlockSize(&m_bw, &m_bh);
 }
 
 template<class T>
-bool BlockCache<T>::hasBlock(int32_t col, int32_t row) {
-	return hasBlock(toIdx(col, row));
+bool BlockCache<T>::hasBlock(uint16_t band, uint16_t col, uint16_t row) const {
+	return hasBlock(toIdx(band, col, row));
 }
 
 template<class T>
-bool BlockCache<T>::hasBlock(size_t idx) {
+bool BlockCache<T>::hasBlock(uint64_t idx) const {
 	bool has = false;
-#pragma omp critical(__blockcache)
+	#pragma omp critical(__blockcache)
 	{
 		has = m_blocks.find(idx) != m_blocks.end();
 	}
@@ -700,8 +725,8 @@ bool BlockCache<T>::hasBlock(size_t idx) {
 }
 
 template<class T>
-void BlockCache<T>::setSize(size_t size) {
-#pragma omp critical(__blockcache)
+void BlockCache<T>::setSize(uint32_t size) {
+	#pragma omp critical(__blockcache)
 	{
 		while (m_blocks.size() > size)
 			freeOne();
@@ -710,81 +735,71 @@ void BlockCache<T>::setSize(size_t size) {
 }
 
 template<class T>
-size_t BlockCache<T>::getSize() {
+uint32_t BlockCache<T>::getSize() {
 	return m_size;
 }
 
 template<class T>
-T* BlockCache<T>::getBlock(int32_t col, int32_t row, bool forWrite) {
-	size_t idx = toIdx(col, row);
-	T *blk = nullptr;
+Block<T>* BlockCache<T>::getBlock(uint16_t band, uint16_t col, uint16_t row, bool forWrite) {
+	uint64_t idx = toIdx(band, col, row);
+	Block<T> *blk = nullptr;
 	if (m_blocks.find(idx) == m_blocks.end()) {
-		//g_debug(" -- cache - new block");
-		T *blk = freeOne();
+		blk = freeOne();
 		if (!blk)
-			blk = (T *) malloc(sizeof(T) * m_bw * m_bh);
-		if (!blk)
-			g_runerr("Failed to allocate memory for raster block.");
-#pragma omp critical(__gdal_io)
+			blk = new Block<T>(idx, band, col, row, sizeof(T) * m_bw * m_bh, ++m_time);
+		#pragma omp critical(__gdal_io)
 		{
-			if (m_band->ReadBlock(col / m_bw, row / m_bh, blk) != CE_None)
+			if (m_ds->GetRasterBand(band)->ReadBlock(col / m_bw, row / m_bh, (void *) blk->data) != CE_None)
 				g_runerr("Failed to read block.");
 		}
 		m_blocks[idx] = blk;
+		m_time_idx[blk->time] = idx;
+	} else {
+		blk = m_blocks[idx];
+		if(m_time_idx.find(blk->time) != m_time_idx.end())
+			m_time_idx.erase(blk->time);
+		blk->time = ++m_time;
+		m_time_idx[blk->time] = idx;
 	}
-	//g_debug(" -- cache - update time");
-	++m_time; // TODO: No provision for rollover
-	m_time_idx.erase(m_idx_time[idx]);
-	m_time_idx[m_time] = idx;
-	m_idx_time[idx] = m_time;
-	if (forWrite)
-		m_dirty[idx] = true;
-	blk = m_blocks[idx];
-	//g_debug(" -- cache - return block");
 	return blk;
 }
 
 template<class T>
-T BlockCache<T>::get(int32_t col, int32_t row) {
+T BlockCache<T>::get(uint16_t band, int32_t col, int32_t row) {
 	T v;
-#pragma omp critical(__blockcache)
+	#pragma omp critical(__blockcache)
 	{
-		T *blk = getBlock(col, row, false);
-		v = blk[toBlockIdx(col, row)];
+		Block<T> *blk = getBlock(band, col, row, false);
+		v = blk->data[toBlockIdx(col, row)];
 	}
 	return v;
 }
 
 template<class T>
-void BlockCache<T>::set(int32_t col, int32_t row, T value) {
-#pragma omp critical(__blockcache)
+void BlockCache<T>::set(uint16_t band, int32_t col, int32_t row, T value) {
+	#pragma omp critical(__blockcache)
 	{
-		//g_debug(" -- cache set " << col << "," << row << "; " << value);
-		T *blk = getBlock(col, row, true);
-		blk[toBlockIdx(col, row)] = value;
+		Block<T> *blk = getBlock(band, col, row, true);
+		blk->data[toBlockIdx(col, row)] = value;
 	}
 }
 
 template<class T>
 void BlockCache<T>::flush() {
-#pragma omp critical(__blockcache)
+	#pragma omp critical(__blockcache)
 	{
-		for (auto it = m_blocks.begin(); it != m_blocks.end(); ++it)
-			flushBlock(it->first);
+		for (const auto &it : m_blocks)
+			flushBlock(it.second);
 	}
 }
 
 template<class T>
 void BlockCache<T>::close() {
 	flush();
-#pragma omp critical(__blockcache)
+	#pragma omp critical(__blockcache)
 	{
-		for (auto it = m_blocks.begin(); it != m_blocks.end(); ++it) {
-			if (it->second != nullptr) {
-				free(it->second);
-				it->second = nullptr;
-			}
-		}
+		for(auto &it : m_blocks)
+			if(it.second) delete it.second;
 	}
 }
 
@@ -867,82 +882,89 @@ T Raster<T>::getDefaultNodata() {
 
 template<class T>
 Raster<T>::Raster() :
-		m_cols(-1), m_rows(-1), m_bandn(1), m_writable(false), m_ds(nullptr), m_band(
-				nullptr), m_type(getType()), m_inited(false) {
+	m_cols(-1), m_rows(-1),
+	m_bands(1),
+	m_writable(false),
+	m_ds(nullptr),
+	m_type(getType()),
+	m_inited(false) {
 }
 
 template<class T>
-Raster<T>::Raster(const std::string &filename, int32_t band,
-		const Raster<T> &tpl) {
-	init(filename, band, tpl);
+Raster<T>::Raster(const std::string &filename, uint16_t bands, const Raster<T> &tpl) :
+	m_cols(-1), m_rows(-1),
+	m_bands(1),
+	m_writable(false),
+	m_ds(nullptr),
+	m_type(getType()),
+	m_inited(false) {
+	init(filename, bands, tpl);
 }
 
 template<class T>
-Raster<T>::Raster(const std::string &filename, int32_t band, double minx,
+Raster<T>::Raster(const std::string &filename, uint16_t bands, double minx,
 		double miny, double maxx, double maxy, double resolutionX,
-		double resolutionY, double nodata, const std::string &proj) {
-	init(filename, band, minx, miny, maxx, maxy, resolutionX, resolutionY,
-			nodata, proj);
+		double resolutionY, const std::string &proj) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(getType()),
+		m_inited(false) {
+	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj);
 }
 
 template<class T>
-Raster<T>::Raster(const std::string &filename, int32_t band,
-		const Bounds &bounds, double resolutionX, double resolutionY,
-		double nodata, int32_t crs) {
+Raster<T>::Raster(const std::string &filename, uint16_t bands, const Bounds &bounds,
+		double resolutionX, double resolutionY, uint16_t crs) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(getType()),
+		m_inited(false) {
 	std::string proj = epsg2ProjText(crs);
-	init(filename, band, bounds.minx(), bounds.miny(), bounds.maxx(),
-			bounds.maxy(), resolutionX, resolutionY, nodata, proj);
+	init(filename, bands, bounds.minx(), bounds.miny(), bounds.maxx(),
+			bounds.maxy(), resolutionX, resolutionY, proj);
 }
 
 template<class T>
-Raster<T>::Raster(const std::string &filename, int32_t band, double minx,
+Raster<T>::Raster(const std::string &filename, uint16_t bands, double minx,
 		double miny, double maxx, double maxy, double resolutionX,
-		double resolutionY, double nodata, int32_t crs) {
+		double resolutionY, uint16_t crs) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(getType()),
+		m_inited(false) {
 	std::string proj = epsg2ProjText(crs);
-	init(filename, band, minx, miny, maxx, maxy, resolutionX, resolutionY,
-			nodata, proj);
+	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj);
 }
 
 template<class T>
-Raster<T>::Raster(const std::string &filename, int32_t band, bool writable) {
-	init(filename, band, writable);
+Raster<T>::Raster(const std::string &filename, bool writable) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(getType()),
+		m_inited(false) {
+	init(filename, writable);
 }
 
 template<class T>
-void Raster<T>::init(const std::string &filename, int32_t band,
+void Raster<T>::init(const std::string &filename, uint16_t bands,
 		const Bounds &bounds, double resolutionX, double resolutionY,
-		double nodata, const std::string &proj) {
-	m_cols = -1;
-	m_rows = -1;
-	m_bandn = 1;
-	m_writable = false;
-	m_ds = nullptr;
-	m_band = nullptr;
-	m_type = getType();
-	m_inited = false;
-	init(filename, band, bounds.minx(), bounds.miny(), bounds.maxx(),
-			bounds.maxy(), resolutionX, resolutionY, nodata, proj);
+		const std::string &proj) {
+	init(filename, bands, bounds.minx(), bounds.miny(), bounds.maxx(),
+			bounds.maxy(), resolutionX, resolutionY, proj);
 }
 
 template<class T>
-void Raster<T>::init(const std::string &filename, int32_t band, double minx,
+void Raster<T>::init(const std::string &filename, uint16_t bands, double minx,
 		double miny, double maxx, double maxy, double resolutionX,
-		double resolutionY, double nodata, const std::string &proj) {
-
-	g_debug(
-			"Raster init: " << filename << ", " << minx << ", " << miny << ", "
-					<< maxx << ", " << maxy << ", " << resolutionX << ", "
-					<< resolutionY << ", " << nodata << ", " << proj);
-
-	m_cols = -1;
-	m_rows = -1;
-	m_bandn = 1;
-	m_writable = false;
-	m_ds = nullptr;
-	m_band = nullptr;
-	m_type = getType();
-	m_inited = false;
-
+		double resolutionY, const std::string &proj) {
 	if (resolutionX == 0 || resolutionY == 0)
 		g_argerr("Resolution must be larger or smaller than 0.");
 	if (maxx < minx)
@@ -963,13 +985,15 @@ void Raster<T>::init(const std::string &filename, int32_t band, double minx,
 	// Create GDAL dataset.
 	GDALAllRegister();
 	m_ds = GetGDALDriverManager()->GetDriverByName("GTiff")->Create(
-			filename.c_str(), width, height, 1, m_type, NULL);
+			filename.c_str(), width, height, bands, m_type, NULL);
 	if (m_ds == nullptr)
 		g_runerr("Failed to create file.");
 
 	// Initialize geotransform.
-	double trans[6] = { resolutionX < 0 ? maxx : minx, resolutionX, 0.0,
-			resolutionY < 0 ? maxy : miny, 0.0, resolutionY };
+	double trans[6] = {
+		resolutionX < 0 ? maxx : minx, resolutionX, 0.0,
+		resolutionY < 0 ? maxy : miny, 0.0, resolutionY
+	};
 	for (int i = 0; i < 6; ++i)
 		m_trans[i] = trans[i];
 	m_ds->SetGeoTransform(m_trans);
@@ -981,20 +1005,15 @@ void Raster<T>::init(const std::string &filename, int32_t band, double minx,
 	// Save some dataset properties.
 	m_rows = m_ds->GetRasterYSize();
 	m_cols = m_ds->GetRasterXSize();
-	m_band = m_ds->GetRasterBand(band);
-	if (m_band == NULL)
-		g_runerr("Failed to get band.");
-	m_bandn = band;
-	m_band->SetNoDataValue(nodata);
-	m_nodata = (T) m_band->GetNoDataValue();
+	m_bands = bands;
 	m_cache.setSize(100);
-	m_cache.setRasterBand(m_band);
+	m_cache.setDataset(m_ds);
 	m_writable = true;
 	m_inited = true;
 }
 
 template<class T>
-void Raster<T>::init(const std::string &filename, int32_t band, bool writable) {
+void Raster<T>::init(const std::string &filename, bool writable) {
 
 	if (filename.empty())
 		g_argerr("Filename must be given.");
@@ -1009,16 +1028,11 @@ void Raster<T>::init(const std::string &filename, int32_t band, bool writable) {
 		g_runerr("Failed to open raster.");
 
 	// Save some raster
-	m_bandn = band;
 	m_ds->GetGeoTransform(m_trans);
-	m_band = m_ds->GetRasterBand(band);
-	if (m_band == nullptr)
-		g_runerr("Failed to get band.");
 	m_rows = m_ds->GetRasterYSize();
 	m_cols = m_ds->GetRasterXSize();
-	m_nodata = (T) m_band->GetNoDataValue();
 	m_cache.setSize(100);
-	m_cache.setRasterBand(m_band);
+	m_cache.setDataset(m_ds);
 	m_writable = writable;
 	m_inited = true;
 }
@@ -1049,7 +1063,7 @@ int32_t Raster<T>::getType(const std::string &filename) {
 }
 
 template<class T>
-void Raster<T>::setCacheSize(size_t size) {
+void Raster<T>::setCacheSize(uint32_t size) {
 	m_cache.setSize(size);
 }
 
@@ -1059,12 +1073,12 @@ std::string Raster<T>::filename() const {
 }
 
 template<class T>
-int32_t Raster<T>::bandCount() const {
+uint16_t Raster<T>::bandCount() const {
 	return m_ds->GetRasterCount();
 }
 
 template<class T>
-std::string Raster<T>::epsg2ProjText(int32_t crs) const {
+std::string Raster<T>::epsg2ProjText(uint16_t crs) const {
 	OGRSpatialReference ref;
 	char *wkt;
 	ref.importFromEPSG(crs);
@@ -1078,15 +1092,16 @@ bool Raster<T>::inited() const {
 }
 
 template<class T>
-void Raster<T>::fill(T value) {
+void Raster<T>::fill(T value, uint16_t band) {
 	m_cache.flush();
 	MemRaster<T> grd(m_cache.blockWidth(), m_cache.blockHeight());
 	grd.fill(value);
-#pragma omp critical(__gdal_io)
+	#pragma omp critical(__gdal_io)
 	{
+		GDALRasterBand *bnd = m_ds->GetRasterBand(band);
 		for (int32_t r = 0; r < rows() / grd.rows(); ++r) {
 			for (int32_t c = 0; c < cols() / grd.cols(); ++c) {
-				if (m_band->WriteBlock(c, r, grd.grid()) != CE_None)
+				if (bnd->WriteBlock(c, r, grd.grid()) != CE_None)
 					g_runerr("Fill error.");
 			}
 		}
@@ -1094,107 +1109,138 @@ void Raster<T>::fill(T value) {
 }
 
 template<class T>
-void Raster<T>::readBlock(int32_t col, int32_t row, Grid<T> &grd,
-		int32_t dstCol, int32_t dstRow, int32_t xcols, int32_t xrows) {
+void Raster<T>::fill(T value) {
+	fill(value, 1);
+}
+
+template<class T>
+void Raster<T>::readBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
+		int32_t dstCol, int32_t dstRow,
+		int32_t xcols, int32_t xrows) {
 	if (&grd == this)
 		g_runerr("Recursive call to readBlock.");
 	m_cache.flush();
-	int32_t cols = g_min(m_cols - col, grd.cols() - dstCol);
-	int32_t rows = g_min(m_rows - row, grd.rows() - dstRow);
+	int16_t cols = g_min(m_cols - col, grd.cols() - dstCol);
+	int16_t rows = g_min(m_rows - row, grd.rows() - dstRow);
 	if (xcols > 0)
 		cols = g_min(xcols, cols);
 	if (xrows > 0)
 		rows = g_min(xrows, rows);
 	if (cols < 1 || rows < 1)
 		g_argerr("Zero read size.");
+	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
 	if (grd.hasGrid()) {
 		if (cols != grd.cols() || rows != grd.rows()) {
 			MemRaster<T> g(cols, rows);
-#pragma omp critical(__gdal_io)
+			#pragma omp critical(__gdal_io)
 			{
-				if (m_band->RasterIO(GF_Read, col, row, cols, rows, g.grid(),
+				if (bnd->RasterIO(GF_Read, col, row, cols, rows, g.grid(),
 						cols, rows, getType(), 0, 0) != CE_None)
 					g_runerr("Failed to read from band. (1)");
-				m_band->FlushCache();
+				bnd->FlushCache();
 			}
 			grd.writeBlock(dstCol, dstRow, g);
 		} else {
-#pragma omp critical(__gdal_io)
+			#pragma omp critical(__gdal_io)
 			{
-				if (m_band->RasterIO(GF_Read, col, row, cols, rows, grd.grid(),
+				if (bnd->RasterIO(GF_Read, col, row, cols, rows, grd.grid(),
 						cols, rows, getType(), 0, 0) != CE_None)
 					g_runerr("Failed to read from band. (2)");
-				m_band->FlushCache();
+				bnd->FlushCache();
 			}
 		}
 	} else {
 		MemRaster<T> mr(cols, rows);
-#pragma omp critical(__gdal_io)
+		#pragma omp critical(__gdal_io)
 		{
-			if (m_band->RasterIO(GF_Read, col, row, cols, rows, mr.grid(), cols,
+			if (bnd->RasterIO(GF_Read, col, row, cols, rows, mr.grid(), cols,
 					rows, getType(), 0, 0) != CE_None)
 				g_runerr("Failed to read from band. (3)");
-			m_band->FlushCache();
+			bnd->FlushCache();
 		}
 		grd.writeBlock(dstCol, dstRow, mr);
 	}
 }
 
 template<class T>
-void Raster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &grd,
+void Raster<T>::readBlock(int32_t col, int32_t row, Grid<T> &grd,
+		int32_t dstCol, int32_t dstRow,
+		int32_t xcols, int32_t xrows) {
+	readBlock(col, row, grd, dstCol, dstRow, xcols, xrows);
+}
+
+template<class T>
+void Raster<T>::writeBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
 		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
 	if (&grd == this)
 		g_runerr("Recursive call to writeBlock.");
 	m_cache.flush();
-	int32_t cols = g_min(m_cols - col, grd.cols() - srcCol);
-	int32_t rows = g_min(m_rows - row, grd.rows() - srcRow);
+	int16_t cols = g_min(m_cols - col, grd.cols() - srcCol);
+	int16_t rows = g_min(m_rows - row, grd.rows() - srcRow);
 	if (xcols > 0)
 		cols = g_min(xcols, cols);
 	if (xrows > 0)
 		rows = g_min(xrows, rows);
 	if (cols < 1 || rows < 1)
 		g_argerr("Zero write size.");
+	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
 	if (grd.hasGrid()) {
 		if (cols != grd.cols() || rows != grd.rows()) {
 			MemRaster<T> g(cols, rows);
 			grd.readBlock(srcCol, srcRow, g);
-#pragma omp critical(__gdal_io)
+			#pragma omp critical(__gdal_io)
 			{
-				if (m_band->RasterIO(GF_Write, col, row, cols, rows, g.grid(),
+				if (bnd->RasterIO(GF_Write, col, row, cols, rows, g.grid(),
 						cols, rows, getType(), 0, 0) != CE_None)
 					g_runerr("Failed to write to band. (1)");
-				m_band->FlushCache();
+				bnd->FlushCache();
 			}
 		} else {
-#pragma omp critical(__gdal_io)
+			#pragma omp critical(__gdal_io)
 			{
-				if (m_band->RasterIO(GF_Write, col, row, cols, rows, grd.grid(),
+				if (bnd->RasterIO(GF_Write, col, row, cols, rows, grd.grid(),
 						cols, rows, getType(), 0, 0) != CE_None)
 					g_runerr("Failed to write to band. (2)");
-				m_band->FlushCache();
+				bnd->FlushCache();
 			}
 		}
 	} else {
 		MemRaster<T> mr(cols, rows);
 		grd.readBlock(srcCol, srcRow, mr);
-#pragma omp critical(__gdal_io)
+		#pragma omp critical(__gdal_io)
 		{
-			if (m_band->RasterIO(GF_Write, col, row, cols, rows, mr.grid(),
+			if (bnd->RasterIO(GF_Write, col, row, cols, rows, mr.grid(),
 					cols, rows, getType(), 0, 0) != CE_None)
 				g_runerr("Failed to write to band. (3)");
-			m_band->FlushCache();
+			bnd->FlushCache();
 		}
 	}
 }
 
 template<class T>
+void Raster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &grd,
+		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
+	writeBlock(col, row, grd, srcCol, srcRow, xcols, xrows);
+}
+
+template<class T>
+void Raster<T>::writeBlock(uint16_t band, Grid<T> &block) {
+	writeBlock(band, 0, 0, block);
+}
+
+template<class T>
 void Raster<T>::writeBlock(Grid<T> &block) {
-	writeBlock(0, 0, block);
+	writeBlock(1, block);
+}
+
+template<class T>
+void Raster<T>::readBlock(uint16_t band, Grid<T> &block) {
+	readBlock(band, 0, 0, block);
 }
 
 template<class T>
 void Raster<T>::readBlock(Grid<T> &block) {
-	readBlock(0, 0, block);
+	readBlock(1, block);
 }
 
 template<class T>
@@ -1218,27 +1264,13 @@ bool Raster<T>::positiveY() const {
 }
 
 template<class T>
-void Raster<T>::setBand(int32_t band) {
-	if (band == m_bandn)
-		return;
-	flush();
-	m_band = m_ds->GetRasterBand(band);
-	m_bandn = band;
-}
-
-template<class T>
-int32_t Raster<T>::getBandNum() {
-	return m_bandn;
-}
-
-template<class T>
 void Raster<T>::projection(std::string &proj) const {
 	proj.assign(m_ds->GetProjectionRef());
 }
 
 template<class T>
 GDALDataType Raster<T>::type() const {
-	return m_band->GetRasterDataType();
+	return m_ds->GetRasterBand(1)->GetRasterDataType();
 }
 
 template<class T>
@@ -1297,23 +1329,32 @@ double Raster<T>::height() const {
 }
 
 template<class T>
+T Raster<T>::nodata(uint16_t band) const {
+	return m_ds->GetRasterBand(band)->GetNoDataValue();
+}
+
+template<class T>
 T Raster<T>::nodata() const {
-	return m_nodata;
+	return nodata(1);
 }
 
 template<class T>
-void Raster<T>::nodata(const T nodata) {
-	m_band->SetNoDataValue((double) nodata);
-	m_nodata = nodata;
+void Raster<T>::setNodata(const T nodata, uint16_t band) {
+	m_ds->GetRasterBand(band)->SetNoDataValue((double) nodata);
 }
 
 template<class T>
-int32_t Raster<T>::cols() const {
+void Raster<T>::setNodata(const T nodata) {
+	setNodata(nodata, 1);
+}
+
+template<class T>
+uint16_t Raster<T>::cols() const {
 	return m_cols;
 }
 
 template<class T>
-int32_t Raster<T>::rows() const {
+uint16_t Raster<T>::rows() const {
 	return m_rows;
 }
 
@@ -1348,50 +1389,65 @@ double Raster<T>::toCentroidY(int32_t row) const {
 }
 
 template<class T>
-size_t Raster<T>::size() const {
-	return (size_t) (m_cols * m_rows);
+uint32_t Raster<T>::size() const {
+	return (uint32_t) (m_cols * m_rows);
+}
+
+template<class T>
+bool Raster<T>::isNoData(int32_t col, int32_t row, uint16_t band) {
+	return get(col, row, band) == nodata(band);
 }
 
 template<class T>
 bool Raster<T>::isNoData(int32_t col, int32_t row) {
-	return get(col, row) == m_nodata;
+	return isNoData(col, row, 1);
 }
 
 template<class T>
-bool Raster<T>::isNoData(size_t idx) {
-	return get(idx) == m_nodata;
+bool Raster<T>::isNoData(uint32_t idx, uint16_t band) {
+	return get(idx, band) == nodata(band);
+}
+
+template<class T>
+bool Raster<T>::isNoData(uint32_t idx) {
+	return isNoData(idx, (uint16_t) 1);
+}
+
+template<class T>
+bool Raster<T>::isNoData(double x, double y, uint16_t band) {
+	return isNoData(toCol(x), toRow(y), band);
 }
 
 template<class T>
 bool Raster<T>::isNoData(double x, double y) {
-	return isNoData(toCol(x), toRow(y));
+	return isNoData(x, y, 1);
 }
 
 template<class T>
-bool Raster<T>::isValid(int32_t c, int32_t r) {
-	return getOrNodata(c, r) != m_nodata;
+bool Raster<T>::isValid(int32_t c, int32_t r, uint16_t band) {
+	return getOrNodata(c, r, band) != nodata(band);
 }
 
 template<class T>
-bool Raster<T>::isValid(double x, double y) {
-	return getOrNodata(x, y) != m_nodata;
+bool Raster<T>::isValid(double x, double y, uint16_t band) {
+	return getOrNodata(x, y, band) != nodata(band);
 }
 
 template<class T>
-T Raster<T>::getOrNodata(double x, double y) {
+T Raster<T>::getOrNodata(double x, double y, uint16_t band) {
 	if (!has(x, y)) {
-		return m_nodata;
+		return nodata(band);
 	} else {
-		return get(x, y);
+		return get(x, y, band);
 	}
 }
 
 template<class T>
-T Raster<T>::getOrNodata(int32_t col, int32_t row) {
+T Raster<T>::getOrNodata(int32_t col, int32_t row, uint16_t band) {
 	if (!has(col, row)) {
-		return m_nodata;
+		return nodata(band);
 	} else {
-		return get(col, row);
+		return get(col, row, band);
 	}
 }
 
@@ -1406,44 +1462,69 @@ bool Raster<T>::hasGrid() const {
 }
 
 template<class T>
+T Raster<T>::get(double x, double y, uint16_t band) {
+	return get(toCol(x), toRow(y), band);
+}
+
+template<class T>
 T Raster<T>::get(double x, double y) {
-	return get(toCol(x), toRow(y));
+	return get(x, y, 1);
+}
+
+template<class T>
+T Raster<T>::get(int32_t col, int32_t row, uint16_t band) {
+	return m_cache.get(band, col, row);
 }
 
 template<class T>
 T Raster<T>::get(int32_t col, int32_t row) {
-	return m_cache.get(col, row);
+	return get(col, row, 1);
 }
 
 template<class T>
-T Raster<T>::get(size_t idx) {
+T Raster<T>::get(uint32_t idx, uint16_t band) {
 	if (idx >= size())
 		g_argerr("Index out of bounds.");
-	return get(idx % m_cols, (int) idx / m_cols);
+	return get(idx % m_cols, (int) idx / m_cols, band);
 }
 
 template<class T>
-T Raster<T>::operator[](size_t idx) {
-	return get(idx);
+T Raster<T>::get(uint32_t idx) {
+	return get(idx, (uint16_t) 1);
+}
+
+template<class T>
+void Raster<T>::set(int32_t col, int32_t row, T v, uint16_t band) {
+	if (!m_writable)
+		g_runerr("This raster is not writable.");
+	m_cache.set(band, col, row, v);
 }
 
 template<class T>
 void Raster<T>::set(int32_t col, int32_t row, T v) {
-	if (!m_writable)
-		g_runerr("This raster is not writable.");
-	m_cache.set(col, row, v);
+	set(col, row, v, 1);
 }
 
 template<class T>
-void Raster<T>::set(size_t idx, T v) {
+void Raster<T>::set(uint32_t idx, T v, uint16_t band) {
 	if (idx >= size())
 		g_argerr("Index out of bounds.");
-	set(idx % m_cols, (int) idx / m_cols, v);
+	set(idx % m_cols, (int) idx / m_cols, v, band);
+}
+
+template<class T>
+void Raster<T>::set(uint32_t idx, T v) {
+	set(idx, v, (uint16_t) 1);
+}
+
+template<class T>
+void Raster<T>::set(double x, double y, T v, uint16_t band) {
+	set(toCol(x), toRow(y), v, band);
 }
 
 template<class T>
 void Raster<T>::set(double x, double y, T v) {
-	set(toCol(x), toRow(y), v);
+	set(x, y, v, 1);
 }
 
 template<class T>
@@ -1462,8 +1543,8 @@ bool Raster<T>::has(double x, double y) const {
 }
 
 template<class T>
-bool Raster<T>::has(size_t idx) const {
-	return idx < (size_t) (m_cols * m_rows);
+bool Raster<T>::has(uint32_t idx) const {
+	return idx < (uint32_t) (m_cols * m_rows);
 }
 
 template<class T>

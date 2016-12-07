@@ -63,7 +63,7 @@ bool feather(Grid<float> &srcGrid, Grid<float> &dstGrid, float distance,
 	MemRaster<char> fillGrid(cols, rows);
 	int valid = 0;
 	for (size_t i = 0; i < (size_t) rows * cols; ++i) {
-		if (srcGrid[i] == nodata) {
+		if (srcGrid.get(i) == nodata) {
 			fillGrid.set(i, 0);
 		} else {
 			fillGrid.set(i, 1);
@@ -93,7 +93,7 @@ bool feather(Grid<float> &srcGrid, Grid<float> &dstGrid, float distance,
 		}
 		// Reset dirty edges to 0
 		for (size_t i = 0; i < (size_t) rows * cols; ++i)
-			if (fillGrid[i] == 2)
+			if (fillGrid.get(i) == 2)
 				fillGrid.set(i, 0);
 		step += 1.0;
 	} while (found && step <= steps);

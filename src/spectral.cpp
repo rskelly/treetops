@@ -102,13 +102,13 @@ void processSpectralFile(const SpectralConfig &config,
 
 	g_debug("processSpectralFile [config] [raster] " << specFilename);
 
-	int startRow, endRow, startCol, endCol;
-	unsigned int idxNodata = config.idxNodata;
-	unsigned short specNodata = config.specNodata;
+	uint16_t startRow, endRow, startCol, endCol;
+	uint32_t idxNodata = config.idxNodata;
+	uint16_t specNodata = config.specNodata;
 	Bounds bounds;
 
 	{
-		Raster<unsigned int> idxRaster(config.indexFilename);
+		Raster<uint32_t> idxRaster(config.indexFilename);
 		// Get the start and end cols/rows from the bounds intersection.
 		bounds.collapse();
 		bounds.extend(computeOverlapBounds(idxRaster, specFilename));
@@ -125,33 +125,27 @@ void processSpectralFile(const SpectralConfig &config,
 
 	// If nodata is not set, get it from the raster.
 	if (!config.hasSpecNodata) {
-		Raster<unsigned short> specRaster(specFilename);
+		Raster<uint16_t> specRaster(specFilename);
 		specNodata = specRaster.nodata();
 	}
 
-	g_debug(
-			" - rows: " << startRow << " -> " << endRow << "; cols: "
-					<< startCol << " -> " << endCol);
-	g_debug(" - bands " << bands.size() << "; bounds: " << bounds.print());
-
 	//std::unordered_map<unsigned int, std::unique_ptr<Poly> > polys;
-	std::unordered_map<size_t, std::unique_ptr<Px> > px;
-	std::unordered_set<size_t> skip;
-	std::unordered_set<size_t> finalize;
+	std::unordered_map<uint64_t, std::unique_ptr<Px> > px;
+	std::unordered_set<uint64_t> skip;
+	std::unordered_set<uint64_t> finalize;
 
 	// Iterate over bands to populate Polys
-#pragma omp parallel for
+	#pragma omp parallel for
 	for (int block = startRow; block < endRow; block += 100) {
 
 		Raster<unsigned int> idxRaster(config.indexFilename);
-		Raster<unsigned short> specRaster(specFilename, bands[0]);
+		Raster<unsigned short> specRaster(specFilename);
 
-		for (size_t row = block; row < g_min(endRow, block + 100); ++row) {
-			for (size_t b = 0; b < bands.size(); ++b) {
-				int band = bands[b];
-				specRaster.setBand(band);
-				for (int col = startCol; col < endCol; ++col) {
-					unsigned int id = idxRaster.get(col, row);
+		for (int32_t row = block; row < g_min(endRow, block + 100); ++row) {
+			for (uint32_t b = 0; b < bands.size(); ++b) {
+				uint16_t band = bands[b];
+				for (uint32_t col = startCol; col < endCol; ++col) {
+					uint32_t id = idxRaster.get(col, row, 1);
 					if (id == idxNodata)
 						continue;
 					double x = idxRaster.toX(col)
@@ -164,17 +158,17 @@ void processSpectralFile(const SpectralConfig &config,
 						unsigned int v = specRaster.get(scol, srow);
 						if (v == specNodata)
 							continue;
-						size_t idx = ((size_t) col << 32) | row;
-#pragma omp critical (PX)
+						uint64_t idx = ((uint64_t) col << 32) | row;
+						#pragma omp critical (PX)
 						{
 							if (skip.find(idx) == skip.end()) {
-								if (px.find(idx) == px.end())
-									px[idx] = std::unique_ptr < Px
-											> (new Px(id, x, y));
-								Px &p = *(px[idx]);
-								p.dn[band] = v;
+								if (px.find(idx) == px.end()) {
+									std::unique_ptr<Px> pp(new Px(id, x, y));
+									px[idx] = std::move(pp);
+								}
+								px[idx]->dn[band] = v;
 								//g_debug("px id: " << id << "; idx: " << idx << "; dn size: " << p.dn.size());
-								if (p.dn.size() == bands.size())
+								if (px[idx]->dn.size() == bands.size())
 									finalize.insert(idx);
 							} else {
 								skip.emplace(idx);
@@ -186,20 +180,20 @@ void processSpectralFile(const SpectralConfig &config,
 		}
 		// Remove polys that have IDs that are not in the current row.	
 		std::cout << std::fixed << std::setprecision(3);
-#pragma omp critical (PX)
+		#pragma omp critical (PX)
 		{
 			g_debug("Save " << finalize.size());
 			db.begin();
-			for (const size_t &idx : finalize) {
+			for (const uint32_t &idx : finalize) {
 				if (px[idx]->dn.size() == bands.size())
 					px[idx]->save(db);
 			}
 			db.commit();
 		}
-#pragma omp critical (PX)
+		#pragma omp critical (PX)
 		{
 			g_debug("Finalize.");
-			for (const size_t &idx : finalize)
+			for (const uint32_t &idx : finalize)
 				px.erase(idx);
 			finalize.clear();
 		}

@@ -336,8 +336,9 @@ public:
 		m_dem.projection(proj);
 		Raster<unsigned int> basins(filename, 1, m_dem.minx(), m_dem.miny(),
 				m_dem.maxx(), m_dem.maxy(), m_dem.resolutionX(),
-				m_dem.resolutionY(), 0, proj);
-		basins.fill(0);
+				m_dem.resolutionY(), proj);
+		basins.setNodata(0, 1);
+		basins.fill(0, 1);
 		m_basinList.clear();
 
 		LEFillOperator<float> op(elevation);
@@ -353,7 +354,7 @@ public:
 			}
 
 			// Fill the basin based on the elevations in dem.
-			std::vector<int> result = m_dem.floodFill(seed.col(), seed.row(),
+			std::vector<uint16_t> result = m_dem.floodFill(seed.col(), seed.row(),
 					op, basins, seed.id());
 			int area = result[4];
 

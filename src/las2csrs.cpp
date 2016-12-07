@@ -536,18 +536,18 @@ public:
 
 		// Expand the bounds for the new header.
 		for (int i = 0; i < count; ++i) {
-			if (x[i] < bounds[0])
-				bounds[0] = x[i];
-			if (x[i] > bounds[1])
-				bounds[1] = x[i];
-			if (y[i] < bounds[2])
-				bounds[2] = y[i];
-			if (y[i] > bounds[3])
-				bounds[3] = y[i];
-			if (z[i] < bounds[4])
-				bounds[4] = z[i];
-			if (z[i] > bounds[5])
-				bounds[5] = z[i];
+			if (x.get(i) < bounds[0])
+				bounds[0] = x.get(i);
+			if (x.get(i) > bounds[1])
+				bounds[1] = x.get(i);
+			if (y.get(i) < bounds[2])
+				bounds[2] = y.get(i);
+			if (y.get(i) > bounds[3])
+				bounds[3] = y.get(i);
+			if (z.get(i) < bounds[4])
+				bounds[4] = z.get(i);
+			if (z.get(i) > bounds[5])
+				bounds[5] = z.get(i);
 		}
 	}
 

@@ -396,7 +396,7 @@ namespace geotools {
                 for(int b = 0; b < bands; ++b) {
                     std::unique_ptr<MemRaster<float> > mr(new MemRaster<float>(m_cols, m_rows, true));
                     mr->fill(-9999.0);
-                    mr->nodata(-9999.0);
+                    mr->setNodata(-9999.0);
                     rasters.push_back(std::move(mr));
                 }
                 m_mem.push_back(std::move(rasters));
@@ -466,23 +466,15 @@ namespace geotools {
                 }
                 // Prepare the grid
                 // TODO: Only works with UTM north.
-                g_debug(" -- preparing " << config.dstFiles[i]);
-                int band = 0;
+                int band = 1;
+                Raster<float> grid(config.dstFiles[0].c_str(), m_mem[i].size(), m_bounds, m_resolutionX,
+                    m_resolutionY, config.hsrid);
                 for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i]) {
                     if(*cancel) return;
-                    std::string file;
-                    if(config.dstFiles.size()) {
-                        std::stringstream ss;
-                        ss << config.dstFiles[i] << "_" << ++band << ".tif";
-                        file = ss.str();
-                    } else {
-                        file = config.dstFiles[i];
-                    }
-                    Raster<float> grid(file.c_str(), 1, m_bounds, m_resolutionX,
-                        m_resolutionY, -9999, config.hsrid);
                     // Write grid to file.
-                    g_debug(" -- writing " << config.types[i]);
-                    grid.writeBlock(*(m.get()));
+                    grid.setNodata(-9999.0, band);
+                    grid.writeBlock(band, *(m.get()));
+                    ++band;
                 }
             }
 
