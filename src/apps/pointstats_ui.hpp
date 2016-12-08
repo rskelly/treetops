@@ -4,7 +4,7 @@
 #include <set>
 #include <cmath>
 
-#include <QtWidgets/QWidget>
+#include <QWidget>
 #include <QDir>
 #include <QMessageBox>
 #include <QtCore>

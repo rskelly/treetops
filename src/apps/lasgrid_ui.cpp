@@ -1,6 +1,7 @@
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QFileDialog>
+#include <QWidget>
+#include <QFileDialog>
 #include <QMessageBox>
+#include <QDir>
 
 #include "geotools.hpp"
 #include "lasgrid.hpp"
@@ -12,7 +13,20 @@ using namespace geotools::las;
 using namespace geotools::las::lasgrid_config;
 
 LasgridForm::LasgridForm(QWidget *p) :
-		QWidget(p), m_vsrid(0), m_hsrid(0) {
+		QWidget(p),
+		m_vsrid(0), m_hsrid(0),
+		m_form(nullptr),
+		m_workerThread(nullptr),
+		m_quantiles(0),
+		m_quantile(0),
+		m_radius(0),
+		m_resolution(0),
+		m_snap(false),
+		m_fill(false),
+		m_angleLimit(90),
+		m_type(0),
+		m_callbacks(nullptr),
+		m_attribute(0) {
 }
 
 LasgridForm::~LasgridForm() {

@@ -6,7 +6,7 @@
 #include <string>
 #include <math.h>
 
-#include <QtWidgets/QWidget>
+#include <QWidget>
 #include <QDir>
 #include <QtCore>
 #include <QMessageBox>

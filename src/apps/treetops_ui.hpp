@@ -1,7 +1,7 @@
 #ifndef __TREETOPS_UI_HPP__
 #define __TREETOPS_UI_HPP__
 
-#include <QtWidgets/QWidget>
+#include <QWidget>
 #include <QMessageBox>
 #include <QtCore>
 #include <QDir>

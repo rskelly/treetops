@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 set (WITH_GUI true CACHE BOOL "If true, will build the Qt GUI.")
 
 if(${WITH_GUI})

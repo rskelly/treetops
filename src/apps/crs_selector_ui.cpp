@@ -1,10 +1,10 @@
 #include <iterator>
 #include <cstdlib>
 
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QFileDialog>
+#include <QWidget>
+#include <QFileDialog>
 #include <QCompleter>
-#include <QKeyEvent>
+#include <QDialog>
 
 #include "cpl_conv.h"
 

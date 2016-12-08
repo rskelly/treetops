@@ -1,5 +1,5 @@
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QFileDialog>
+#include <QWidget>
+#include <QFileDialog>
 
 #include "omp.h"
 
