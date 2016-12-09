@@ -169,15 +169,15 @@ namespace geotools {
 			std::string destFile;
 			std::string classFile;
 			uint16_t kernelSize;
-			uint8_t statType;
+			uint8_t method;
 
 			RasterStatsConfig() :
 				kernelSize(3),
-				statType(0) {
+				method(0) {
 			}
 
 			void check() {
-				if(statType == 3 && kernelSize != 3) {
+				if(method == 3 && kernelSize != 3) {
 					g_warn("Kernel size for aspect is 3. Adjusting.");
 					kernelSize = 3;
 				}
@@ -287,22 +287,22 @@ namespace geotools {
 			}
 		}
 
-		double median(std::vector<double> &values, double nodata) {
+		double median(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			int size = values.size();
-			if(!size) return nodata;
+			if(!size) return rast.nodata(band);
 			std::sort(values.begin(), values.end());
 			return size % 2 == 0 ? (values[size / 2 - 1] + values[size / 2]) / 2.0 : values[size / 2];
 		}
 
-		double mean(std::vector<double> &values, double nodata) {
+		double mean(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			double sum = 0.0;
 			for(const double &v : values)
 				sum += v;
-			return values.size() ? sum / values.size() : nodata;
+			return values.size() ? sum / values.size() : rast.nodata(band);
 		}
 
 		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
-		double aspect(std::vector<double> &values, double nodata) {
+		double aspect(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
 			double a = ((values[2] + 2.0 * values[5] + values[8]) - (values[0] + 2.0 * values[3] + values[6])) / 8.0;
@@ -317,10 +317,26 @@ namespace geotools {
 			}
 		}
 
-		typedef double (*statFunc)(std::vector<double>&, double);
+		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
+		double slope(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			if(values.size() != 9)
+				g_argerr("Kernel must have 9 elements for slope.");
+			double centre = values[4];
+			double dif = 0.0;
+			double nodata = rast.nodata(band);
+			for(uint16_t i = 0; i < 9; ++i) {
+				double v = values[i];
+				if(v != nodata)
+					dif = g_max(dif, g_abs(v - centre));
+			}
+			return g_sq(dif) / (g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
+		}
+
+		typedef double (*statFunc)(std::vector<double>&, uint16_t, const Raster<float>&);
 
 		void process(MemRaster<float> &inrast, MemRaster<float> &outrast,
-				uint16_t kernelSize, double nodata, statFunc fn) {
+				const Raster<float> &writerast,
+				uint16_t kernelSize, uint16_t band, statFunc fn) {
 
 			if(kernelSize % 2 == 0) {
 				g_warn("Kernel size can't be even. Bumping up by one.");
@@ -338,14 +354,14 @@ namespace geotools {
 						for(uint16_t c = 0; c < kernelSize; ++c)
 							values.push_back(kernel.get(c, r));
 					}
-					double value = fn(values, nodata);
+					double value = fn(values, band, writerast);
 					outrast.set(col + kernelSize / 2, row + kernelSize / 2, value);
 				}
 			}
 		}
 
 		statFunc getMethod(const RasterStatsConfig &config) {
-			switch(config.statType) {
+			switch(config.method) {
 			case 1:
 				return mean;
 			case 2:
@@ -353,7 +369,7 @@ namespace geotools {
 			case 3:
 				return aspect;
 			default:
-				g_argerr("Unknown method: " << config.statType);
+				g_argerr("Unknown method: " << config.method);
 			}
 		}
 
@@ -392,17 +408,70 @@ namespace geotools {
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
 				inrast.fill(nodata[band - 1]);
+				writerast.setNodata(nodata[band - 1]);
 				
 				for(const std::string &file : config.sourceFiles) {
 					Raster<float> rast(file);
 					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
 				}
 
-				process(inrast, outrast, config.kernelSize, nodata[band - 1], fn);
+				process(inrast, outrast, writerast, config.kernelSize, band, fn);
 
 				writerast.writeBlock(band, outrast);
 			}
 
+		}
+
+		void contributingarea(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			Raster<float> source(config.sourceFiles[0]);
+
+			MemRaster<float> inrast(source.cols(), source.rows(), false);
+			inrast.writeBlock(source);
+
+			MemRaster<uint32_t> outrast(source.cols(), source.rows(), false);
+			outrast.fill(0);
+
+			std::queue<std::pair<uint16_t, uint16_t> > q;
+
+			uint64_t total = inrast.size();
+			uint64_t count = 0;
+
+			for(uint16_t row = 0; row < inrast.rows(); ++row) {
+				for(uint16_t col = 0; col < inrast.cols(); ++col) {
+					if(++count % 100)
+						std::cerr << " - " << (int) ((float) count / total * 100) << "\n";
+					q.push(std::make_pair(col, row));
+					while(!q.empty()) {
+						auto p = q.front();
+						q.pop();
+						uint16_t c = p.first;
+						uint16_t r = p.second;
+						double v = inrast.get(c, r);
+						if(c > 0 && inrast.get(c - 1, r) < v) {
+							outrast.set(c - 1, r, outrast.get(c - 1, r) + 1);
+							q.push(std::make_pair(c - 1, r));
+						}
+						if(c <= inrast.cols() - 1 && inrast.get(c + 1, r) < v) {
+							outrast.set(c + 1, r, outrast.get(c + 1, r) + 1);
+							q.push(std::make_pair(c + 1, r));
+						}
+						if(r > 0 && inrast.get(c, r - 1) < v) {
+							outrast.set(c, r - 1, outrast.get(c, r - 1) + 1);
+							q.push(std::make_pair(c, r - 1));
+						}
+						if(r <= inrast.rows() - 1 && inrast.get(c, r + 1) < v) {
+							outrast.set(c, r + 1, outrast.get(c, r + 1) + 1);
+							q.push(std::make_pair(c, r + 1));
+						}
+					}
+				}
+			}
+
+			Raster<uint32_t> dest(config.destFile, 1, source);
+			dest.writeBlock(outrast);
 		}
 
 	} // raster
@@ -416,11 +485,12 @@ void usage() {
 			<< "	for the difference in every pixel for each pair of rasters.\n"
 			<< "    Or, produces a raster containing statistics derived from a window\n"
 			<< "    on an input raster.\n"
-			<< " -c <filename>   The classification raster used to generate classes.\n"
+			<< " -m <method>     An action to perform. Currently available:\n"
+			<< "                 mean, median, slope, aspect, contributing area (ca), class.\n"
+			<< " -c <filename>   The classification raster used to generate classes (use with class method.)\n"
 			<< "                 Implies class statistics option.\n"
-			<< " -s <filename>   Statistical output raster. Implies stats raster\n"
-			<< "                 option.\n"
-			<< " -k <int>        Kernel size; used with -s.\n";
+			<< " -o <filename>   Output raster. Input rasters will be merged into output.\n"
+			<< " -k <int>        Kernel size.\n";
 }
 
 int main(int argc, char ** argv) {
@@ -430,16 +500,19 @@ int main(int argc, char ** argv) {
 		return 1;
 	}
 
+	g_loglevel(G_LOG_DEBUG);
+
 	using namespace geotools::raster;
 
 	RasterStatsConfig config;
-
-	int mode = 0;
 
 	std::map<std::string, uint8_t> statTypes;
 	statTypes["mean"] = 1;
 	statTypes["median"] = 2;
 	statTypes["aspect"] = 3;
+	statTypes["slope"] = 4;
+	statTypes["ca"] = 5;
+	statTypes["class"] = 6;
 
 	try {
 
@@ -447,29 +520,35 @@ int main(int argc, char ** argv) {
 			std::string arg(argv[i]);
 			if(arg == "-c") {
 				config.classFile = argv[++i];
-				mode = 1;
-			} else if(arg == "-s") {
+			} else if(arg == "-o") {
 				config.destFile = argv[++i];
-				mode = 2;
 			} else if(arg == "-k") {
 				config.kernelSize = atoi(argv[++i]);
-			} else if(arg == "-t") {
+			} else if(arg == "-m") {
 				std::string t = argv[++i];
 				if(statTypes.find(t) == statTypes.end())
-					g_argerr("Unknown statistic: " << t);
-				config.statType = statTypes[t];
+					g_argerr("Unknown method: " << t);
+				config.method = statTypes[t];
 			} else {
 				config.sourceFiles.push_back(argv[i]);
 			}
 		}
 
-		switch(mode) {
-		case 1:
+		switch(config.method) {
+		case 6:
 			rasterclassstats(config);
 			break;
+		case 5:
+			contributingarea(config);
+			break;
+		case 1:
 		case 2:
+		case 3:
+		case 4:
 			rasterstats(config);
 			break;
+		default:
+			g_argerr("Unknown method: " << config.method);
 		}
 
 	} catch (const std::exception &e) {

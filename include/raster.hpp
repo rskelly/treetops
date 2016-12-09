@@ -468,6 +468,9 @@ namespace geotools {
             // cache is full-1. Will flush dirty blocks.
             geotools::raster::Block<T>* freeOne();
 
+            // Free all blocks.
+            void close();
+
         public:
             BlockCache();
 
@@ -511,9 +514,6 @@ namespace geotools {
 
             // Flush all blocks to disk.
             void flush();
-
-            // Free all blocks.
-            void close();
 
             ~BlockCache();
 

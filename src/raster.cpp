@@ -628,6 +628,7 @@ void BlockCache<T>::flushBlock(Block<T> *blk) {
 	if (blk && m_ds->GetAccess() == GA_Update) {
 		#pragma omp critical(__gdal_io)
 		{
+			g_debug("Flushing");
 			if (m_ds->GetRasterBand(blk->band)->WriteBlock(blk->col, blk->row,
 					blk->data) != CE_None)
 				g_runerr("Failed to flush block.");
@@ -662,11 +663,12 @@ Block<T>* BlockCache<T>::freeOldest() {
 	uint64_t time = it->first;
 	uint64_t idx = it->second;
 	Block<T> *blk = m_blocks[idx];
-	if(blk && blk->dirty) {
-		flushBlock(idx);
-		m_blocks.erase(idx);
-		m_time_idx.erase(time);
-	}
+	if(!blk)
+		g_runerr("Found a null block.");
+	if(blk->dirty)
+		flushBlock(blk);
+	m_blocks.erase(idx);
+	m_time_idx.erase(time);
 	return blk;
 }
 
@@ -745,8 +747,15 @@ Block<T>* BlockCache<T>::getBlock(uint16_t band, uint16_t col, uint16_t row, boo
 	Block<T> *blk = nullptr;
 	if (m_blocks.find(idx) == m_blocks.end()) {
 		blk = freeOne();
-		if (!blk)
+		if (!blk) {
 			blk = new Block<T>(idx, band, col, row, sizeof(T) * m_bw * m_bh, ++m_time);
+		} else {
+			blk->idx = idx;
+			blk->band = band;
+			blk->col = col;
+			blk->row = row;
+			blk->time = ++m_time;
+		}
 		#pragma omp critical(__gdal_io)
 		{
 			if (m_ds->GetRasterBand(band)->ReadBlock(col / m_bw, row / m_bh, (void *) blk->data) != CE_None)
@@ -800,6 +809,7 @@ void BlockCache<T>::close() {
 	{
 		for(auto &it : m_blocks)
 			if(it.second) delete it.second;
+		m_blocks.clear();
 	}
 }
 
@@ -975,12 +985,11 @@ void Raster<T>::init(const std::string &filename, uint16_t bands, double minx,
 		g_argerr("Filename must be given.");
 
 	m_filename.assign(filename);
+	m_type = getType();
 
 	// Compute columns/rows
-	int32_t width = (int) ((maxx - minx) / resolutionX)
-			* (resolutionX < 0 ? -1 : 1) + 1;
-	int32_t height = (int) ((maxy - miny) / resolutionY)
-			* (resolutionY < 0 ? -1 : 1) + 1;
+	int32_t width = (int) std::ceil((maxx - minx) / g_abs(resolutionX));
+	int32_t height = (int) std::ceil((maxy - miny) / g_abs(resolutionY));
 
 	// Create GDAL dataset.
 	GDALAllRegister();
@@ -1019,6 +1028,7 @@ void Raster<T>::init(const std::string &filename, bool writable) {
 		g_argerr("Filename must be given.");
 
 	m_filename.assign(filename);
+	m_type = getType();
 
 	// Attempt to open the dataset.
 	GDALAllRegister();
@@ -1555,7 +1565,6 @@ void Raster<T>::flush() {
 
 template<class T>
 Raster<T>::~Raster() {
-	m_cache.close();
 	if (m_ds) // Probably not necessary.
 		GDALClose(m_ds);
 }
