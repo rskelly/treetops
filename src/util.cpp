@@ -17,6 +17,18 @@
 
 using namespace geotools::util;
 
+void Callbacks::stepCallback(float status) const {
+	g_debug("Step: " << (int) (status * 100.0f) << "%");
+}
+
+void Callbacks::overallCallback(float status) const {
+	g_debug("Overall: " << (int) (status * 100.0f) << "%");
+}
+
+void Callbacks::statusCallback(const std::string &msg) const {
+	g_debug("Status: " << msg);
+}
+
 Callbacks::~Callbacks() {
 }
 

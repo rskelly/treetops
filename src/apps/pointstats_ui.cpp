@@ -112,6 +112,10 @@ void PointStatsCallbacks::overallCallback(float status) const {
 	emit overallProgress((int) std::round(status * 100));
 }
 
+void PointStatsCallbacks::statusCallback(const std::string &msg) const {
+	emit statusUpdate(QString(msg.c_str()));
+}
+
 void WorkerThread::init(PointStatsForm *parent,
 		const geotools::util::Bounds &bounds) {
 	m_parent = parent;
@@ -281,6 +285,7 @@ void PointStatsForm::setupUi(QWidget *form) {
 			SLOT(fileListChanged()));
 
 	connect((PointStatsCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
+	connect((PointStatsCallbacks *) m_callbacks, SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
 	updateTypeUi();

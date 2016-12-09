@@ -62,6 +62,7 @@ namespace geotools {
             virtual ~Callbacks() = 0;
             virtual void stepCallback(float status) const = 0;
             virtual void overallCallback(float status) const = 0;
+            virtual void statusCallback(const std::string &msg) const = 0;
         };
 
         class Point {

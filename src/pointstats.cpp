@@ -340,8 +340,10 @@ namespace geotools {
             m_resolutionX = config.resolution;
             m_resolutionY = -config.resolution;
 
-            if(callbacks)
+            if(callbacks) {
                 callbacks->overallCallback(0.01f);
+                callbacks->statusCallback("Starting...");
+            }
 
             FileSorter sorter(20.0, 20.0);
             std::vector<std::string> files(config.sourceFiles.begin(), config.sourceFiles.end());
@@ -360,6 +362,8 @@ namespace geotools {
                     m_bounds.snap(m_resolutionX);
                     break;
             }
+            if(callbacks)
+                callbacks->statusCallback("Initializing point reader...");
             ps.setBounds(m_bounds);
             InitCallback initStatus(callbacks);
             ps.buildFinalizer(&initStatus);
@@ -368,8 +372,10 @@ namespace geotools {
             m_cols = m_bounds.maxCol(m_resolutionX) + 1;
             m_rows = m_bounds.maxRow(m_resolutionY) + 1;
 
-            if(callbacks)
+            if(callbacks) {
                 callbacks->overallCallback(0.5f);
+                callbacks->statusCallback("Configuring computers...");
+            }
 
             // Initialize the filter group.
             CellStatsFilter *filter = nullptr;
@@ -408,8 +414,10 @@ namespace geotools {
                 m_mtx.push_back(std::move(m));
             }
 
-            if(callbacks)
+            if(callbacks) {
                 callbacks->overallCallback(0.47f);
+                callbacks->statusCallback("Processing points...");
+            }
 
             // Initialize the thread group for runner.
             std::list<std::thread> threads;
@@ -479,8 +487,10 @@ namespace geotools {
                 }
             }
 
-            if (callbacks)
+            if (callbacks) {
                 callbacks->overallCallback(1.0f);
+                callbacks->statusCallback("Finished.");
+            }
 
         }
 

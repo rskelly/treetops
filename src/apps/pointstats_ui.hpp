@@ -22,9 +22,12 @@ class PointStatsCallbacks: public QObject, public geotools::util::Callbacks {
 	Q_OBJECT
 public:
 	void stepCallback(float status) const;
-	void overallCallback(float status) const;signals:
+	void overallCallback(float status) const;
+	void statusCallback(const std::string &msg) const;
+signals:
 	void stepProgress(int) const;
 	void overallProgress(int) const;
+	void statusUpdate(QString) const;
 };
 
 class WorkerThread;
