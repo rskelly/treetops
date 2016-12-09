@@ -14,151 +14,145 @@ using namespace geotools::treetops::config;
 
 namespace geotools {
 
-namespace treetops {
+	namespace treetops {
 
-class TreetopsCallbacks: public QObject, public geotools::util::Callbacks {
-	Q_OBJECT
-public:
-	TreetopsCallbacks() :
-			geotools::util::Callbacks() {
+		class TreetopsCallbacks: public QObject, public geotools::util::Callbacks {
+			Q_OBJECT
+		public:
+			void stepCallback(float status) const;
+			void overallCallback(float status) const;
+			void statusCallback(const std::string &msg) const;
+		signals:
+			void stepProgress(int) const;
+			void overallProgress(int) const;
+			void statusUpdate(QString) const;
+		};
+
 	}
-	void stepCallback(float status) const {
-		emit stepProgress((int) std::round(status * 100));
-	}
 
-	void overallCallback(float status) const {
-		emit overallProgress((int) std::round(status * 100));
-	}
+	namespace ui {
 
-	signals:
-	void stepProgress(int) const;
-	void overallProgress(int) const;
-};
+		class WorkerThread;
 
-}
+		class TreetopsForm: public QWidget, public Ui::TreetopsForm {
+			friend class WorkerThread;Q_OBJECT
+		private:
+			bool m_cancel;
+			QWidget *m_form;
+			geotools::util::Callbacks *m_callbacks;
+			WorkerThread *m_workerThread;
+			QDir m_last;
+			TreetopsConfig m_config;
 
-namespace ui {
+			void checkRun();
+			void updateView();
 
-class WorkerThread;
+		public:
+			TreetopsForm(QWidget *p = Q_NULLPTR);
+			void setupUi(QWidget *Form);
+			~TreetopsForm();
 
-class TreetopsForm: public QWidget, public Ui::TreetopsForm {
-	friend class WorkerThread;Q_OBJECT
-private:
-	QWidget *m_form;
-	QDir m_last;
-	TreetopsConfig m_config;
-	geotools::util::Callbacks *m_callbacks;
-	WorkerThread *m_workerThread;
-	bool m_cancel;
-	void checkRun();
-	void updateView();
+		public slots:
+			void doSmoothChanged(bool);
+			void doTopsChanged(bool);
+			void doCrownsChanged(bool);
 
-public:
-	TreetopsForm(QWidget *p = Q_NULLPTR);
-	void setupUi(QWidget *Form);
-	~TreetopsForm();
+			void smoothWindowSizeChanged(int);
+			void smoothSigmaChanged(double);
+			void smoothOriginalCHMChanged(QString);
+			void smoothSmoothedCHMChanged(QString);
 
-public slots:
-	void doSmoothChanged(bool);
-	void doTopsChanged(bool);
-	void doCrownsChanged(bool);
+			void topsMinHeightChanged(double);
+			void topsWindowSizeChanged(int);
+			void topsOriginalCHMChanged(QString);
+			void topsSmoothedCHMChanged(QString);
+			void topsTreetopsDatabaseChanged(QString);
+			void topsTreetopsSRIDClicked();
+			void topsTreetopsSRIDChanged(int);
 
-	void smoothWindowSizeChanged(int);
-	void smoothSigmaChanged(double);
-	void smoothOriginalCHMChanged(QString);
-	void smoothSmoothedCHMChanged(QString);
+			void crownsRadiusChanged(double);
+			void crownsHeightFractionChanged(double);
+			void crownsMinHeightChanged(double);
+			void crownsTreetopsDatabaseChanged(QString);
+			void crownsSmoothedCHMChanged(QString);
+			void crownsCrownsRasterChanged(QString);
+			void crownsCrownsDatabaseChanged(QString);
 
-	void topsMinHeightChanged(double);
-	void topsWindowSizeChanged(int);
-	void topsOriginalCHMChanged(QString);
-	void topsSmoothedCHMChanged(QString);
-	void topsTreetopsDatabaseChanged(QString);
-	void topsTreetopsSRIDClicked();
-	void topsTreetopsSRIDChanged(int);
+			void exitClicked();
+			void runClicked();
+			void cancelClicked();
+			void helpClicked();
 
-	void crownsRadiusChanged(double);
-	void crownsHeightFractionChanged(double);
-	void crownsMinHeightChanged(double);
-	void crownsTreetopsDatabaseChanged(QString);
-	void crownsSmoothedCHMChanged(QString);
-	void crownsCrownsRasterChanged(QString);
-	void crownsCrownsDatabaseChanged(QString);
+			void smoothOriginalCHMClicked();
+			void smoothSmoothedCHMClicked();
 
-	void exitClicked();
-	void runClicked();
-	void cancelClicked();
-	void helpClicked();
+			void topsOriginalCHMClicked();
+			void topsSmoothedCHMClicked();
+			void topsTreetopsDatabaseClicked();
 
-	void smoothOriginalCHMClicked();
-	void smoothSmoothedCHMClicked();
+			void crownsCrownsDatabaseClicked();
+			void crownsCrownsRasterClicked();
+			void crownsTreetopsDatabaseClicked();
+			void crownsSmoothedCHMClicked();
 
-	void topsOriginalCHMClicked();
-	void topsSmoothedCHMClicked();
-	void topsTreetopsDatabaseClicked();
+			void done();
+		};
 
-	void crownsCrownsDatabaseClicked();
-	void crownsCrownsRasterClicked();
-	void crownsTreetopsDatabaseClicked();
-	void crownsSmoothedCHMClicked();
+		class WorkerThread: public QThread {
+		private:
+			TreetopsForm *m_parent;
 
-	void done();
-};
+			void run() {
 
-class WorkerThread: public QThread {
-private:
-	TreetopsForm *m_parent;
+				using namespace geotools::treetops;
+				using namespace geotools::treetops::config;
 
-	void run() {
+				try {
+					Treetops t;
+					t.setCallbacks(m_parent->m_callbacks);
+					const TreetopsConfig &config = m_parent->m_config;
+					const TreetopsCallbacks *cb =
+							(TreetopsCallbacks *) m_parent->m_callbacks;
 
-		using namespace geotools::treetops;
-		using namespace geotools::treetops::config;
+					int steps = ((int) config.doSmoothing) + ((int) config.doTops)
+							+ ((int) config.doCrowns);
+					int step = 0;
 
-		try {
-			Treetops t;
-			t.setCallbacks(m_parent->m_callbacks);
-			const TreetopsConfig &config = m_parent->m_config;
-			const TreetopsCallbacks *cb =
-					(TreetopsCallbacks *) m_parent->m_callbacks;
+					if (cb)
+						cb->overallCallback(0.01);
 
-			int steps = ((int) config.doSmoothing) + ((int) config.doTops)
-					+ ((int) config.doCrowns);
-			int step = 0;
+					if (config.doSmoothing) {
+						t.smooth(config);
+						cb->overallCallback((float) ++step / steps);
+					}
 
-			if (cb)
-				cb->overallCallback(0.01);
+					if (config.doTops) {
+						t.treetops(config);
+						cb->overallCallback((float) ++step / steps);
+					}
 
-			if (config.doSmoothing) {
-				t.smooth(config);
-				cb->overallCallback((float) ++step / steps);
+					if (config.doCrowns) {
+						t.treecrowns(config);
+						cb->overallCallback((float) ++step / steps);
+					}
+
+					cb->overallCallback(1.0);
+
+				} catch (const std::exception &e) {
+					QMessageBox err((QWidget *) m_parent);
+					err.setText("Error");
+					err.setInformativeText(QString(e.what()));
+					err.exec();
+				}
 			}
+		public:
 
-			if (config.doTops) {
-				t.treetops(config);
-				cb->overallCallback((float) ++step / steps);
+			void init(TreetopsForm *parent) {
+				m_parent = parent;
 			}
+		};
 
-			if (config.doCrowns) {
-				t.treecrowns(config);
-				cb->overallCallback((float) ++step / steps);
-			}
-
-			cb->overallCallback(1.0);
-
-		} catch (const std::exception &e) {
-			QMessageBox err((QWidget *) m_parent);
-			err.setText("Error");
-			err.setInformativeText(QString(e.what()));
-			err.exec();
-		}
 	}
-public:
-
-	void init(TreetopsForm *parent) {
-		m_parent = parent;
-	}
-};
-
-}
 
 }
 

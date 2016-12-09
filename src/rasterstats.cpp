@@ -169,6 +169,19 @@ namespace geotools {
 			std::string destFile;
 			std::string classFile;
 			uint16_t kernelSize;
+			uint8_t statType;
+
+			RasterStatsConfig() :
+				kernelSize(3),
+				statType(0) {
+			}
+
+			void check() {
+				if(statType == 3 && kernelSize != 3) {
+					g_warn("Kernel size for aspect is 3. Adjusting.");
+					kernelSize = 3;
+				}
+			}
 		};
 
 		/**
@@ -274,38 +287,81 @@ namespace geotools {
 			}
 		}
 
-		void mean(MemRaster<float> &inrast, MemRaster<float> &outrast, uint16_t kernelSize, double nodata) {
+		double median(std::vector<double> &values, double nodata) {
+			int size = values.size();
+			if(!size) return nodata;
+			std::sort(values.begin(), values.end());
+			return size % 2 == 0 ? (values[size / 2 - 1] + values[size / 2]) / 2.0 : values[size / 2];
+		}
+
+		double mean(std::vector<double> &values, double nodata) {
+			double sum = 0.0;
+			for(const double &v : values)
+				sum += v;
+			return values.size() ? sum / values.size() : nodata;
+		}
+
+		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
+		double aspect(std::vector<double> &values, double nodata) {
+			if(values.size() != 9)
+				g_argerr("Kernel must have 9 elements for aspect.");
+			double a = ((values[2] + 2.0 * values[5] + values[8]) - (values[0] + 2.0 * values[3] + values[6])) / 8.0;
+			double b = ((values[6] + 2.0 * values[7] + values[8]) - (values[0] + 2.0 * values[1] + values[3])) / 8.0;
+			double aspect = 57.29578 * std::atan2(a, -b);
+			if(aspect < 0.0) {
+				return 90.0 - aspect;
+			} else if(aspect > 90.0) {
+			    return 360.0 - aspect + 90.0;
+			} else {
+			    return 90.0 - aspect;
+			}
+		}
+
+		typedef double (*statFunc)(std::vector<double>&, double);
+
+		void process(MemRaster<float> &inrast, MemRaster<float> &outrast,
+				uint16_t kernelSize, double nodata, statFunc fn) {
+
 			if(kernelSize % 2 == 0) {
 				g_warn("Kernel size can't be even. Bumping up by one.");
 				++kernelSize;
 			}
 			if(kernelSize < 3)
 				g_argerr("Kernel size must be three or greater.");
-			
-			MemRaster<float> kernel(kernelSize, kernelSize);
 
+			MemRaster<float> kernel(kernelSize, kernelSize);
 			for(uint16_t row = 0; row < inrast.rows() - kernelSize; ++row) {
 				for(uint16_t col = 0; col < inrast.cols() - kernelSize; ++col) {
 					inrast.readBlock(col, row, kernel);
-					double sum = 0.0;
-					uint32_t count = 0;
+					std::vector<double> values;
 					for(uint16_t r = 0; r < kernelSize; ++r) {
-						for(uint16_t c = 0; c < kernelSize; ++c) {
-							double v = kernel.get(c, r);
-							if(v != nodata) {
-								sum += v;
-								++count;
-							}
-						}
+						for(uint16_t c = 0; c < kernelSize; ++c)
+							values.push_back(kernel.get(c, r));
 					}
-					outrast.set(col + kernelSize / 2, row + kernelSize / 2, count > 0 ? sum / count : -9999.0);
+					double value = fn(values, nodata);
+					outrast.set(col + kernelSize / 2, row + kernelSize / 2, value);
 				}
 			}
-
 		}
 
-		void rasterstats(const RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+		statFunc getMethod(const RasterStatsConfig &config) {
+			switch(config.statType) {
+			case 1:
+				return mean;
+			case 2:
+				return median;
+			case 3:
+				return aspect;
+			default:
+				g_argerr("Unknown method: " << config.statType);
+			}
+		}
 
+		void rasterstats(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			statFunc fn = getMethod(config);
 			double resX = 0.0, resY = 0.0;
 			uint16_t bands = 0;
 			std::vector<double> nodata;
@@ -323,7 +379,7 @@ namespace geotools {
 				resY = rast.resolutionY();
 				if(nodata.empty()) {
 					for(uint16_t band = 1; band <= bands; ++band)
-						nodata[band - 1] = rast.nodata(band);
+						nodata.push_back(rast.nodata(band));
 				}
 			}
 
@@ -342,7 +398,7 @@ namespace geotools {
 					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
 				}
 
-				mean(inrast, outrast, config.kernelSize, nodata[band - 1]);
+				process(inrast, outrast, config.kernelSize, nodata[band - 1], fn);
 
 				writerast.writeBlock(band, outrast);
 			}
@@ -369,28 +425,43 @@ void usage() {
 
 int main(int argc, char ** argv) {
 
+	if(argc == 1) {
+		usage();
+		return 1;
+	}
+
 	using namespace geotools::raster;
 
 	RasterStatsConfig config;
 
 	int mode = 0;
 
-	for (int i = 1; i < argc; ++i) {
-		std::string arg(argv[i]);
-		if(arg == "-c") {
-			config.classFile = argv[++i];
-			mode = 1;
-		} else if(arg == "-s") {
-			config.destFile = argv[++i];
-			mode = 2;
-		} else if(arg == "-k") {
-			config.kernelSize = atoi(argv[++i]);
-		} else {
-			config.sourceFiles.push_back(argv[i]);
-		}
-	}
+	std::map<std::string, uint8_t> statTypes;
+	statTypes["mean"] = 1;
+	statTypes["median"] = 2;
+	statTypes["aspect"] = 3;
 
 	try {
+
+		for (int i = 1; i < argc; ++i) {
+			std::string arg(argv[i]);
+			if(arg == "-c") {
+				config.classFile = argv[++i];
+				mode = 1;
+			} else if(arg == "-s") {
+				config.destFile = argv[++i];
+				mode = 2;
+			} else if(arg == "-k") {
+				config.kernelSize = atoi(argv[++i]);
+			} else if(arg == "-t") {
+				std::string t = argv[++i];
+				if(statTypes.find(t) == statTypes.end())
+					g_argerr("Unknown statistic: " << t);
+				config.statType = statTypes[t];
+			} else {
+				config.sourceFiles.push_back(argv[i]);
+			}
+		}
 
 		switch(mode) {
 		case 1:
@@ -403,10 +474,6 @@ int main(int argc, char ** argv) {
 
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
-		usage();
-		return 1;
-	} catch (const char *e) {
-		std::cerr << e << std::endl;
 		usage();
 		return 1;
 	}

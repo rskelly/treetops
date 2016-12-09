@@ -13,7 +13,6 @@ using namespace geotools::las;
 using namespace geotools::las::lasgrid_config;
 
 LasgridForm::LasgridForm(QWidget *p) :
-		QWidget(p),
 		m_vsrid(0), m_hsrid(0),
 		m_form(nullptr),
 		m_workerThread(nullptr),

@@ -10,9 +10,25 @@
 using namespace geotools::ui;
 using namespace geotools::raster;
 
+void MosaicCallbacks::stepCallback(float status) const {
+	emit stepProgress((int) std::round(status * 100));
+}
+
+void MosaicCallbacks::overallCallback(float status) const {
+	emit overallProgress((int) std::round(status * 100));
+}
+
+void MosaicCallbacks::statusCallback(const std::string &msg) const {
+	emit statusUpdate(QString(msg.c_str()));
+}
+
 MosaicForm::MosaicForm(QWidget *p) :
-		QWidget(p), m_tileSize(2048), m_distance(100.0), m_threads(1), m_callbacks(
-				new MosaicCallbacks()) {
+		m_form(nullptr),
+		m_tileSize(2048),
+		m_distance(100.0),
+		m_threads(1),
+		m_callbacks(new MosaicCallbacks()),
+		m_workerThread(nullptr) {
 }
 
 MosaicForm::~MosaicForm() {
@@ -29,7 +45,6 @@ void MosaicForm::setupUi(QWidget *form) {
 
 	m_form = form;
 	m_last = QDir::home();
-
 	m_workerThread = new WorkerThread();
 	m_callbacks = new MosaicCallbacks();
 

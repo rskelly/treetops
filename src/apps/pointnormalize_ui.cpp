@@ -55,13 +55,28 @@ void PointNormalizeCallbacks::overallCallback(float status) const {
 	emit overallProgress((int) std::round(status * 100));
 }
 
-PointNormalizeForm::PointNormalizeForm(QWidget *p) {
+void PointNormalizeCallbacks::statusCallback(const std::string &msg) const {
+	emit statusUpdate(QString(msg.c_str()));
+}
+
+PointNormalizeForm::PointNormalizeForm(QWidget *p) :
+	m_cancel(false),
+	m_form(nullptr),
+	m_callbacks(nullptr),
+	m_workerThread(nullptr),
+	m_bgrpGround(nullptr),
+	m_bgrpNegative(nullptr) {
 }
 
 void PointNormalizeForm::setupUi(QWidget *form) {
+
 	Ui::PointNormalizeForm::setupUi(form);
+
 	m_form = form;
 	m_filter = QString("LAS Files (*.las)");
+	m_callbacks = new PointNormalizeCallbacks();
+	m_workerThread = new WorkerThread();
+	m_workerThread->init(this);
 
 	_loadConfig(m_config);
 
@@ -82,10 +97,6 @@ void PointNormalizeForm::setupUi(QWidget *form) {
 
 	m_fileList.init(this, btnAddFiles, btnRemoveAllFiles,
 			btnRemoveSelectedFiles, lstFiles, m_last, m_filter);
-
-	m_callbacks = new PointNormalizeCallbacks();
-	m_workerThread = new WorkerThread();
-	m_workerThread->init(this);
 
 	spnThreads->setMaximum(std::thread::hardware_concurrency());
 	spnThreads->setValue(m_config.threads);
@@ -115,136 +126,139 @@ void PointNormalizeForm::setupUi(QWidget *form) {
 }
 
 void PointNormalizeForm::bufferChanged(double b) {
-m_config.buffer = b;
-g_debug(" -- buffer " << b);
-checkRun();
+	m_config.buffer = b;
+	g_debug(" -- buffer " << b);
+	checkRun();
 }
 
 void PointNormalizeForm::threadsChanged(int t) {
-m_config.threads = t;
-g_debug(" -- threads " << t);
-checkRun();
+	m_config.threads = t;
+	g_debug(" -- threads " << t);
+	checkRun();
 }
 
 void PointNormalizeForm::overwriteChanged(bool o) {
-m_config.overwrite = o;
-g_debug(" -- overwrite " << o);
-checkRun();
+	m_config.overwrite = o;
+	g_debug(" -- overwrite " << o);
+	checkRun();
 }
 
 void PointNormalizeForm::keepNegativeToggled(bool on) {
-m_config.dropNegative = !on;
-g_debug(" -- drop negative " << m_config.dropNegative);
-checkRun();
+	m_config.dropNegative = !on;
+	g_debug(" -- drop negative " << m_config.dropNegative);
+	checkRun();
 }
 
 void PointNormalizeForm::keepGroundToggled(bool on) {
-m_config.dropGround = !on;
-g_debug(" -- drop ground " << m_config.dropGround);
-checkRun();
+	m_config.dropGround = !on;
+	g_debug(" -- drop ground " << m_config.dropGround);
+	checkRun();
 }
 
 const PointNormalizeConfig& PointNormalizeForm::config() {
-return m_config;
+	return m_config;
 }
 
 Callbacks* PointNormalizeForm::callbacks() {
-return m_callbacks;
+	return m_callbacks;
 }
 
 bool* PointNormalizeForm::cancel() {
-return &m_cancel;
+	return &m_cancel;
 }
 
 void PointNormalizeForm::fileListChanged() {
-m_config.sourceFiles = m_fileList.files();
-checkRun();
+	m_config.sourceFiles = m_fileList.files();
+	checkRun();
 }
 
 void PointNormalizeForm::checkRun() {
-btnRun->setEnabled(
-		!m_workerThread->isRunning() && m_config.sourceFiles.size() > 0
-				&& !m_config.outputDir.empty());
-btnCancel->setEnabled(m_workerThread->isRunning());
-btnExit->setEnabled(!m_workerThread->isRunning());
+	btnRun->setEnabled(!m_workerThread->isRunning()
+			&& m_config.sourceFiles.size() > 0
+			&& !m_config.outputDir.empty());
+	btnCancel->setEnabled(m_workerThread->isRunning());
+	btnExit->setEnabled(!m_workerThread->isRunning());
 }
 
 void PointNormalizeForm::outputFolderClicked() {
-QString res = QFileDialog::getExistingDirectory(this, "Output Directory",
+	QString res = QFileDialog::getExistingDirectory(this, "Output Directory",
 		m_last.path(),
 		QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-m_config.outputDir = res.toStdString();
-m_last.setPath(res);
-_settings.setValue(QString("last_dir"), m_last.path());
-txtOutputFolder->setText(res);
-checkRun();
+	m_config.outputDir = res.toStdString();
+	m_last.setPath(res);
+	_settings.setValue(QString("last_dir"), m_last.path());
+	txtOutputFolder->setText(res);
+	checkRun();
 }
 
 void PointNormalizeForm::exitClicked() {
-m_form->close();
+	m_form->close();
 }
 
 void PointNormalizeForm::cancelClicked() {
-m_cancel = true;
-prgStep->setValue(0);
-prgOverall->setValue(0);
-checkRun();
+	m_cancel = true;
+	prgStep->setValue(0);
+	prgOverall->setValue(0);
+	checkRun();
 }
 
 void PointNormalizeForm::helpClicked() {
-QDesktopServices::openUrl(
+	QDesktopServices::openUrl(
 		QUrl("http://www.dijital.ca/geotools/help/pointnormalize.html",
 				QUrl::TolerantMode));
 }
 
 void PointNormalizeForm::runClicked() {
-if (m_workerThread->isRunning())
-	return;
-m_cancel = false;
-btnRun->setEnabled(false);
-btnCancel->setEnabled(true);
-btnExit->setEnabled(false);
-m_workerThread->start();
-checkRun();
+	if (m_workerThread->isRunning())
+		return;
+	m_cancel = false;
+	btnRun->setEnabled(false);
+	btnCancel->setEnabled(true);
+	btnExit->setEnabled(false);
+	m_workerThread->start();
+	checkRun();
 }
 
 void PointNormalizeForm::done() {
-g_debug(" -- done");
-if (m_workerThread->hasError()) {
-	QMessageBox err((QWidget *) this);
-	err.setText("Error");
-	err.setInformativeText(QString(m_workerThread->getError().c_str()));
-	err.exec();
-}
-checkRun();
+	g_debug(" -- done");
+	if (m_workerThread->hasError()) {
+		QMessageBox err((QWidget *) this);
+		err.setText("Error");
+		err.setInformativeText(QString(m_workerThread->getError().c_str()));
+		err.exec();
+	}
+	checkRun();
 }
 
 PointNormalizeForm::~PointNormalizeForm() {
-_saveConfig(m_config);
-delete m_callbacks;
-if (m_workerThread) {
-	m_workerThread->exit(0);
-	delete m_workerThread;
-}
+	_saveConfig(m_config);
+	delete m_callbacks;
+	if (m_workerThread) {
+		m_workerThread->exit(0);
+		delete m_workerThread;
+	}
 }
 
 void WorkerThread::init(PointNormalizeForm *parent) {
-m_parent = parent;
+	m_parent = parent;
 }
 
 void WorkerThread::run() {
-try {
-	PointNormalize pn;
-	pn.normalize(m_parent->config(), m_parent->callbacks(), m_parent->cancel());
-} catch (const std::exception &ex) {
-	m_error = ex.what();
-}
+	try {
+		PointNormalize pn;
+		pn.normalize(m_parent->config(), m_parent->callbacks(), m_parent->cancel());
+	} catch (const std::exception &ex) {
+		m_error = ex.what();
+	}
 }
 
 bool WorkerThread::hasError() {
-return !m_error.empty();
+	return !m_error.empty();
 }
 
 std::string WorkerThread::getError() {
-return m_error;
+	return m_error;
+}
+
+WorkerThread::~WorkerThread() {
 }
