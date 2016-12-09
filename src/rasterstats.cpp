@@ -296,9 +296,41 @@ namespace geotools {
 
 		double mean(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			double sum = 0.0;
-			for(const double &v : values)
-				sum += v;
-			return values.size() ? sum / values.size() : rast.nodata(band);
+			double nodata = rast.nodata(band);
+			uint16_t count = 0;
+			for(const double &v : values) {
+				if(v != nodata) {
+					sum += v;
+					++count;
+				}
+			}
+			return values.size() ? sum / count : nodata;
+		}
+
+		double variance(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			double sum = 0.0;
+			double nodata = rast.nodata(band);
+			uint16_t count = 0;
+			for(const double &v : values) {
+				if(v != nodata) {
+					sum += v;
+					++count;
+				}
+			}
+			if(count == 0) return nodata;
+			sum = count > 0 ? sum / count : nodata;
+			double sum2 = 0;
+			for(const double &v : values) {
+				if(v != nodata)
+					sum2 += g_sq(v - sum);
+			}
+			return sum2;
+		}
+
+		double stddev(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			double var = variance(values, band, rast);
+			double nodata = rast.nodata(band);
+			return var == nodata ? nodata : std::sqrt(var);
 		}
 
 		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
@@ -368,6 +400,10 @@ namespace geotools {
 				return median;
 			case 3:
 				return aspect;
+			case 7:
+				return variance;
+			case 8:
+				return stddev;
 			default:
 				g_argerr("Unknown method: " << config.method);
 			}
@@ -441,7 +477,7 @@ namespace geotools {
 
 			for(uint16_t row = 0; row < inrast.rows(); ++row) {
 				for(uint16_t col = 0; col < inrast.cols(); ++col) {
-					if(++count % 100)
+					if(++count % 1000 == 0)
 						std::cerr << " - " << (int) ((float) count / total * 100) << "\n";
 					q.push(std::make_pair(col, row));
 					while(!q.empty()) {
@@ -513,6 +549,8 @@ int main(int argc, char ** argv) {
 	statTypes["slope"] = 4;
 	statTypes["ca"] = 5;
 	statTypes["class"] = 6;
+	statTypes["variance"] = 7;
+	statTypes["stddev"] = 8;
 
 	try {
 
@@ -545,6 +583,8 @@ int main(int argc, char ** argv) {
 		case 2:
 		case 3:
 		case 4:
+		case 7:
+		case 8:
 			rasterstats(config);
 			break;
 		default:
