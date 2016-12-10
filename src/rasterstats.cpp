@@ -361,7 +361,72 @@ namespace geotools {
 				if(v != nodata)
 					dif = g_max(dif, g_abs(v - centre));
 			}
-			return g_sq(dif) / (g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
+			std::cerr << dif << ", " << std::sqrt(g_sq(rast.resolutionX()) + g_sq(rast.resolutionY())) << "\n";
+			return dif / std::sqrt(g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
+		}
+
+		void normalize(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			double sd = stddev(values, band, rast);
+			double mn = mean(values, band, rast);
+			for(int i = 0; i < values.size(); ++i)
+				values[i] = sd == 0 ? rast.nodata(band) : (values[i] - mn) / sd;
+		}
+
+		double linearity(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			if(values.size() != 9)
+				g_argerr("Kernel must have 9 elements for aspect.");
+			normalize(values, band, rast);
+			double maxVar = 0;
+			int maxIdx = 0;
+			double d[3];
+			double x[4][3] = {{0, 4, 8}, {1, 4, 7}, {2, 4, 6}, {3, 4, 5}};
+			for(int i = 0; i < 4; ++i) {
+				double sum = 0;
+				for(int j = 0; j < 3; ++j) {
+					d[j] = values[x[i][j]];
+					sum += values[x[i][j]];
+				}
+				double mean = sum / 3;
+				double var = 0;
+				for(int j = 0; j < 3; ++j)
+					var += g_sq(values[x[i][j]] - mean);
+				if(var > maxVar) {
+					maxVar = var;
+					maxIdx = i;
+				}
+			}
+			return maxIdx;
+		}
+
+		double linearity2(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+			if(values.size() != 9)
+				g_argerr("Kernel must have 9 elements for aspect.");
+			normalize(values, band, rast);
+			double maxVar = 0;
+			int maxIdx = 0;
+			double d[3];
+			double x[4][3] = {{0, 4, 8}, {1, 4, 7}, {2, 4, 6}, {3, 4, 5}};
+			double vars[4];
+			for(int i = 0; i < 4; ++i) {
+				double sum = 0;
+				for(int j = 0; j < 3; ++j) {
+					d[j] = values[x[i][j]];
+					sum += values[x[i][j]];
+				}
+				double mean = sum / 3;
+				double var = 0;
+				for(int j = 0; j < 3; ++j)
+					var += g_sq(values[x[i][j]] - mean);
+				vars[i] = var;
+			}
+			double sum = 0;
+			for(int i = 0; i < 3; ++i) 
+				sum += vars[i];
+			double mean = sum / 3;
+			double var = 0;
+			for(int i = 0; i < 3; ++i)
+				var += g_sq(vars[i] - mean);
+			return var;
 		}
 
 		typedef double (*statFunc)(std::vector<double>&, uint16_t, const Raster<float>&);
@@ -400,10 +465,14 @@ namespace geotools {
 				return median;
 			case 3:
 				return aspect;
+			case 4:
+				return slope;
 			case 7:
 				return variance;
 			case 8:
 				return stddev;
+			case 9:
+				return linearity;
 			default:
 				g_argerr("Unknown method: " << config.method);
 			}
@@ -472,20 +541,28 @@ namespace geotools {
 
 			std::queue<std::pair<uint16_t, uint16_t> > q;
 
+			double nodata = source.nodata();
 			uint64_t total = inrast.size();
 			uint64_t count = 0;
+			uint32_t cc = 0;
+
+			std::vector<bool> visited(inrast.cols() * inrast.rows());
 
 			for(uint16_t row = 0; row < inrast.rows(); ++row) {
 				for(uint16_t col = 0; col < inrast.cols(); ++col) {
 					if(++count % 1000 == 0)
 						std::cerr << " - " << (int) ((float) count / total * 100) << "\n";
+					std::fill(visited.begin(), visited.end(), false);
 					q.push(std::make_pair(col, row));
 					while(!q.empty()) {
 						auto p = q.front();
 						q.pop();
 						uint16_t c = p.first;
 						uint16_t r = p.second;
+						if(visited[r * inrast.cols() + c]) continue;
+						visited[r * inrast.cols() + c] = true;
 						double v = inrast.get(c, r);
+						if(v == nodata) continue;
 						if(c > 0 && inrast.get(c - 1, r) < v) {
 							outrast.set(c - 1, r, outrast.get(c - 1, r) + 1);
 							q.push(std::make_pair(c - 1, r));
@@ -551,6 +628,7 @@ int main(int argc, char ** argv) {
 	statTypes["class"] = 6;
 	statTypes["variance"] = 7;
 	statTypes["stddev"] = 8;
+	statTypes["linearity"] = 9;
 
 	try {
 
@@ -585,6 +663,7 @@ int main(int argc, char ** argv) {
 		case 4:
 		case 7:
 		case 8:
+		case 9:
 			rasterstats(config);
 			break;
 		default:
