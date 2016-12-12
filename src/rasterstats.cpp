@@ -337,6 +337,9 @@ namespace geotools {
 		double aspect(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
+			double nodata = rast.nodata(band);
+			if(values[4] == nodata)
+				return nodata;
 			double a = ((values[2] + 2.0 * values[5] + values[8]) - (values[0] + 2.0 * values[3] + values[6])) / 8.0;
 			double b = ((values[6] + 2.0 * values[7] + values[8]) - (values[0] + 2.0 * values[1] + values[3])) / 8.0;
 			double aspect = 57.29578 * std::atan2(a, -b);
@@ -356,19 +359,20 @@ namespace geotools {
 			double centre = values[4];
 			double dif = 0.0;
 			double nodata = rast.nodata(band);
+			if(centre == nodata)
+				return nodata;
 			for(uint16_t i = 0; i < 9; ++i) {
 				double v = values[i];
 				if(v != nodata)
 					dif = g_max(dif, g_abs(v - centre));
 			}
-			std::cerr << dif << ", " << std::sqrt(g_sq(rast.resolutionX()) + g_sq(rast.resolutionY())) << "\n";
-			return dif / std::sqrt(g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
+			return std::atan2(dif, g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
 		}
 
 		void normalize(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
 			double sd = stddev(values, band, rast);
 			double mn = mean(values, band, rast);
-			for(int i = 0; i < values.size(); ++i)
+			for(size_t i = 0; i < values.size(); ++i)
 				values[i] = sd == 0 ? rast.nodata(band) : (values[i] - mn) / sd;
 		}
 
@@ -378,14 +382,11 @@ namespace geotools {
 			normalize(values, band, rast);
 			double maxVar = 0;
 			int maxIdx = 0;
-			double d[3];
 			double x[4][3] = {{0, 4, 8}, {1, 4, 7}, {2, 4, 6}, {3, 4, 5}};
 			for(int i = 0; i < 4; ++i) {
 				double sum = 0;
-				for(int j = 0; j < 3; ++j) {
-					d[j] = values[x[i][j]];
+				for(int j = 0; j < 3; ++j)
 					sum += values[x[i][j]];
-				}
 				double mean = sum / 3;
 				double var = 0;
 				for(int j = 0; j < 3; ++j)
@@ -402,17 +403,12 @@ namespace geotools {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
 			normalize(values, band, rast);
-			double maxVar = 0;
-			int maxIdx = 0;
-			double d[3];
 			double x[4][3] = {{0, 4, 8}, {1, 4, 7}, {2, 4, 6}, {3, 4, 5}};
 			double vars[4];
 			for(int i = 0; i < 4; ++i) {
 				double sum = 0;
-				for(int j = 0; j < 3; ++j) {
-					d[j] = values[x[i][j]];
+				for(int j = 0; j < 3; ++j)
 					sum += values[x[i][j]];
-				}
 				double mean = sum / 3;
 				double var = 0;
 				for(int j = 0; j < 3; ++j)
@@ -527,64 +523,218 @@ namespace geotools {
 
 		}
 
-		void contributingarea(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+		template<class T>
+		class GTFillOperator: public FillOperator<T> {
+		private:
+			T m_elevation;
+		public:
+
+			GTFillOperator(T elevation) :
+				m_elevation(elevation) {
+			}
+
+			bool fill(T value) const {
+				return value > m_elevation;
+			}
+		};
+
+		bool isEdgePixel(uint16_t col, uint16_t row, MemRaster<float> &inrast, MemRaster<uint8_t> &flood, double *min) {
+			if(col == 0 || row == 0 || col == (flood.cols() - 1) || row == (flood.rows() - 1))
+				return true;
+			*min = G_DBL_MAX_POS;
+			for(uint16_t r = row - 1; r < row + 2; ++r) {
+				for(uint16_t c = col - 1; c < col + 2; ++c) {
+					if(flood.get(c, r) == 0) {
+						*min = g_min(*min, inrast.get(c, r));
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		void findLowPoint(MemRaster<float> &inrast, MemRaster<uint32_t> &outrast, MemRaster<uint8_t> &flood,
+				uint16_t minc, uint16_t minr, uint16_t maxc, uint16_t maxr,
+				uint16_t *lc, uint16_t *lr, double *low) {
+			// Find edge;
+			*low = G_DBL_MAX_POS;
+			for(uint16_t row = minr; row < maxr; ++row) {
+				for(uint16_t col = minc; col < maxc; ++col) {
+					double minTmp;
+					int v;
+					bool edge;
+					try{
+						v = inrast.get(col, row);
+						edge  = isEdgePixel(col, row, inrast, flood, &minTmp);
+					}catch(const std::exception &e) {
+						std::cerr << col << ", " << row << ", " << maxc << ", " << maxr << ", " << inrast.cols() << ", " << inrast.rows() << "\n";
+						throw e;
+					}
+					if(v == 1 && edge) {
+						*lc = col;
+						*lr = row;
+						*low = g_min(*low, minTmp);
+						outrast.set(col, row, outrast.get(col, row) + 1);
+					}
+				}
+			}
+		}
+
+		void contributingarea2(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
 
 			config.check();
 
+			g_loglevel(G_LOG_DEBUG);
+
 			Raster<float> source(config.sourceFiles[0]);
 
-			MemRaster<float> inrast(source.cols(), source.rows(), false);
+			MemRaster<float> inrast(source.cols(), source.rows(), true);
 			inrast.writeBlock(source);
 
-			MemRaster<uint32_t> outrast(source.cols(), source.rows(), false);
+			MemRaster<float> outrast(source.cols(), source.rows(), true);
 			outrast.fill(0);
 
-			std::queue<std::pair<uint16_t, uint16_t> > q;
+			g_debug("Starting");
 
-			double nodata = source.nodata();
-			uint64_t total = inrast.size();
-			uint64_t count = 0;
-			uint32_t cc = 0;
+			#pragma omp parallel
+			{
 
-			std::vector<bool> visited(inrast.cols() * inrast.rows());
+				typedef std::tuple<uint16_t, uint16_t> rtuple ;
+				std::queue<rtuple> q;
 
-			for(uint16_t row = 0; row < inrast.rows(); ++row) {
-				for(uint16_t col = 0; col < inrast.cols(); ++col) {
-					if(++count % 1000 == 0)
-						std::cerr << " - " << (int) ((float) count / total * 100) << "\n";
-					std::fill(visited.begin(), visited.end(), false);
-					q.push(std::make_pair(col, row));
-					while(!q.empty()) {
-						auto p = q.front();
-						q.pop();
-						uint16_t c = p.first;
-						uint16_t r = p.second;
-						if(visited[r * inrast.cols() + c]) continue;
-						visited[r * inrast.cols() + c] = true;
-						double v = inrast.get(c, r);
-						if(v == nodata) continue;
-						if(c > 0 && inrast.get(c - 1, r) < v) {
-							outrast.set(c - 1, r, outrast.get(c - 1, r) + 1);
-							q.push(std::make_pair(c - 1, r));
-						}
-						if(c <= inrast.cols() - 1 && inrast.get(c + 1, r) < v) {
-							outrast.set(c + 1, r, outrast.get(c + 1, r) + 1);
-							q.push(std::make_pair(c + 1, r));
-						}
-						if(r > 0 && inrast.get(c, r - 1) < v) {
-							outrast.set(c, r - 1, outrast.get(c, r - 1) + 1);
-							q.push(std::make_pair(c, r - 1));
-						}
-						if(r <= inrast.rows() - 1 && inrast.get(c, r + 1) < v) {
-							outrast.set(c, r + 1, outrast.get(c, r + 1) + 1);
-							q.push(std::make_pair(c, r + 1));
+				std::vector<bool> visited(inrast.cols() * inrast.rows());
+
+				#pragma omp for
+				for(int row = 1; row < inrast.rows() - 1; ++row) {
+					g_debug("Row: " << row);
+					for(int col = 1; col < inrast.cols() - 1; ++col) {
+
+						std::fill(visited.begin(), visited.end(), false);
+
+						double v = inrast.get(col, row);
+						q.push(std::make_tuple(col, row));
+
+						while(!q.empty()) {
+
+							auto cell = q.front(); q.pop();
+							int qc = std::get<0>(cell);
+							int qr = std::get<1>(cell);
+
+							#pragma omp critical(__writeout)
+							outrast.set(qc, qr, outrast.get(qc, qr) + 1);
+
+							double min = G_DBL_MAX_POS;
+							int mc, mr;
+							for(int r = qr - 1; r < qr + 2; ++r) {
+								for(int c = qc - 1; c < qc + 2; ++c) {
+									if((c == qc && r == qr)
+											|| c < 0 || r < 0 || c >= inrast.cols() || r >= inrast.rows()
+											|| inrast.isNoData(c, r))
+										continue;
+									double dif = v - inrast.get(c, r);
+									long idx = r * inrast.cols() + c;
+									if(dif < min && !visited[idx]) {
+										min = dif;
+										mc = c;
+										mr = r;
+									}
+									visited[idx] = true;
+								}
+							}
+							if(min < G_DBL_MAX_POS)
+								q.push(std::make_tuple(mc, mr));
 						}
 					}
 				}
 			}
-
-			Raster<uint32_t> dest(config.destFile, 1, source);
+			g_debug("Writing out.");
+			Raster<float> dest(config.destFile, 1, source);
 			dest.writeBlock(outrast);
+			dest.normalize();
+		}
+
+		void contributingarea(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			g_loglevel(G_LOG_DEBUG);
+
+			Raster<float> source(config.sourceFiles[0]);
+
+			double nodata = source.nodata();
+			g_debug(nodata);
+
+			MemRaster<float> input(source.cols(), source.rows(), false);
+			input.writeBlock(source);
+
+			MemRaster<float> accum(source.cols(), source.rows(), false);
+			accum.fill(0);
+
+			g_debug("Starting");
+
+			typedef std::tuple<uint16_t, uint16_t, double, double> rtuple ;
+			std::queue<rtuple> q;
+			std::vector<bool> visited(source.cols() * source.rows());
+
+			for(int row = 1; row < source.rows() - 1; ++row) {
+				for(int col = 1; col < source.cols() - 1; ++col) {
+
+					double v = source.get(col, row);
+					q.push(std::make_tuple(col, row, 0.0, v));
+					std::fill(visited.begin(), visited.end(), false);
+
+					while(!q.empty()) {
+
+						auto cell = q.front();
+						q.pop();
+
+						int sc = std::get<0>(cell);
+						int sr = std::get<1>(cell);
+						double count = std::get<2>(cell);
+						double v = std::get<3>(cell);
+
+						accum.set(sc, sr, accum.get(sc, sr) + count);
+
+						double min = v;
+						int found = 0;
+
+						for(int r = sr - 1; r < sr + 2; ++r) {
+							for(int c = sc - 1; c < sc + 2; ++c) {
+								double v0;
+								size_t idx = r * input.cols() + c;
+								if((c == sc && r == sc)
+										|| c < 0 || r < 0 || c >= input.cols() || r >= input.rows()
+										|| visited[idx] || (v0 = input.get(c, r)) == nodata)
+									continue;
+								//std::cerr << " -- " << c << ", " << r << ", " << v << ", " << v0 << "\n";
+								if(v0 <= min) {
+									visited[idx] = true;
+									min = v0;
+									++found;
+								}
+							}
+						}
+						if(!found) continue;
+						for(int r = sr - 1; r < sr + 2; ++r) {
+							for(int c = sc - 1; c < sc + 2; ++c) {
+								double v0;
+								if((c == sc && r == sc)
+										|| c < 0 || r < 0 || c >= input.cols() || r >= input.rows()
+										|| (v0 = input.get(c, r)) == nodata)
+									continue;
+								//std::cerr << " -- " << c << ", " << r << ", " << v << ", " << v0 << "\n";
+								if(v0 == min)
+									q.push(std::make_tuple(c, r, count + 1.0 / found, min));
+							}
+						}
+					}
+				}
+			}
+			g_debug("Writing out.");
+			accum.logNormalize();
+			Raster<float> dest(config.destFile, 1, source);
+			dest.writeBlock(1, accum);
+			//dest.writeBlock(2, direction);
 		}
 
 	} // raster

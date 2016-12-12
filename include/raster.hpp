@@ -185,6 +185,10 @@ namespace geotools {
             // Normalize the grid so that one standard deviation is +-1.
             void normalize();
 
+            // Normalize the grid so that the max value is equal to 1, and
+            // the minimum is zero.
+            void logNormalize();
+
             // Return the maximum value in the raster.
             T max();
 
@@ -213,8 +217,11 @@ namespace geotools {
             // as other.
             // TODO: Moved here to allow compilation of different type combinations.
             template <class U>
-            std::vector<uint16_t> floodFill(int32_t col, int32_t row,
-                FillOperator<T> &op, Grid<U> &other, U fill) {
+            void floodFill(int32_t col, int32_t row,
+                FillOperator<T> &op, Grid<U> &other, U fill,
+				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
+				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
+				uint32_t *outarea= nullptr) {
 
                 int32_t minc = cols() + 1;
                 int32_t minr = rows() + 1;
@@ -233,7 +240,7 @@ namespace geotools {
                     col = cel->col;
                     q.pop();
 
-                    uint32_t idx = (uint32_t) row * cols() + col;
+                    uint64_t idx = (uint64_t) row * cols() + col;
 
                     if (!visited[idx] && op.fill(get(col, row))) {
 
@@ -251,7 +258,7 @@ namespace geotools {
                             q.push(std::unique_ptr<Cell>(new Cell(col, row + 1)));
 
                         for (int32_t c = col - 1; c >= 0; --c) {
-                            idx = (uint32_t) row * cols() + c;
+                            idx = (uint64_t) row * cols() + c;
                             if (!visited[idx] && op.fill(get(c, row))) {
                                 minc = g_min(c, minc);
                                 ++area;
@@ -266,7 +273,7 @@ namespace geotools {
                             }
                         }
                         for (int32_t c = col + 1; c < cols(); ++c) {
-                            idx = (uint32_t) row * cols() + c;
+                            idx = (uint64_t) row * cols() + c;
                             if (!visited[idx] && op.fill(get(c, row))) {
                                 maxc = g_max(c, maxc);
                                 ++area;
@@ -282,20 +289,29 @@ namespace geotools {
                         }
                     }
                 }
-                std::vector<uint16_t> ret(5);
-                ret.push_back(minc);
-                ret.push_back(minr);
-                ret.push_back(maxc);
-                ret.push_back(maxr);
-                ret.push_back(area);
-                return ret;
+                if(outminc != nullptr)
+                	*outminc = minc;
+                if(outminr != nullptr)
+                	*outminr = minr;
+                if(outmaxc != nullptr)
+                	*outmaxc = maxc;
+                if(outmaxr != nullptr)
+                	*outmaxr = maxr;
+                if(outarea != nullptr)
+                	*outarea = area;
             }
 
             // Begin flood fill at the given cell; fill cells equal to the target value.
-            std::vector<uint16_t> floodFill(int32_t col, int32_t row, T target, T fill);
+            void floodFill(int32_t col, int32_t row, T target, T fill,
+    				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
+    				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
+    				uint32_t *outarea = nullptr);
 
             // Begin flood fill at the given cell; fill cells that satisfy the operator.
-            std::vector<uint16_t> floodFill(int32_t col, int32_t row, FillOperator<T> &op, T fill);
+            void floodFill(int32_t col, int32_t row, FillOperator<T> &op, T fill,
+    				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
+    				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
+    				uint32_t *outarea = nullptr);
 
             // Smooth the raster and write the smoothed version to the output raster.
             // Callback is an optional function reference with a single float
@@ -468,9 +484,6 @@ namespace geotools {
             // cache is full-1. Will flush dirty blocks.
             geotools::raster::Block<T>* freeOne();
 
-            // Free all blocks.
-            void close();
-
         public:
             BlockCache();
 
@@ -514,6 +527,9 @@ namespace geotools {
 
             // Flush all blocks to disk.
             void flush();
+
+            // Free all blocks.
+            void close();
 
             ~BlockCache();
 
@@ -822,6 +838,8 @@ namespace geotools {
 
             // Flush the current block to the dataset.
             void flush();
+
+            void polygonize(const std::string &filename, uint16_t band = 1);
 
             ~Raster();
 

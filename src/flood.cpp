@@ -354,17 +354,18 @@ public:
 			}
 
 			// Fill the basin based on the elevations in dem.
-			std::vector<uint16_t> result = m_dem.floodFill(seed.col(), seed.row(),
-					op, basins, seed.id());
-			int area = result[4];
+			uint16_t minc, minr, maxc, maxr;
+			uint32_t area;
+			m_dem.floodFill(seed.col(), seed.row(),
+					op, basins, seed.id(), &minc, &minr, &maxc, &maxr, &area);
 
 			g_debug("Basin: area: " << area);
 
 			if (area >= minBasinArea()) {
 				// If it's large enough, save the basin.
 				m_basinList.push_back(
-						Basin(seed.id(), result[0], result[1], result[2],
-								result[3], area));
+						Basin(seed.id(), minc, minr, maxc,
+								maxr, area));
 			} else {
 				// If the basin is too small, fill it with nodata. Do not collect more spill points.
 				basins.floodFill(seed.col(), seed.row(), seed.id(),

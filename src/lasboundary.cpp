@@ -20,190 +20,70 @@
 
 #include <omp.h>
 
-#include <geos/triangulate/DelaunayTriangulationBuilder.h>
-#include <geos/geom/GeometryFactory.h>
-#include <geos/geom/Geometry.h>
-#include <geos/geom/Point.h>
-#include <geos/geom/Coordinate.h>
-
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
-
-#include <liblas/liblas.hpp>
 
 #include "geotools.hpp"
 #include "util.hpp"
 #include "lasutil.hpp"
 #include "raster.hpp"
-#include "Vector.hpp"
-
-#define LAS_EXT ".las"
 
 namespace fs = boost::filesystem;
 namespace alg = boost::algorithm;
-namespace geom = geos::geom;
 
-#include "raster.cpp"
+#include "raster.hpp"
+#include "lasreader.hpp"
 
 using namespace geotools::util;
 using namespace geotools::raster;
-using namespace geotools::vector;
 
 namespace geotools {
 
-namespace las {
+	namespace las {
 
-namespace util {
+		void lasboundary(const std::vector<std::string> &srcFiles, const std::string &dstFile, int srid,
+				double res, std::set<int> &classes) {
 
-/**
- * Gets a list of the files in the directory pointed to by srcDir, 
- * or returns a list containing srcDir if srcDir is a file.
- */
-void listFiles(std::vector<std::string> &files, std::string &srcDir) {
-	fs::path srcdir_p(srcDir);
-	if (!exists(srcdir_p))
-		g_argerr("Path not found.");
-	if (is_directory(srcdir_p)) {
-		fs::directory_iterator end;
-		for (fs::directory_iterator iter(srcdir_p); iter != end; iter++) {
-			std::string fname = iter->path().string();
-			std::string lname(fname);
-			alg::to_lower(lname);
-			if (alg::ends_with(lname, LAS_EXT))
-				files.push_back(fname);
-		}
-	} else {
-		std::string s(srcDir);
-		files.push_back(s);
-	}
-}
+			if (srcFiles.empty())
+				g_argerr("No source dir given.");
+			if (dstFile.empty())
+				g_argerr("No dest file given.");
 
-bool fullNeighbours(Grid<char> &grid, int col, int row) {
-	if (col == 0 || row == 0 || col >= grid.cols() - 1
-			|| row >= grid.rows() - 1)
-		return false;
-	if (!grid.get(col - 1, row - 1) || !grid.get(col, row - 1)
-			|| !grid.get(col + 1, row - 1) || !grid.get(col - 1, row)
-			|| !grid.get(col + 1, row) || !grid.get(col - 1, row + 1)
-			|| !grid.get(col, row + 1) || !grid.get(col + 1, row + 1))
-		return false;
-	return true;
-}
+			g_loglevel(G_LOG_DEBUG);
+			g_debug("reader");
+			LASMultiReader lr(srcFiles, 2.0, 2.0);
+			Bounds bounds = lr.bounds();
+			bounds.align(0, 0, 2, 2);
 
-} // itil
+			g_debug("raster");
+			MemRaster<uint8_t> rast(bounds.maxCol(2.0) + 1, bounds.maxRow(2.0) + 1);
+			rast.fill(0);
 
-void lasboundary(std::string &srcDir, std::string &dstFile, int srid,
-		double res, std::set<int> &classes) {
+			g_debug("reading");
+			LASPoint pt;
+			while(lr.next(pt))
+				rast.set(bounds.toCol(pt.x, 2.0), bounds.toRow(pt.y, 2.0), (unsigned char) 1);
 
-	if (srcDir.empty())
-		g_argerr("No source dir given.");
-	if (dstFile.empty())
-		g_argerr("No dest file given.");
-	if (srid <= 0)
-		g_argerr("No SRID given.");
-
-	using namespace geotools::las::util;
-
-	// Gets the list of files from the source dir.
-	std::vector<std::string> files;
-	listFiles(files, srcDir);
-
-	if (files.size() == 0)
-		g_argerr("No files found.");
-
-	liblas::ReaderFactory rf;
-	Bounds bounds;
-	bounds.collapse();
-
-	for (unsigned int i = 0; i < files.size(); ++i) {
-		// Open the file and create a reader.
-		g_trace("Checking " << files[i]);
-		std::ifstream in(files[i].c_str());
-		liblas::Reader reader = rf.CreateWithStream(in);
-		liblas::Header header = reader.GetHeader();
-		Bounds bounds0;
-		bounds0.collapse();
-		if (!LasUtil::computeLasBounds(header, bounds0, 2))
-			LasUtil::computeLasBounds(reader, bounds0, 2);
-		bounds.extend(bounds0);
-		in.close();
-	}
-
-	bounds.snap(res);
-	int cols = (int) ((bounds[2] - bounds[0]) + res);
-	int rows = (int) ((bounds[3] - bounds[1]) + res);
-	double width = bounds[2] - bounds[0];
-	double height = bounds[3] - bounds[1];
-
-	MemRaster<char> grid(cols, rows);
-
-	for (unsigned int i = 0; i < files.size(); ++i) {
-		// Open the file and create a reader.
-		g_trace("Processing " << files[i]);
-		std::ifstream in(files[i].c_str());
-		liblas::Reader reader = rf.CreateWithStream(in);
-		liblas::Header header = reader.GetHeader();
-		while (reader.ReadNextPoint()) {
-			liblas::Point pt = reader.GetPoint();
-			if (classes.size() == 0
-					|| Util::inList(classes,
-							pt.GetClassification().GetClass())) {
-				int col = (int) ((pt.GetX() - bounds[0]) / res);
-				int row = (int) ((pt.GetY() - bounds[1]) / res);
-				grid.set(col, row, 1);
+			g_debug("filling");
+			for(uint16_t r = 0; r < rast.rows(); ++r) {
+				if(rast.get(0, r) == 0)
+					rast.floodFill(0, r, 0, 2);
+				if(rast.get(rast.cols() - 1, r) == 0)
+					rast.floodFill(rast.cols() - 1, r, 0, 2);
 			}
+
+			g_debug("cleaning");
+			for(uint64_t i = 0; i < rast.size(); ++i)
+				rast.set(i, rast.get(i) == 2 ? 0 : 1);
+
+			Raster<uint8_t> tmp("lasboundary_tmp.tif", 1, bounds, 2.0, 2.0, 0);
+			tmp.writeBlock(rast);
+			tmp.polygonize(dstFile, 1);
+
 		}
-	}
 
-	using namespace geos::geom;
-	using namespace geos::triangulate;
-
-	const geom::GeometryFactory *gf =
-			geom::GeometryFactory::getDefaultInstance();
-	std::vector<Geometry*> coords;
-
-	// Create a point set from the grid cells with returns in them.
-	for (int row = 0; row < grid.rows(); ++row) {
-		for (int col = 0; col < grid.cols(); ++col) {
-			if (grid.get(col, row) && !fullNeighbours(grid, col, row))
-				coords.push_back(
-						gf->createPoint(
-								Coordinate(col * res + bounds[0] + res / 2.0,
-										row * res + bounds[1] - res / 2.0)));
-		}
-	}
-
-	// Build Delaunay.
-	GeometryCollection *mp = gf->createGeometryCollection(coords);
-	DelaunayTriangulationBuilder dtb;
-	dtb.setSites(*mp);
-
-	// Get the edges.
-	std::unique_ptr<MultiLineString> boundary = dtb.getEdges(*gf);
-
-	MultiLineString *edges = boundary.get();
-	std::vector<Geometry*> newlines;
-	for (unsigned int i = 0; i < edges->getNumGeometries(); ++i) {
-		Geometry *line = (Geometry *) edges->getGeometryN(i);
-		if (line->getLength() < 10.0) {
-			newlines.push_back(line);
-		}
-	}
-
-	MultiLineString *newbounds = gf->createMultiLineString(&newlines);
-
-	// Build the vector.
-	std::map<std::string, int> attribs;
-	attribs["value"] = Vector::INTEGER;
-	Vector vec(dstFile, Vector::MULTILINE, std::string("epsg:26912"), attribs);
-
-	std::unique_ptr<Geom> g = vec.addMultiLine(*newbounds);
-	g->setAttribute("value", 1);
-
-}
-
-} // las
+	} // las
 
 } // geotools
 
@@ -226,10 +106,11 @@ int main(int argc, char **argv) {
 	std::string srcDir;
 	std::string dstFile;
 	int srid = 0;
-	double res = 1.0;
+	double res = 2.0;
 	std::set<int> classes;
+	std::vector<std::string> srcFiles;
 
-	for (int i = 0; i < argc; ++i) {
+	for (int i = 1; i < argc; ++i) {
 		std::string s(argv[i]);
 		if (s == "-c") {
 			// Gets the set of classes to keep
@@ -242,12 +123,14 @@ int main(int argc, char **argv) {
 			srcDir = argv[++i];
 		} else if (s == "-o") {
 			dstFile = argv[++i];
+		} else {
+			srcFiles.push_back(argv[i]);
 		}
 	}
 
 	try {
 
-		geotools::las::lasboundary(srcDir, dstFile, srid, res, classes);
+		geotools::las::lasboundary(srcFiles, dstFile, srid, res, classes);
 
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;

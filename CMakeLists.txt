@@ -174,8 +174,8 @@ else()
 	target_link_libraries (pointnormalize-app PUBLIC pointnormalize)
 endif()
 
-#add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
-#target_link_libraries (lasboundary PUBLIC las gdal las laszip geos boost_system boost_filesystem raster util geotools)
+add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
+target_link_libraries (lasboundary PUBLIC gdal lasreader geos boost_system boost_filesystem raster util geotools)
 
 
 add_library(lasvalidate SHARED src/lasvalidate.cpp src/lasutil.cpp)

@@ -28,7 +28,7 @@ void _read(void *buf, size_t l1, size_t l2, std::FILE *f) {
 }
 
 void LASReader::init() {
-	g_debug("LASReader: open " << m_file);
+	//g_debug("LASReader: open " << m_file);
 	m_f = std::fopen(m_file.c_str(), "rb");
 	if (!m_f)
 		g_runerr("Failed to open " << m_file << "; errno: " << errno);
@@ -146,11 +146,14 @@ void LASMultiReader::init(const std::vector<std::string> &files) {
 		if(*m_cancel) return;
 		LASReader r(file);
 		m_files.push_back(file);
+		g_debug(r.bounds().print());
 		m_bounds.extend(r.bounds());
 		m_blockBounds.push_back(r.bounds());
 		m_pointCount += r.pointCount();
 	}
+	g_debug(m_bounds.print());
 	m_cols = bounds().maxCol(m_resolutionX) + 1;
+	g_debug("init " << bounds().width() << ", " << bounds().height() << ", " << m_cols << ", " << (bounds().maxRow(m_resolutionY) + 1));
 }
 
 LASMultiReader::LASMultiReader(const std::vector<std::string> &files,
@@ -266,9 +269,11 @@ bool LASMultiReader::next(LASPoint &pt, bool *final, uint64_t *finalIdx, bool *f
 		m_finalizer->set(col, row, count - 1);
 		if(count == 1) {
 			*finalIdx = (uint64_t) row * m_cols + col;
-			*final = true;
+			if(final != nullptr)
+				*final = true;
 		} else {
-			*final = false;
+			if(final != nullptr)
+				*final = false;
 		}
 	}
 	return true;

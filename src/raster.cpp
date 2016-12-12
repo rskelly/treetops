@@ -6,6 +6,10 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/filesystem.hpp>
 
+#include <gdal_alg.h>
+#include <ogr_feature.h>
+#include <ogrsf_frmts.h>
+
 #include "geotools.hpp"
 #include "util.hpp"
 #include "raster.hpp"
@@ -125,6 +129,15 @@ void Grid<T>::normalize() {
 }
 
 template<class T>
+void Grid<T>::logNormalize() {
+	T n = min();
+	T x = max();
+	double e = std::exp(1.0) - 1.0;
+	for(uint32_t i = 0; i < size(); ++i)
+		set(i, std::log(1.0 + e * (get(i) - n) / (x - n)));
+}
+
+template<class T>
 T Grid<T>::max() {
 	if (!m_stats)
 		computeStats();
@@ -160,16 +173,23 @@ T Grid<T>::variance() {
 }
 
 template<class T>
-std::vector<uint16_t> Grid<T>::floodFill(int32_t col, int32_t row, T target,
-		T fill) {
+void Grid<T>::floodFill(int32_t col, int32_t row, T target, T fill,
+		uint16_t *outminc, uint16_t *outminr,
+		uint16_t *outmaxc, uint16_t *outmaxr,
+		uint32_t *outarea) {
 	TargetOperator<T> op(target);
-	return floodFill(col, row, op, *this, fill);
+	return floodFill(col, row, op, *this, fill, outminc, outminr,
+			outmaxc, outmaxr, outarea);
 }
 
 template<class T>
-std::vector<uint16_t> Grid<T>::floodFill(int32_t col, int32_t row,
-		FillOperator<T> &op, T fill) {
-	return floodFill(col, row, op, *this, fill);
+void Grid<T>::floodFill(int32_t col, int32_t row,
+		FillOperator<T> &op, T fill,
+		uint16_t *outminc, uint16_t *outminr,
+		uint16_t *outmaxc, uint16_t *outmaxr,
+		uint32_t *outarea) {
+	return floodFill(col, row, op, *this, fill, outminc, outminr,
+			outmaxc, outmaxr, outarea);
 }
 
 template<class T>
@@ -1558,6 +1578,19 @@ bool Raster<T>::has(uint32_t idx) const {
 }
 
 template<class T>
+void Raster<T>::polygonize(const std::string &filename, uint16_t band) {
+	Util::rm(filename);
+	GDALAllRegister();
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
+	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, NULL);
+	OGRFieldDefn field( "id", OFTInteger);
+	layer->CreateField(&field);
+	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
+	GDALClose(ds);
+}
+
+template<class T>
 void Raster<T>::flush() {
 	if (m_writable)
 		m_cache.flush();
@@ -1565,6 +1598,7 @@ void Raster<T>::flush() {
 
 template<class T>
 Raster<T>::~Raster() {
+	m_cache.close();
 	if (m_ds) // Probably not necessary.
 		GDALClose(m_ds);
 }
