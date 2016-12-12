@@ -42,8 +42,8 @@ namespace geotools {
 
 	namespace las {
 
-		void lasboundary(const std::vector<std::string> &srcFiles, const std::string &dstFile, int srid,
-				double res, std::set<int> &classes) {
+		void lasboundary(const std::vector<std::string> &srcFiles, const std::string &dstFile,
+				const std::string &polyFile, int srid, double res, std::set<int> &classes) {
 
 			if (srcFiles.empty())
 				g_argerr("No source dir given.");
@@ -52,18 +52,19 @@ namespace geotools {
 
 			g_loglevel(G_LOG_DEBUG);
 			g_debug("reader");
-			LASMultiReader lr(srcFiles, 2.0, 2.0);
+			LASMultiReader lr(srcFiles, res, res);
 			Bounds bounds = lr.bounds();
 			bounds.align(0, 0, 2, 2);
 
 			g_debug("raster");
-			MemRaster<uint8_t> rast(bounds.maxCol(2.0) + 1, bounds.maxRow(2.0) + 1);
+			MemRaster<uint8_t> rast(bounds.maxCol(res) + 1, bounds.maxRow(res) + 1);
 			rast.fill(0);
+			rast.setNodata(0);
 
 			g_debug("reading");
 			LASPoint pt;
 			while(lr.next(pt))
-				rast.set(bounds.toCol(pt.x, 2.0), bounds.toRow(pt.y, 2.0), (unsigned char) 1);
+				rast.set(bounds.toCol(pt.x, res), bounds.toRow(pt.y, res), (unsigned char) 1);
 
 			g_debug("filling");
 			for(uint16_t r = 0; r < rast.rows(); ++r) {
@@ -77,10 +78,11 @@ namespace geotools {
 			for(uint64_t i = 0; i < rast.size(); ++i)
 				rast.set(i, rast.get(i) == 2 ? 0 : 1);
 
-			Raster<uint8_t> tmp("lasboundary_tmp.tif", 1, bounds, 2.0, 2.0, 0);
-			tmp.writeBlock(rast);
-			tmp.polygonize(dstFile, 1);
-
+			g_debug("polygonizing");
+			Raster<uint8_t> out(dstFile, 1, bounds, res, res, 0);
+			out.writeBlock(rast);
+			if(!polyFile.empty())
+				out.polygonize(polyFile, 1);
 		}
 
 	} // las
@@ -103,10 +105,10 @@ void usage() {
 
 int main(int argc, char **argv) {
 
-	std::string srcDir;
+	std::string polyFile;
 	std::string dstFile;
 	int srid = 0;
-	double res = 2.0;
+	double res = 20.0;
 	std::set<int> classes;
 	std::vector<std::string> srcFiles;
 
@@ -119,10 +121,10 @@ int main(int argc, char **argv) {
 			res = atof(argv[++i]);
 		} else if (s == "-s") {
 			srid = atoi(argv[++i]);
-		} else if (s == "-i") {
-			srcDir = argv[++i];
 		} else if (s == "-o") {
 			dstFile = argv[++i];
+		} else if (s == "-p") {
+			polyFile = argv[++i];
 		} else {
 			srcFiles.push_back(argv[i]);
 		}
@@ -130,7 +132,7 @@ int main(int argc, char **argv) {
 
 	try {
 
-		geotools::las::lasboundary(srcFiles, dstFile, srid, res, classes);
+		geotools::las::lasboundary(srcFiles, dstFile, polyFile, srid, res, classes);
 
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
