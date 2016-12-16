@@ -9,11 +9,14 @@ endif()
 
 if (${APPLE})
 	if(${WITH_GUI})
-		set (CMAKE_PREFIX_PATH /usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets/)
+		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
 	endif()
+	# For GDAL2
+	set (GDAL_LIBRARY /usr/local/opt/gdal2/lib)
+	set (GDAL_INCLUDE_DIR /usr/local/opt/gdal2/include)
 	set (CMAKE_C_COMPILER /usr/local/bin/clang-omp CACHE STRING "C compiler" FORCE)
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
-	set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 elseif(${WIN32})
 	# Qt was installed using the installer.
 	# CGAL was installed from the installer, then built with cmake against Qt and OSGeo
@@ -108,8 +111,8 @@ add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
 target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
 
 
-add_executable (flood src/flood.cpp)
-target_link_libraries (flood gdal raster util geotools)
+#add_executable (flood src/flood.cpp)
+#target_link_libraries (flood gdal raster util geotools)
 
 
 add_executable (rasterstats src/rasterstats.cpp)
@@ -205,7 +208,7 @@ target_link_libraries (las2csrs gdal las laszip proj boost_system boost_filesyst
 
 
 
-install (TARGETS flood DESTINATION bin)
+#install (TARGETS flood DESTINATION bin)
 
 install (TARGETS treetops DESTINATION lib)
 install (TARGETS treetops-app DESTINATION bin)

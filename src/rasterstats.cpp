@@ -438,14 +438,18 @@ namespace geotools {
 			if(kernelSize < 3)
 				g_argerr("Kernel size must be three or greater.");
 
+			bool circle = true;
+
 			MemRaster<float> kernel(kernelSize, kernelSize);
 			for(uint16_t row = 0; row < inrast.rows() - kernelSize; ++row) {
 				for(uint16_t col = 0; col < inrast.cols() - kernelSize; ++col) {
 					inrast.readBlock(col, row, kernel);
 					std::vector<double> values;
 					for(uint16_t r = 0; r < kernelSize; ++r) {
-						for(uint16_t c = 0; c < kernelSize; ++c)
-							values.push_back(kernel.get(c, r));
+						for(uint16_t c = 0; c < kernelSize; ++c) {
+							if(circle && g_max(1, g_sq(r) + g_sq(c)) <= g_sq(kernelSize))
+								values.push_back(kernel.get(c, r));
+						}
 					}
 					double value = fn(values, band, writerast);
 					outrast.set(col + kernelSize / 2, row + kernelSize / 2, value);
@@ -519,6 +523,229 @@ namespace geotools {
 				process(inrast, outrast, writerast, config.kernelSize, band, fn);
 
 				writerast.writeBlock(band, outrast);
+			}
+
+		}
+
+		void fillnearest(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			double resX = 0.0, resY = 0.0;
+			uint16_t bands = 0;
+			std::vector<double> nodata;
+			Bounds bounds;
+			bounds.collapse();
+			for(const std::string &file : config.sourceFiles) {
+				Raster<float> rast(file);
+				bounds.extend(rast.bounds());
+				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
+					g_argerr("All rasters must have the same resolution.");
+				if(bands > 0 && bands != rast.bandCount())
+					g_argerr("All rasters must have the same number of bands.");
+				bands = rast.bandCount();
+				resX = rast.resolutionX();
+				resY = rast.resolutionY();
+				if(nodata.empty()) {
+					for(uint16_t band = 1; band <= bands; ++band)
+						nodata.push_back(rast.nodata(band));
+				}
+			}
+
+			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+
+			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
+				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+
+			for(uint32_t band = 1; band <= bands; ++band) {
+				
+				inrast.fill(nodata[band - 1]);
+				outrast.fill(nodata[band - 1]);
+				inrast.setNodata(nodata[band - 1]);
+				writerast.setNodata(nodata[band - 1]);
+				
+				for(const std::string &file : config.sourceFiles) {
+					Raster<float> rast(file);
+					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
+				}
+
+
+	//			#pragma omp parallel
+				{
+					uint32_t area;
+	//				#pragma omp for
+					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+						std::cerr << "row " << row << "\n";
+						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
+							if(inrast.get(col, row) > 0.0) {
+								outrast.set(col, row, inrast.get(col, row));
+								continue;
+							}
+							double rad = 0;
+							bool found = false;
+							double v;
+							while(!found) {
+								rad += 1;
+								//std::cerr << " rad " << rad << "\n";
+								if(rad > g_min(inrast.cols(), inrast.rows()))
+									break;
+								double mind = 99999999.9;
+								for(int r = g_max(0, row - rad); r < g_min(inrast.rows() - 1, row + rad + 1); ++r) {
+									for(int c = g_max(0, col - rad); c < g_min(inrast.cols() - 1, col + rad + 1); ++c) {
+										double d = std::sqrt(g_sq(row - r) + g_sq(col - c));
+										if(d <= g_sq(rad) && d < mind && inrast.get(c, r) > 0.0) {
+											mind = d;
+											v = inrast.get(c, r);
+											found = true;
+										}
+									}
+								}
+							}
+							if(found)
+								outrast.set(col, row, v);
+						}
+					}
+				}
+				writerast.writeBlock(band, outrast);
+			}
+
+		}
+
+		void featuresize(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			int thresh = 10;
+
+			double resX = 0.0, resY = 0.0;
+			uint16_t bands = 0;
+			std::vector<double> nodata;
+			Bounds bounds;
+			bounds.collapse();
+			for(const std::string &file : config.sourceFiles) {
+				Raster<float> rast(file);
+				bounds.extend(rast.bounds());
+				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
+					g_argerr("All rasters must have the same resolution.");
+				if(bands > 0 && bands != rast.bandCount())
+					g_argerr("All rasters must have the same number of bands.");
+				bands = rast.bandCount();
+				resX = rast.resolutionX();
+				resY = rast.resolutionY();
+				if(nodata.empty()) {
+					for(uint16_t band = 1; band <= bands; ++band)
+						nodata.push_back(rast.nodata(band));
+				}
+			}
+
+			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+
+			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
+				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+
+			TargetOperator<float> op(2.0f);
+
+			for(uint32_t band = 1; band <= bands; ++band) {
+				
+				inrast.fill(nodata[band - 1]);
+				outrast.fill(nodata[band - 1]);
+				writerast.setNodata(nodata[band - 1]);
+				
+				for(const std::string &file : config.sourceFiles) {
+					Raster<float> rast(file);
+					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
+				}
+
+
+				// Hack: the corners are bogus fills.
+				inrast.floodFill(0, 0, 1.0f, 0.0f);
+				inrast.floodFill(inrast.cols()-1, 0, 1.0f, 0.0f);
+
+	//			#pragma omp parallel
+				{
+					uint32_t area;
+	//				#pragma omp for
+					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+						std::cerr << "row " << row << "\n";
+						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
+							inrast.floodFill(col, row, 1.0f, 2.0f, nullptr, nullptr, nullptr, nullptr, &area);
+							if(area == 0) {
+								continue;
+							} else if(area < thresh) {
+	//							#pragma omp critical
+								inrast.floodFill(col, row, op, outrast, 0.0f);
+							} else {
+	//							#pragma omp critical
+								//std::cerr << "area " << area << "\n";
+								inrast.floodFill(col, row, op, outrast, (float) area);
+							}
+						}
+					}
+				}
+				writerast.writeBlock(band, outrast);
+			}
+
+		}
+
+		void removesingle(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+
+			config.check();
+
+			double resX = 0.0, resY = 0.0;
+			uint16_t bands = 0;
+			std::vector<double> nodata;
+			Bounds bounds;
+			bounds.collapse();
+			for(const std::string &file : config.sourceFiles) {
+				Raster<float> rast(file);
+				bounds.extend(rast.bounds());
+				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
+					g_argerr("All rasters must have the same resolution.");
+				if(bands > 0 && bands != rast.bandCount())
+					g_argerr("All rasters must have the same number of bands.");
+				bands = rast.bandCount();
+				resX = rast.resolutionX();
+				resY = rast.resolutionY();
+				if(nodata.empty()) {
+					for(uint16_t band = 1; band <= bands; ++band)
+						nodata.push_back(rast.nodata(band));
+				}
+			}
+
+			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
+			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
+
+			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
+				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+
+			for(uint32_t band = 1; band <= bands; ++band) {
+				
+				inrast.fill(nodata[band - 1]);
+				writerast.setNodata(nodata[band - 1]);
+				
+				for(const std::string &file : config.sourceFiles) {
+					Raster<float> rast(file);
+					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
+				}
+
+				static int16_t px[8][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+				for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+					std::cerr << "row " << row << "\n";
+					for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
+						float v = inrast.get(col, row);
+						bool fill = true;
+						for(size_t i = 0; i < 8; ++i) {
+							if(inrast.get(col + px[i][0], row + px[i][1]) == v) {
+								fill = false;
+								break;
+							}
+						}
+						if(fill)
+							outrast.set(col, row, inrast.get(col - 1, row - 1));
+					}
+				}
 			}
 
 		}
@@ -653,6 +880,14 @@ namespace geotools {
 			dest.normalize();
 		}
 
+
+		void normalize(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
+			Raster<float> source(config.sourceFiles[0]);			
+			Raster<float> dest(config.destFile, source.bandCount(), source);
+			dest.writeBlock(source);
+			//dest.normalize();
+		}
+
 		void contributingarea(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
 
 			config.check();
@@ -677,6 +912,7 @@ namespace geotools {
 			std::vector<bool> visited(source.cols() * source.rows());
 
 			for(int row = 1; row < source.rows() - 1; ++row) {
+					std::cerr << "row " << row << " of " << source.rows() << "\n";
 				for(int col = 1; col < source.cols() - 1; ++col) {
 
 					double v = source.get(col, row);
@@ -779,6 +1015,9 @@ int main(int argc, char ** argv) {
 	statTypes["variance"] = 7;
 	statTypes["stddev"] = 8;
 	statTypes["linearity"] = 9;
+	statTypes["featuresize"] = 10;
+	statTypes["fillnearest"] = 11;
+	statTypes["normalize"] = 12;
 
 	try {
 
@@ -815,6 +1054,15 @@ int main(int argc, char ** argv) {
 		case 8:
 		case 9:
 			rasterstats(config);
+			break;
+		case 10:
+			featuresize(config);
+			break;
+		case 11:
+			fillnearest(config);
+			break;
+		case 12:
+			normalize(config);
 			break;
 		default:
 			g_argerr("Unknown method: " << config.method);

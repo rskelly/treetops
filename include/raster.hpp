@@ -221,7 +221,7 @@ namespace geotools {
                 FillOperator<T> &op, Grid<U> &other, U fill,
 				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
 				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-				uint32_t *outarea= nullptr) {
+				uint32_t *outarea = nullptr, bool d8 = true) {
 
                 int32_t minc = cols() + 1;
                 int32_t minr = rows() + 1;
@@ -257,7 +257,8 @@ namespace geotools {
                         if (row < rows() - 1)
                             q.push(std::unique_ptr<Cell>(new Cell(col, row + 1)));
 
-                        for (int32_t c = col - 1; c >= 0; --c) {
+                        int32_t c;
+                        for (c = col - 1; c >= 0; --c) {
                             idx = (uint64_t) row * cols() + c;
                             if (!visited[idx] && op.fill(get(c, row))) {
                                 minc = g_min(c, minc);
@@ -272,7 +273,13 @@ namespace geotools {
                                 break;
                             }
                         }
-                        for (int32_t c = col + 1; c < cols(); ++c) {
+                        if(d8) {
+                            if (row > 0)
+                                q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
+                            if (row < rows() - 1)
+                                q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
+                        }
+                        for (c = col + 1; c < cols(); ++c) {
                             idx = (uint64_t) row * cols() + c;
                             if (!visited[idx] && op.fill(get(c, row))) {
                                 maxc = g_max(c, maxc);
@@ -287,19 +294,24 @@ namespace geotools {
                                 break;
                             }
                         }
+                        if(d8) {
+                            if (row > 0)
+                                q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
+                            if (row < rows() - 1)
+                                q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
+                        }
                     }
                 }
                 if(outminc != nullptr)
-                	*outminc = minc;
+                    *outminc = minc;
                 if(outminr != nullptr)
-                	*outminr = minr;
+                    *outminr = minr;
                 if(outmaxc != nullptr)
-                	*outmaxc = maxc;
+                    *outmaxc = maxc;
                 if(outmaxr != nullptr)
-                	*outmaxr = maxr;
+                    *outmaxr = maxr;
                 if(outarea != nullptr)
-                	*outarea = area;
-            }
+                    *outarea = area;            }
 
             // Begin flood fill at the given cell; fill cells equal to the target value.
             void floodFill(int32_t col, int32_t row, T target, T fill,

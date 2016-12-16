@@ -110,21 +110,24 @@ void Grid<T>::normalize() {
 	double sum = 0.0;
 	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
-		if (v != nodata() && !std::isnan(v))
+		if (v != nodata() && !std::isnan(v) && v < G_DBL_MAX_POS)
 			sum += v;
 	}
 	double mean = sum / size();
 	sum = 0.0;
 	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
-		if (v != nodata() && !std::isnan(v))
+		if (v != nodata() && !std::isnan(v) && v < G_DBL_MAX_POS)
 			sum += std::pow(v - mean, 2.0);
 	}
 	double stdDev = std::sqrt(sum);
 	for (uint32_t i = 0; i < size(); ++i) {
 		double v = (double) get(i);
-		if (v != nodata() && !std::isnan(v))
+		if (v != nodata() && !std::isnan(v) && v < G_DBL_MAX_POS) {
 			set(i, (const T) ((v - mean) / stdDev));
+		} else {
+			set(i, nodata());
+		}
 	}
 }
 
@@ -250,9 +253,8 @@ void Grid<T>::voidFillIDW(double radius, uint32_t count, double exp) {
 			} while (rad < g_min(cols(), rows()));
 
 			if (!found)
-				std::cerr << "WARNING: Pixel not filled at " << c << "," << r
-						<< ". Consider larger radius or smaller count."
-						<< std::endl;
+				g_warn("Pixel not filled at " << c << "," << r
+						<< ". Consider larger radius or smaller count.");
 		}
 	}
 
@@ -1161,6 +1163,7 @@ void Raster<T>::readBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
 	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
 	if (grd.hasGrid()) {
 		if (cols != grd.cols() || rows != grd.rows()) {
+
 			MemRaster<T> g(cols, rows);
 			#pragma omp critical(__gdal_io)
 			{
@@ -1196,7 +1199,7 @@ template<class T>
 void Raster<T>::readBlock(int32_t col, int32_t row, Grid<T> &grd,
 		int32_t dstCol, int32_t dstRow,
 		int32_t xcols, int32_t xrows) {
-	readBlock(col, row, grd, dstCol, dstRow, xcols, xrows);
+	readBlock(1, col, row, grd, dstCol, dstRow, xcols, xrows);
 }
 
 template<class T>
@@ -1653,3 +1656,4 @@ template class geotools::raster::MemRaster<char>;
 
 template class geotools::raster::MemRaster<std::vector<double>*>;
 
+template class geotools::raster::TargetOperator<float>;
