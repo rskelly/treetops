@@ -571,14 +571,15 @@ namespace geotools {
 				}
 
 
-	//			#pragma omp parallel
+				#pragma omp parallel
 				{
 					uint32_t area;
-	//				#pragma omp for
+					#pragma omp for
 					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
 						std::cerr << "row " << row << "\n";
 						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
 							if(inrast.get(col, row) > 0.0) {
+								#pragma omp critical
 								outrast.set(col, row, inrast.get(col, row));
 								continue;
 							}
@@ -587,13 +588,12 @@ namespace geotools {
 							double v;
 							while(!found) {
 								rad += 1;
-								//std::cerr << " rad " << rad << "\n";
 								if(rad > g_min(inrast.cols(), inrast.rows()))
 									break;
 								double mind = 99999999.9;
 								for(int r = g_max(0, row - rad); r < g_min(inrast.rows() - 1, row + rad + 1); ++r) {
 									for(int c = g_max(0, col - rad); c < g_min(inrast.cols() - 1, col + rad + 1); ++c) {
-										double d = std::sqrt(g_sq(row - r) + g_sq(col - c));
+										double d = g_sq(row - r) + g_sq(col - c);
 										if(d <= g_sq(rad) && d < mind && inrast.get(c, r) > 0.0) {
 											mind = d;
 											v = inrast.get(c, r);
@@ -602,8 +602,10 @@ namespace geotools {
 									}
 								}
 							}
-							if(found)
+							if(found) {
+								#pragma omp critical
 								outrast.set(col, row, v);
+							}
 						}
 					}
 				}

@@ -221,7 +221,7 @@ namespace geotools {
                 FillOperator<T> &op, Grid<U> &other, U fill,
 				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
 				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-				uint32_t *outarea = nullptr, bool d8 = true) {
+				uint32_t *outarea = nullptr, bool d8 = false) {
 
                 int32_t minc = cols() + 1;
                 int32_t minr = rows() + 1;

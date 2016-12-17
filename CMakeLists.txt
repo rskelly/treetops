@@ -190,6 +190,8 @@ target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 #add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
 #target_link_libraries (pointzonalstats gdal las laszip geos boost_system boost_filesystem raster util geotools)
 
+add_executable (pointgrid src/pointgrid.cpp)
+target_link_libraries (pointgrid gdal las laszip geos boost_system boost_filesystem raster util geotools lasreader)
 
 add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
 target_link_libraries (lasmerge las laszip boost_system boost_filesystem util geotools)
@@ -209,6 +211,7 @@ target_link_libraries (las2csrs gdal las laszip proj boost_system boost_filesyst
 
 
 #install (TARGETS flood DESTINATION bin)
+install (TARGETS pointgrid DESTINATION bin)
 
 install (TARGETS treetops DESTINATION lib)
 install (TARGETS treetops-app DESTINATION bin)
