@@ -116,7 +116,6 @@ int main(int argc, char **argv) {
 			} else if (arg == "-td") {
 				config.topsTreetopsDatabase = argv[++i];
 				config.doTops = true;
-
 			} else if (arg == "-cs") {
 				config.crownsSmoothedCHM = argv[++i];
 				config.doCrowns = true;
@@ -141,7 +140,6 @@ int main(int argc, char **argv) {
 			} else if (arg == "-threads") {
 				config.threads = atoi(argv[++i]);
 				config.doCrowns = true;
-
 			} else if (arg == "-v") {
 				g_loglevel(0);
 			}

@@ -106,7 +106,6 @@ namespace geotools {
         namespace util {
 
             // A simple class for maintaining information about a tree top.
-
             class Top {
             public:
                 uint64_t id;

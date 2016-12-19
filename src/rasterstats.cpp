@@ -573,7 +573,6 @@ namespace geotools {
 
 				#pragma omp parallel
 				{
-					uint32_t area;
 					#pragma omp for
 					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
 						std::cerr << "row " << row << "\n";
@@ -618,7 +617,7 @@ namespace geotools {
 
 			config.check();
 
-			int thresh = 10;
+			uint32_t thresh = 10;
 
 			double resX = 0.0, resY = 0.0;
 			uint16_t bands = 0;
@@ -672,7 +671,7 @@ namespace geotools {
 					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
 						std::cerr << "row " << row << "\n";
 						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
-							inrast.floodFill(col, row, 1.0f, 2.0f, nullptr, nullptr, nullptr, nullptr, &area);
+							inrast.floodFill(col, row, 1.0f, 2.0f, true, nullptr, nullptr, nullptr, nullptr, &area);
 							if(area == 0) {
 								continue;
 							} else if(area < thresh) {

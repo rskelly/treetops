@@ -695,8 +695,8 @@ int main(int argc, char **argv) {
 		std::vector<std::string> srcfiles;
 		std::string dstdir;
 		std::string ffrom;
-		double efrom;
-		double eto;
+		double efrom = 0;
+		double eto = 0;
 		std::string toSRS;
 		std::string fromSRS;
 

@@ -101,55 +101,10 @@ namespace geotools {
 		class WorkerThread: public QThread {
 		private:
 			TreetopsForm *m_parent;
-
-			void run() {
-
-				using namespace geotools::treetops;
-				using namespace geotools::treetops::config;
-
-				try {
-					Treetops t;
-					t.setCallbacks(m_parent->m_callbacks);
-					const TreetopsConfig &config = m_parent->m_config;
-					const TreetopsCallbacks *cb =
-							(TreetopsCallbacks *) m_parent->m_callbacks;
-
-					int steps = ((int) config.doSmoothing) + ((int) config.doTops)
-							+ ((int) config.doCrowns);
-					int step = 0;
-
-					if (cb)
-						cb->overallCallback(0.01);
-
-					if (config.doSmoothing) {
-						t.smooth(config);
-						cb->overallCallback((float) ++step / steps);
-					}
-
-					if (config.doTops) {
-						t.treetops(config);
-						cb->overallCallback((float) ++step / steps);
-					}
-
-					if (config.doCrowns) {
-						t.treecrowns(config);
-						cb->overallCallback((float) ++step / steps);
-					}
-
-					cb->overallCallback(1.0);
-
-				} catch (const std::exception &e) {
-					QMessageBox err((QWidget *) m_parent);
-					err.setText("Error");
-					err.setInformativeText(QString(e.what()));
-					err.exec();
-				}
-			}
+			void run();
 		public:
-
-			void init(TreetopsForm *parent) {
-				m_parent = parent;
-			}
+			void init(TreetopsForm *parent);
+			virtual ~WorkerThread();
 		};
 
 	}

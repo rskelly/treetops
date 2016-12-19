@@ -201,11 +201,22 @@ void processSpectralFile(const SpectralConfig &config,
 	}
 }
 
-void Spectral::extractSpectra(const SpectralConfig &config) {
-	g_debug("extractSpectra [config]");
+Spectral::Spectral() :
+		m_callbacks(nullptr),
+		m_cancel(nullptr) {
+}
+
+bool __spec_cancel = false;
+
+void Spectral::extractSpectra(const SpectralConfig &config,
+		Callbacks *callbacks, bool *cancel) {
 
 	// Check the config for problems.
 	config.check();
+
+	m_cancel = cancel == nullptr ? &__spec_cancel : cancel;
+	m_callbacks = callbacks;
+
 
 	// Check the bands list; fill it if necessary.
 	std::vector<int> bands = computeBandList(config.bands,

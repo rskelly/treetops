@@ -125,8 +125,8 @@ int main(int argc, char ** argv) {
 	std::set<int> classes;
 	std::string destFile;
 	std::vector<std::string> sourceFiles;
-	int method;
-	double resolution;
+	int method = 0;
+	double resolution = 0;
 	double alignX = 0;
 	double alignY = 0;
 

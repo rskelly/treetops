@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>620</width>
-    <height>570</height>
+    <width>619</width>
+    <height>595</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>10</x>
      <y>10</y>
      <width>601</width>
-     <height>551</height>
+     <height>574</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -496,6 +496,13 @@
      <widget class="QProgressBar" name="prgOverall">
       <property name="value">
        <number>0</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblStatus">
+      <property name="text">
+       <string>[Not Started]</string>
       </property>
      </widget>
     </item>

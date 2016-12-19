@@ -41,112 +41,82 @@ using namespace geotools::treetops::config;
 using namespace geotools::treetops::util;
 using namespace geotools::treetops;
 
+// Dummy cancel variable.
 bool __tt_cancel = false;
 
 namespace geotools {
 
-namespace treetops {
+	namespace treetops {
 
-namespace util {
+		namespace util {
 
-// Represents a grid cell, and maintains some properties of the 
-// seed that originated it.
-class Node {
-public:
-	uint64_t id;
-	int c, r, tc, tr;
-	double z, tz;
+			// Represents a grid cell, and maintains some properties of the
+			// seed that originated it.
+			class Node {
+			public:
+				uint64_t id;
+				int c, r, tc, tr;
+				double z, tz;
 
-	Node(uint64_t id, int c, int r, double z, int tc, int tr, double tz) :
-			id(id), c(c), r(r), tc(tc), tr(tr), z(z), tz(tz) {
-	}
+				Node(uint64_t id, int c, int r, double z, int tc, int tr, double tz) :
+						id(id), c(c), r(r), tc(tc), tr(tr), z(z), tz(tz) {
+				}
 
-	Node(const Top &top) :
-			id(top.id), c(top.col), r(top.row), tc(top.col), tr(top.row), z(
-					top.z), tz(top.z) {
-	}
-};
+				Node(const Top &top) :
+						id(top.id), c(top.col), r(top.row), tc(top.col), tr(top.row), z(
+								top.z), tz(top.z) {
+				}
+			};
 
-// Returns true if the pixel at the center of the given raster is 
-// the maximum value in the raster.
-bool isMaxCenter(MemRaster<float> &raster, int col, int row, int window,
-		double *max) {
-	int cc = col + window / 2;
-	int cr = row + window / 2;
-	float nd = raster.nodata();
-	if (raster.get(cc, cr) == nd)
-		return false;
-	*max = 0;
-	int mc = 0, mr = 0;
-	for (int r = row; r < row + window; ++r) {
-		for (int c = col; c < col + window; ++c) {
-			float v = raster.get(c, r);
-			if (v != nd && v > *max) {
-				*max = v;
-				mc = c;
-				mr = r;
+			// Returns true if the pixel at the center of the given raster is
+			// the maximum value in the raster.
+			bool isMaxCenter(MemRaster<float> &raster, int col, int row, int window,
+					double *max) {
+				int cc = col + window / 2;
+				int cr = row + window / 2;
+				float nd = raster.nodata();
+				if (raster.get(cc, cr) == nd)
+					return false;
+				*max = 0;
+				int mc = 0, mr = 0;
+				for (int r = row; r < row + window; ++r) {
+					for (int c = col; c < col + window; ++c) {
+						float v = raster.get(c, r);
+						if (v != nd && v > *max) {
+							*max = v;
+							mc = c;
+							mr = r;
+						}
+					}
+				}
+				return mc == cc && mr == cr;
 			}
-		}
-	}
-	return mc == cc && mr == cr;
-}
 
-// Guess a value for a cell, based on its neighbours.
-double interpNodata(Grid<float> &rast, int col, int row) {
-	int size = 1;
-	double nodata = rast.nodata();
-	double v, t;
-	int n;
-	while (size < 1000) {
-		n = 0;
-		t = 0;
-		for (int c = g_max(0, col - size);
-				c < g_min(rast.cols(), col + size + 1); ++c) {
-			v = rast.get(c, g_max(0, row - size));
-			if (v != nodata)
-				t += v, ++n;
-			v = rast.get(c, g_min(rast.rows() - 1, row + size));
-			if (v != nodata)
-				t += v, ++n;
-		}
-		for (int r = g_max(1, row - size);
-				r < g_min(rast.rows(), row + size + 1); ++r) {
-			v = rast.get(g_max(0, col - size), r);
-			if (v != nodata)
-				t += v, ++n;
-			v = rast.get(g_min(rast.cols() - 1, col + size), r);
-			if (v != nodata)
-				t += v, ++n;
-		}
-		if (n > 0)
-			return t / n;
-		++size;
-	}
-	g_runerr("Couldn't find a pixel to use as fill.");
-}
+		} // util
 
-} // util
-
-} // trees
+	} // trees
 
 } // geotools
 
+
+// TreetopsConfig implementation
+
 TreetopsConfig::TreetopsConfig() :
-		srid(0),
-		buildIndex(false),
-		tableCacheSize(1024 * 1024),
-		rowCacheSize(24 * 1024 * 1024),
-		threads(1),
-		doSmoothing(false),
-		smoothWindowSize(3),
-		smoothSigma(0.8),
-		doTops(false),
-		topsMinHeight(4.0),
-		topsWindowSize(7),
-		doCrowns(false),
-		crownsRadius(10.0),
-		crownsHeightFraction(0.65),
-		crownsMinHeight(4.0) {
+	srid(0),
+	buildIndex(false),
+	tableCacheSize(1024 * 1024),
+	rowCacheSize(24 * 1024 * 1024),
+	threads(1),
+	doSmoothing(false),
+	smoothWindowSize(3),
+	smoothSigma(0.8),
+	doTops(false),
+	topsMinHeight(4.0),
+	topsWindowSize(7),
+	doCrowns(false),
+	crownsRadius(10.0),
+	crownsHeightFraction(0.65),
+	crownsMinHeight(4.0) {
 }
 
 void TreetopsConfig::checkSmoothing() const {
@@ -157,9 +127,7 @@ void TreetopsConfig::checkSmoothing() const {
 	if (smoothSmoothedCHM.empty())
 		g_argerr("Smoothing: Output filename must not be empty.");
 	if (smoothSigma <= 0 || smoothSigma > 1)
-		g_argerr(
-				"Smoothing: Std. deviation must be 0 < n <= 1. " << smoothSigma
-						<< " given.");
+		g_argerr("Smoothing: Std. deviation must be 0 < n <= 1. " << smoothSigma << " given.");
 	if (smoothWindowSize % 2 == 0 || smoothWindowSize < 3)
 		g_argerr("Smoothing: The window must be odd and >=3.");
 }
@@ -174,22 +142,16 @@ void TreetopsConfig::checkTops() const {
 	if (topsTreetopsDatabase.empty())
 		g_argerr("Tops: Treetops database filename must not be empty.");
 	if (topsWindowSize % 2 == 0 || topsWindowSize < 3)
-		g_argerr(
-				"Tops: Treetops window size must be an odd number >= 3. "
-						<< topsWindowSize << " given.");
+		g_argerr("Tops: Treetops window size must be an odd number >= 3. " << topsWindowSize << " given.");
 }
 
 void TreetopsConfig::checkCrowns() const {
 	if (!doCrowns)
 		g_argerr("Not configured to find crowns.");
 	if (crownsRadius <= 0.0)
-		g_argerr(
-				"Crowns: The maximum crown radius must be > 0. " << crownsRadius
-						<< " given.");
+		g_argerr("Crowns: The maximum crown radius must be > 0. " << crownsRadius << " given.");
 	if (crownsHeightFraction <= 0.0 || crownsHeightFraction > 1.0)
-		g_argerr(
-				"Crowns: The crown height fraction must be between 0 and 1. "
-						<< crownsHeightFraction << " given.");
+		g_argerr("Crowns: The crown height fraction must be between 0 and 1. " << crownsHeightFraction << " given.");
 	if (crownsCrownsRaster.empty())
 	g_argerr("Crowns: Output raster filename must not be empty.")
 	if (crownsTreetopsDatabase.empty())
@@ -217,6 +179,9 @@ bool TreetopsConfig::canRun() const {
 	return false;
 }
 
+
+// Top implementation
+
 Top::Top(uint64_t id, double x, double y, double z, double uz, int col, int row) :
 		id(id), x(x), y(y), z(z), uz(uz), col(col), row(row) {
 }
@@ -224,6 +189,9 @@ Top::Top(uint64_t id, double x, double y, double z, double uz, int col, int row)
 Top::Top() :
 		id(0), x(0), y(0), z(0), uz(0), col(0), row(0) {
 }
+
+
+// Treetops implementation
 
 void Treetops::setCallbacks(Callbacks *callbacks) {
 	m_callbacks = callbacks;
@@ -237,18 +205,19 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 
 	Raster<float> in(config.smoothOriginalCHM);
 	Raster<float> out(config.smoothSmoothedCHM, 1, in);
-	in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks,
-			cancel);
+	in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks, cancel);
 }
 
 void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
+
 	config.checkTops();
 
-	if (!cancel)
-		cancel = &__tt_cancel;
+	cancel = cancel == nullptr ? &__tt_cancel : cancel;
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(0.01);
+		m_callbacks->statusCallback("Starting treetops...");
+	}
 
 	if (*cancel)
 		return;
@@ -262,11 +231,12 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		return;
 
 	// Prepare database.
-	g_debug(" -- tops: preparing db");
+	if(m_callbacks)
+		m_callbacks->statusCallback("Preparing database...");
+
 	std::map<std::string, int> fields;
 	fields["id"] = 1;
-	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields,
-			true);
+	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
 	db.makeFast();
 	db.dropGeomIndex();
 	db.setCacheSize(config.tableCacheSize);
@@ -274,17 +244,18 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(0.02);
+		m_callbacks->statusCallback("Processing...");
+	}
 
 	int32_t bufSize = 256; // The number of rows each thread works on at a time.
 	std::atomic<uint64_t> topCount(0);
 	std::atomic<int32_t> curRow(0);     // Used for status indicator.
 	std::atomic<uint64_t> topId(0);
 
-#pragma omp parallel
+	#pragma omp parallel
 	{
-		g_debug(" -- tops: processing " << omp_get_thread_num());
 		MemRaster<float> blk(original.cols(), bufSize + config.topsWindowSize);
 		blk.setNodata(original.nodata());
 		blk.fill(blk.nodata());
@@ -292,7 +263,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		std::map<uint64_t, std::unique_ptr<Top> > tops0;
 		int32_t bufSize0;
 
-#pragma omp for
+		#pragma omp for
 		for (int32_t brow = 0; brow < original.rows(); brow += bufSize) {
 			if (*cancel)
 				continue;
@@ -302,19 +273,16 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			if (bufSize0 < bufSize)
 				blk.init(original.cols(), bufSize0 + config.topsWindowSize);
 
-			g_debug(" -- bufsize " << bufSize0);
-
 			if (*cancel)
 				continue;
 
-#pragma omp critical(__c)
+			#pragma omp critical(__c)
 			smoothed.readBlock(0, brow, blk);
 
 			for (int32_t row = 0; row < bufSize0; ++row) {
 				if (*cancel)
 					break;
-				for (int32_t col = 0;
-						col < original.cols() - config.topsWindowSize; ++col) {
+				for (int32_t col = 0; col < original.cols() - config.topsWindowSize; ++col) {
 					if (*cancel)
 						break;
 
@@ -323,8 +291,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					double max;
 
 					if (blk.get(c, r) >= config.topsMinHeight
-							&& isMaxCenter(blk, col, row, config.topsWindowSize,
-									&max)) {
+							&& isMaxCenter(blk, col, row, config.topsWindowSize, &max)) {
 
 						// Compute the id based on the cell.
 						uint64_t id = ((uint64_t) c << 32) | r;
@@ -332,9 +299,9 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 						double umax = original.get(c, r + brow, 1);
 
 						std::unique_ptr<Top> pt(
-								new Top(++topId, original.toCentroidX(c), // center of pixel
-								original.toCentroidY(r + brow), max, umax, c,
-										r + brow));
+							new Top(++topId, original.toCentroidX(c), // center of pixel
+							original.toCentroidY(r + brow), max, umax, c, r + brow)
+						);
 						tops0[id] = std::move(pt);
 					}
 				}
@@ -342,8 +309,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 			if (m_callbacks) {
 				curRow += bufSize0;
-				m_callbacks->stepCallback(
-						0.02 + (float) curRow / original.rows() * 0.48);
+				m_callbacks->stepCallback(0.02 + (float) curRow / original.rows() * 0.48);
 			}
 		}
 
@@ -367,7 +333,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			if (++b % batch == 0 || b >= topCount0) {
 				if (*cancel)
 					break;
-				g_debug("inserting " << points.size() << " points");
+				if(m_callbacks)
+					m_callbacks->statusCallback("Inserting points...");
 				#pragma omp critical(__b)
 				{
 					db.begin();
@@ -379,6 +346,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					m_callbacks->stepCallback(
 							(float) b / topCount0 * 0.3 + 0.48);
 			}
+			if(m_callbacks)
+				m_callbacks->statusCallback("Processing...");
 		}
 	}
 
@@ -388,14 +357,16 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 	if (config.buildIndex) {
-		g_debug(" -- tops: building index");
+		if(m_callbacks)
+			m_callbacks->statusCallback("Building index...");
 		db.createGeomIndex();
 	}
 	db.makeSlow();
 
-	g_debug(" -- tops: done.");
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);
+		m_callbacks->statusCallback("Done.");
+	}
 
 }
 
@@ -405,17 +376,19 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if (!cancel)
 		cancel = &__tt_cancel;
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(0.01);
+		m_callbacks->statusCallback("Starting crowns...");
+	}
 
 	if (*cancel)
 		return;
 
-	g_debug(" -- crowns: delineating crowns...");
 	uint32_t batchSize = 10000;
 
 	// Initialize the rasters.
-	g_debug(" -- crowns: preparing rasters");
+	if(m_callbacks)
+		m_callbacks->statusCallback("Preparing rasters...");
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
 	outrast.setNodata(0, 1);
@@ -423,47 +396,38 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	double nodata = inrast.nodata();
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(0.02);
+		m_callbacks->statusCallback("Preparing database...");
+	}
 
 	if (*cancel)
 		return;
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
-	g_debug(" -- crowns: preparing database")
 	uint64_t geomCount;
 	SQLite db(config.crownsTreetopsDatabase);
 	db.getGeomCount(&geomCount);
-	g_debug(" -- crowns: processing " << geomCount << " tree tops");
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(0.03);
+		m_callbacks->statusCallback("Processing crowns...");
+	}
 
 	// Build the list of offsets for D8 or D4 search.
-	std::vector<std::pair<int, int> > offsets; // pairs of col, row
-	offsets.push_back(std::make_pair(-1, -1));
-	offsets.push_back(std::make_pair(-1, 0));
-	offsets.push_back(std::make_pair(-1, 1));
-	offsets.push_back(std::make_pair(0, -1));
-	offsets.push_back(std::make_pair(0, 1));
-	offsets.push_back(std::make_pair(1, -1));
-	offsets.push_back(std::make_pair(1, 0));
-	offsets.push_back(std::make_pair(1, 1));
+	double offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
 
 	// The number of extra rows above and below the buffer.
-	int32_t bufRows = (int) std::ceil(
-			g_abs(config.crownsRadius / inrast.resolutionY()));
+	int32_t bufRows = (int) std::ceil(g_abs(config.crownsRadius / inrast.resolutionY()));
 	// The height of the row, not including disposable buffer. Use bufRows as lower bound to
 	// avoid read error later (keeps min row index to >=0)
 	int32_t rowStep = g_max(bufRows,
-			(int) g_abs(
-					std::ceil((double) batchSize / geomCount * inrast.rows())
-							/ inrast.resolutionY()));
+			(int) g_abs(std::ceil((double) batchSize / geomCount * inrast.rows()) / inrast.resolutionY()));
 	// The total height of the buffer
 	int32_t rowHeight = rowStep + bufRows * 2;
 	std::atomic<uint32_t> curRow(0);
 
-#pragma omp parallel
+	#pragma omp parallel
 	{
 		// To keep track of visited cells.
 		std::vector<bool> visited((uint64_t) inrast.cols() * rowHeight);
@@ -472,7 +436,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		buf.fill(inrast.nodata());
 		blk.fill(0);
 
-#pragma omp for
+		#pragma omp for
 		for (int32_t row = 0; row < inrast.rows(); row += rowStep) {
 			if (*cancel)
 				continue;
@@ -484,12 +448,11 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 					inrast.toY(row + rowStep + bufRows));
 			std::vector<std::unique_ptr<Point> > tops;
 
-#pragma omp critical(__crowns_getpoints)
+			#pragma omp critical(__crowns_getpoints)
 			db.getPoints(tops, bounds);
 
-#pragma omp critical(__crowns_readbuf) 
-			inrast.readBlock(0, row == 0 ? row : row - bufRows, buf, 0,
-					row == 0 ? bufRows : 0);
+			#pragma omp critical(__crowns_readbuf)
+			inrast.readBlock(0, row == 0 ? row : row - bufRows, buf, 0, row == 0 ? bufRows : 0);
 
 			// Convert the Tops to Nodes.
 			std::queue<std::unique_ptr<Node> > q;
@@ -499,9 +462,13 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				int col = inrast.toCol(t->x);
 				int row = inrast.toRow(t->y);
 				int id = atoi(t->fields["id"].c_str());
-				std::unique_ptr<Node> nd(
-						new Node(id, col, row, t->z, col, row, t->z));
+				std::unique_ptr<Node> nd(new Node(id, col, row, t->z, col, row, t->z));
 				q.push(std::move(nd));
+			}
+
+			if (m_callbacks) {
+				m_callbacks->stepCallback(0.03 + ((float) curRow / inrast.rows()) * 0.97);
+				m_callbacks->statusCallback("Processing crowns...");
 			}
 
 			// Run through the queue.
@@ -511,41 +478,32 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 				blk.set(n->c, n->r - row + bufRows, (uint32_t) n->id);
 
-				for (const std::pair<int, int> &offset : offsets) {
-					int c = n->c + offset.first;
-					int r = n->r + offset.second;
+				for(size_t i = 0; i < 8; ++i) {
+					int c = n->c + offsets[i][0];
+					int r = n->r + offsets[i][1];
 
-					if (r < 0 || c < 0 || r >= inrast.rows()
-							|| c >= inrast.cols())
+					if (r < 0 || c < 0 || r >= inrast.rows() || c >= inrast.cols())
 						continue;
-					if (r - row + bufRows < 0
-							|| r - row + bufRows >= buf.rows())
+					if (r - row + bufRows < 0 || r - row + bufRows >= buf.rows())
 						continue;
 
-					uint64_t idx = (uint64_t) (r - row + bufRows)
-							* inrast.cols() + c;
+					uint64_t idx = (uint64_t) (r - row + bufRows) * inrast.cols() + c;
 					if (visited[idx])
 						continue;
 
 					double v = buf.get(idx);
-					if (v != nodata                             // is not nodata
-					&& v < n->z           // is less than the neighbouring pixel
-					&& v >= config.crownsMinHeight // is greater than the min height
-					&& (v / n->tz) >= config.crownsHeightFraction // is greater than the threshold height
-							&& g_sq(n->tc - c) + g_sq(n->tr - r)
-									<= g_sq(config.crownsRadius) // is within the radius
-											) {
-						std::unique_ptr<Node> nd(
-								new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+					if (v != nodata           												// is not nodata
+						&& v < n->z		      												// is less than the neighbouring pixel
+						&& v >= config.crownsMinHeight 										// is greater than the min height
+						&& (v / n->tz) >= config.crownsHeightFraction 						// is greater than the threshold height
+						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+					) {
+						std::unique_ptr<Node> nd(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
 						q.push(std::move(nd));
 						visited[idx] = true;
 					}
 				}
 			}
-
-			if (m_callbacks)
-				m_callbacks->stepCallback(
-						0.03 + ((float) curRow / inrast.rows()) * 0.97);
 
 			if (row > 0 && (row + bufRows) >= inrast.rows())
 				continue;
@@ -553,12 +511,17 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			if (*cancel)
 				continue;
 
-#pragma omp critical(__b)
+			if(m_callbacks)
+				m_callbacks->statusCallback("Writing output...");
+
+			#pragma omp critical(__b)
 			outrast.writeBlock(0, row, blk, 0, bufRows);
 		}
 	}
 
-	if (m_callbacks)
+	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);
+		m_callbacks->statusCallback("Done.");
+	}
 
 }

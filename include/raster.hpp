@@ -215,13 +215,20 @@ namespace geotools {
             // satisfies the given FillOperator. The other grid is actually filled,
             // and the present grid is unchanged *unless* the present grid is passed
             // as other.
-            // TODO: Moved here to allow compilation of different type combinations.
+            // col, row -- The column and row to start on.
+            // op       -- A FillOperator instance which will determine
+            //             whether a pixel should be filled.
+            // other    -- The grid whose cells will actually be filled.
+            // fill     -- The value to fill cells with.
+            // d8       -- Whether to enable diagonal fills.
+            // out*     -- Pointer to variables that hold min and max rows and columns
+            //             plus the area of the fill's bounding box.
             template <class U>
             void floodFill(int32_t col, int32_t row,
-                FillOperator<T> &op, Grid<U> &other, U fill,
+                FillOperator<T> &op, Grid<U> &other, U fill, bool d8 = false,
 				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
 				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-				uint32_t *outarea = nullptr, bool d8 = false) {
+				uint32_t *outarea = nullptr) {
 
                 int32_t minc = cols() + 1;
                 int32_t minr = rows() + 1;
@@ -311,16 +318,17 @@ namespace geotools {
                 if(outmaxr != nullptr)
                     *outmaxr = maxr;
                 if(outarea != nullptr)
-                    *outarea = area;            }
+                    *outarea = area;
+            }
 
             // Begin flood fill at the given cell; fill cells equal to the target value.
-            void floodFill(int32_t col, int32_t row, T target, T fill,
+            void floodFill(int32_t col, int32_t row, T target, T fill, bool d8 = false,
     				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
     				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
     				uint32_t *outarea = nullptr);
 
             // Begin flood fill at the given cell; fill cells that satisfy the operator.
-            void floodFill(int32_t col, int32_t row, FillOperator<T> &op, T fill,
+            void floodFill(int32_t col, int32_t row, FillOperator<T> &op, T fill, bool d8 = false,
     				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
     				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
     				uint32_t *outarea = nullptr);

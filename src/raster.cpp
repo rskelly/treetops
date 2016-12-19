@@ -176,22 +176,22 @@ T Grid<T>::variance() {
 }
 
 template<class T>
-void Grid<T>::floodFill(int32_t col, int32_t row, T target, T fill,
+void Grid<T>::floodFill(int32_t col, int32_t row, T target, T fill, bool d8,
 		uint16_t *outminc, uint16_t *outminr,
 		uint16_t *outmaxc, uint16_t *outmaxr,
 		uint32_t *outarea) {
 	TargetOperator<T> op(target);
-	return floodFill(col, row, op, *this, fill, outminc, outminr,
+	return floodFill(col, row, op, *this, fill, d8, outminc, outminr,
 			outmaxc, outmaxr, outarea);
 }
 
 template<class T>
 void Grid<T>::floodFill(int32_t col, int32_t row,
-		FillOperator<T> &op, T fill,
+		FillOperator<T> &op, T fill, bool d8,
 		uint16_t *outminc, uint16_t *outminr,
 		uint16_t *outmaxc, uint16_t *outmaxr,
 		uint32_t *outarea) {
-	return floodFill(col, row, op, *this, fill, outminc, outminr,
+	return floodFill(col, row, op, *this, fill, d8, outminc, outminr,
 			outmaxc, outmaxr, outarea);
 }
 
@@ -269,8 +269,10 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 		cancel = &_cancel;
 
 	g_debug("Smoothing grid...");
-	if (status)
-		status->stepCallback(0.0);
+	if (status) {
+		status->stepCallback(0.01);
+		status->statusCallback("Preparing to smooth...");
+	}
 
 	if (sigma <= 0)
 		g_argerr("Sigma must be > 0.");
@@ -282,13 +284,14 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 	}
 
 	// Guess at a good number of rows for each strip. Say 64MB each
-	int32_t bufRows = g_max((int) 1,
-			g_min(rows(), (int) ((64 * 1024 * 1024) / sizeof(T) / cols())));
+	int32_t bufRows = g_max((int) 1, g_min(rows(), (int) ((64 * 1024 * 1024) / sizeof(T) / cols())));
 	g_debug(" - buffer rows: " << bufRows);
 
 	double nd = (double) nodata();
 	uint32_t completed = 0;
 
+	if(status)
+		status->statusCallback("Smoothing...");
 	#pragma omp parallel for
 	for (int16_t row = 0; row < rows(); row += bufRows - size) {
 		if (*cancel)
@@ -333,13 +336,17 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 				if (!foundNodata)
 					smooth.set(c + size / 2, r + size / 2, (T) t);
 			}
-		#pragma omp atomic
+			#pragma omp atomic
 			++completed;
 			if (status)
-				status->stepCallback((float) completed / rows());
+				status->stepCallback((float) completed / rows() * 0.98);
 		}
 		if (*cancel)
 			continue;
+		if(status) {
+			status->stepCallback((float) 0.99);
+			status->statusCallback("Writing...");
+		}
 		#pragma omp critical(b)
 		{
 			// The blur buffer is always written size/2 down, so read from there.
@@ -347,8 +354,10 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 		}
 	}
 
-	if (status)
+	if (status) {
 		status->stepCallback(1.0);
+		status->statusCallback("Done.");
+	}
 
 }
 
