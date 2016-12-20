@@ -230,22 +230,22 @@ namespace geotools {
         CellStats* PointStats::getComputer(const uint8_t &type, const PointStatsConfig &config) {
             using namespace geotools::point::stats;
             switch (type) {
-                case TYPE_MEAN: return new CellMean();
-                case TYPE_MEDIAN: return new CellMedian();
-                case TYPE_COUNT: return new CellCount();
-                case TYPE_STDDEV: return new CellSampleStdDev();
-                case TYPE_VARIANCE: return new CellSampleVariance();
-                case TYPE_PSTDDEV: return new CellPopulationStdDev();
-                case TYPE_PVARIANCE: return new CellPopulationVariance();
-                case TYPE_DENSITY: return new CellDensity(g_sq(config.resolution));
-                case TYPE_RUGOSITY: return new CellRugosity(g_sq(config.resolution), 0.0);
-                case TYPE_MAX: return new CellMax();
-                case TYPE_MIN: return new CellMin();
-                case TYPE_KURTOSIS: return new CellKurtosis();
-                case TYPE_SKEW: return new CellSkewness();
-                case TYPE_QUANTILE: return new CellQuantile(config.quantile, config.quantiles);
-                case TYPE_GAP_FRACTION: return new CellGapFraction(config.gapFractionType, config.gapThreshold);
-                case TYPE_COV: return new CellCoV();
+                case TYPE_MEAN:      	return new CellMean();
+                case TYPE_MEDIAN:    	return new CellMedian();
+                case TYPE_COUNT:     	return new CellCount();
+                case TYPE_STDDEV:    	return new CellSampleStdDev();
+                case TYPE_VARIANCE:   	return new CellSampleVariance();
+                case TYPE_PSTDDEV: 		return new CellPopulationStdDev();
+                case TYPE_PVARIANCE: 	return new CellPopulationVariance();
+                case TYPE_DENSITY: 		return new CellDensity(g_sq(config.resolution));
+                case TYPE_RUGOSITY: 	return new CellRugosity(g_sq(config.resolution), 0.0);
+                case TYPE_MAX: 			return new CellMax();
+                case TYPE_MIN: 			return new CellMin();
+                case TYPE_KURTOSIS: 	return new CellKurtosis();
+                case TYPE_SKEW: 		return new CellSkewness();
+                case TYPE_QUANTILE: 	return new CellQuantile(config.quantile, config.quantiles);
+                case TYPE_GAP_FRACTION:	return new CellGapFraction(config.gapFractionType, config.gapThreshold);
+                case TYPE_COV:			return new CellCoV();
                 default:
                     g_argerr("Invalid statistic type: " << type);
             }

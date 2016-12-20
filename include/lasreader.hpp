@@ -94,18 +94,19 @@ namespace geotools {
 		// stream of points.
 		class LASMultiReader {
 		private:
-			std::vector<std::string> m_files;
-			LASReader *m_reader;
+			bool *m_cancel;
 			uint32_t m_idx;
 			uint32_t m_cols;
-			std::unique_ptr<MemRaster<uint32_t> > m_finalizer;
-			double m_resolutionX;
-			double m_resolutionY;
-			Bounds m_bounds;
-			std::vector<Bounds> m_blockBounds;
-			bool *m_cancel;
 			uint64_t m_cellCount;
 			uint64_t m_pointCount;
+			double m_resolutionX;
+			double m_resolutionY;
+			LASReader *m_reader;
+
+			Bounds m_bounds;
+			std::vector<std::string> m_files;
+			std::vector<uint32_t> m_finalizer;
+			std::vector<Bounds> m_blockBounds;
 
 			void init(const std::vector<std::string> &files);
 

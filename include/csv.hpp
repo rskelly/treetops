@@ -17,10 +17,6 @@
 
 #include "geotools.hpp"
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
 namespace geotools {
     namespace csv {
 
@@ -109,10 +105,6 @@ namespace geotools {
 
     }
 }
-
-#ifdef	__cplusplus
-}
-#endif
 
 #endif	/* CSV_HPP */
 

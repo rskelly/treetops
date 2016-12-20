@@ -3,18 +3,7 @@
 #include <memory>
 #include <string>
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Polygon_with_holes_2.h>
-#include <CGAL/Polygon_2.h>
-#include <CGAL/Point_2.h>
-#include <CGAL/Boolean_set_operations_2.h>
-
 #include "lasreader.hpp"
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef CGAL::Polygon_with_holes_2<K>                       Polygon_with_holes_2;
-typedef CGAL::Polygon_2<K>                                  Polygon_2;
-typedef K::Point_2                                          Point_2;
 
 using namespace geotools::las;
 using namespace geotools::util;
@@ -76,7 +65,6 @@ void LASReader::init() {
 
 	// TODO: Extended point count.
 
-	g_debug(" -- " << m_file << " has " << m_pointCount << " points");
 	LASPoint::setScale(m_xScale, m_yScale, m_zScale);
 	reset();
 }
@@ -88,10 +76,8 @@ LASReader::LASReader(const std::string &file) :
 }
 
 LASReader::~LASReader() {
-	if (m_f) {
-		g_debug("LASReader: close " << m_file);
+	if (m_f)
 		std::fclose(m_f);
-	}
 	if (m_buf.get())
 		delete m_buf.release();
 }
@@ -151,18 +137,18 @@ void LASMultiReader::init(const std::vector<std::string> &files) {
 		m_blockBounds.push_back(r.bounds());
 		m_pointCount += r.pointCount();
 	}
-	g_debug(m_bounds.print());
 	m_cols = bounds().maxCol(m_resolutionX) + 1;
-	g_debug("init " << bounds().width() << ", " << bounds().height() << ", " << m_cols << ", " << (bounds().maxRow(m_resolutionY) + 1));
 }
 
 LASMultiReader::LASMultiReader(const std::vector<std::string> &files,
 		double resolutionX, double resolutionY, bool *cancel) :
-	m_reader(nullptr),
-	m_idx(0),
-	m_resolutionX(resolutionX), m_resolutionY(resolutionY),
 	m_cancel(cancel),
-	m_cellCount(0) {
+	m_idx(0),
+	m_cols(0),
+	m_cellCount(0),
+	m_pointCount(0),
+	m_resolutionX(resolutionX), m_resolutionY(resolutionY),
+	m_reader(nullptr) {
 
 	if(m_cancel == nullptr)
 		m_cancel = &__lr__cancel;
@@ -177,40 +163,36 @@ LASMultiReader::~LASMultiReader() {
 
 void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {
 
-	if(m_finalizer.get())
-		delete m_finalizer.release();
-
-	int cols = m_cols = m_bounds.maxCol(m_resolutionX) + 1;
-	int rows =          m_bounds.maxRow(m_resolutionY) + 1;
-
-	MemRaster<uint32_t> *finalizer = nullptr;
-	std::vector<bool> cells((size_t) cols * rows);
-	LASPoint pt;
-
 	try {
-		finalizer = new MemRaster<uint32_t>(cols, rows, false);
-		finalizer->fill(0);
+		int cols = m_cols = m_bounds.maxCol(m_resolutionX) + 1;
+		int rows =          m_bounds.maxRow(m_resolutionY) + 1;
 		bool fileChanged;
 		uint32_t file = 0;
+		LASPoint pt;
+
+		// Resize and zero the finalizer.
+		m_finalizer.resize((size_t) cols * rows);
+		std::fill(m_finalizer.begin(), m_finalizer.end(), 0);
+
+		// Count the points in each cell.
 		while(next(pt, nullptr, nullptr, &fileChanged)) {
 			if(*m_cancel) return;
 			int col = m_bounds.toCol(pt.x, m_resolutionX);
 			int row = m_bounds.toRow(pt.y, m_resolutionY);
-			finalizer->set(col, row, finalizer->get(col, row) + 1);
-			cells[row * m_cols + col] = true;
+			m_finalizer[(size_t) row * cols + col]++;
 			if(fileChanged && callback)
 				callback->status((float) ++file / m_files.size());
 		}
-		m_finalizer.reset(finalizer);
+
+		// Count the valid cells.
+		m_cellCount = 0;
+		for(const uint32_t &c : m_finalizer)
+			if(c) ++m_cellCount;
+
 	} catch(const std::exception &ex) {
-		if(finalizer)
-			delete finalizer;
+		m_finalizer.resize(0);
 		g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header.");
 	}
-
-	m_cellCount = 0;
-	for(bool b : cells)
-		if(b) ++m_cellCount;
 
 	reset();
 }
@@ -260,15 +242,17 @@ bool LASMultiReader::next(LASPoint &pt, bool *final, uint64_t *finalIdx, bool *f
 		// If the file is not switched, set the indicator to false.
 		*fileChanged = false;
 	}
+	// If a pointer is given for finalIdx, set it.
 	if(finalIdx != nullptr) {
 		int col = m_bounds.toCol(pt.x, m_resolutionX);
 		int row = m_bounds.toRow(pt.y, m_resolutionY);
-		uint32_t count = m_finalizer->get(col, row);
+		size_t idx = (size_t) row * m_cols + col;
+		uint32_t count = m_finalizer[idx];
 		if(count == 0)
 			g_runerr("Finalizer reached zero. This is impossible!");
-		m_finalizer->set(col, row, count - 1);
+		m_finalizer[idx]--;
 		if(count == 1) {
-			*finalIdx = (uint64_t) row * m_cols + col;
+			*finalIdx = idx;
 			if(final != nullptr)
 				*final = true;
 		} else {
