@@ -94,6 +94,8 @@ namespace geotools {
 
                 void checkCrowns() const;
 
+                void checkMerge() const;
+
                 // Check the validity of the configuration.
                 void check() const;
 
@@ -144,6 +146,10 @@ namespace geotools {
             // version of the raster. The table should have been generated using the treetops() method
             // to ensure that its structure is correct.
             void treecrowns(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
+
+            // Using predefined criteria, merge disparate tree crowns into single crowns,
+            // potentially with more than one top.
+            void merge(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
         };
 

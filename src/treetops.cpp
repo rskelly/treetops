@@ -160,6 +160,10 @@ void TreetopsConfig::checkCrowns() const {
 		g_argerr("Crowns: Smoothed CHM filename must not be empty.");
 }
 
+void TreetopsConfig::checkMerge() const {
+	g_runerr("Not implemented.");
+}
+
 void TreetopsConfig::check() const {
 	if (doSmoothing)
 		checkSmoothing();
@@ -525,3 +529,24 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	}
 
 }
+
+void Treetops:: merge(const TreetopsConfig &config, bool *cancel) {
+	config.checkMerge();
+
+	// 1) Load tree tops into 2d tree (sqlite might be fine).
+	// 2) Find pairs of tops within specified 3d distance
+	// 3) Identify crowns to investigate using contained tops to locate
+	// 4) Reload pixels from raster if necessary.
+
+	// Things to investigate
+	// - 3d proximity of tops
+	// - circularity of combinations of crowns (i.e, if crowns are roughly
+	//   circular, non-circular crowns may need to be merged)
+	// -- if 2 or more tops are near, find the centroid between them
+	//    and merge their crowns. if the crown meets some criterion for roundness
+	//    like RMS, merge them.
+	// - etc.
+
+
+}
+
