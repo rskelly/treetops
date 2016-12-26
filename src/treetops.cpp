@@ -520,7 +520,14 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 			#pragma omp critical(__b)
 			outrast.writeBlock(0, row, blk, 0, bufRows);
+
 		}
+	}
+
+	if(!config.crownsCrownsDatabase.empty()) {
+		if(m_callbacks)
+			m_callbacks->statusCallback("Polygonizing...");
+		outrast.polygonize(config.crownsCrownsDatabase, 1);
 	}
 
 	if (m_callbacks) {
