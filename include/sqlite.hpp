@@ -176,7 +176,8 @@ namespace geotools {
                         pt->fields[colname] = std::string(values[i]);
                     }
                 }
-                result->push_back(std::unique_ptr<Point>(pt));
+                std::unique_ptr<Point> upt(pt);
+                result->push_back(std::move(upt));
                 return 0;
             }
 
@@ -198,6 +199,29 @@ namespace geotools {
 
                 std::string q = ss.str();
                 g_debug("getPoints: " << q);
+                char *err;
+                begin();
+                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
+                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
+                    rollback();
+                    handleError("Failed to execute query.", err);
+                }
+                rollback();
+            }
+
+            void getNearestPoints(const geotools::util::Point &target, int count,
+            		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
+
+                std::stringstream ss;
+                ss << std::setprecision(12);
+                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
+                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
+                    ss << ", " << it->first;
+                ss << " FROM data ORDER BY ST_Distance(geom, GeomFromText(POINTZ("
+                		<< target.x << " " << target.y << " " << target.z
+						<< "), " << "SRID(geom))LIMIT " << count;
+
+                std::string q = ss.str();
                 char *err;
                 begin();
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),

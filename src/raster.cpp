@@ -1595,7 +1595,15 @@ void Raster<T>::polygonize(const std::string &filename, uint16_t band) {
 	GDALAllRegister();
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
-	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, NULL);
+	ds->SetProjection(m_ds->GetProjectionRef());
+	double trans[6];
+	m_ds->GetGeoTransform(trans);
+	ds->SetGeoTransform(trans);
+	char **opts = nullptr;
+	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
+	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
+	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
