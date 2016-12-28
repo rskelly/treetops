@@ -7,6 +7,14 @@ if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
 
+set (SQLITE3_LIBRARY sqlite3)
+set (SPATIALITE_LIBRARY spatialite)
+set (GEOS_LIBRARY geos_c)
+
+set (Boost_DEBUG OF)
+set (Boost_USE_STATIC_LIBS OFF)
+set (Boost_USE_STATIC_RUNTIME OFF)
+
 if (${APPLE})
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
@@ -18,15 +26,29 @@ if (${APPLE})
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
 	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 elseif(${WIN32})
-	# Qt was installed using the installer.
-	# CGAL was installed from the installer, then built with cmake against Qt and OSGeo
-	# Builds with VS2012 and OSGeo libs
-	if(${WITH_GUI})
-		set (CMAKE_PREFIX_PATH C:/Qt/5.7/msvc2013_64)
-	endif()
-	set (Boost_DEBUG OFF)
-	set (BOOST_INCLUDEDIR C:/OSGeo4W64/include/boost-1_56)
-	set (BOOST_LIBRARYDIR C:/OSGeo4W64/lib)
+	
+	# Preparing to build on Windows
+	# 1) download and install vs 2015
+	# 2) use web installer to install qt5
+	# 3) download prebuild boost for vs msvc-14 -- build using bootstrap, b2
+	# 3) download gisinternals lib zip for msvc-12 -- unzip to C:\opt
+	# 4) download and install cmake
+	# 5) download and install git
+	# --- 6) checkout liblas from git
+	# 7) download eigen -- extract to c:\opt\include -- rename folder to eigen3
+	
+	# No finder for sqlite or spatialite. Just hack it.
+	set (SQLITE3_LIBRARY sqlite3_i)
+	set (SPATIALITE_LIBRARY spatialite_i)
+
+	# Configure boost.
+	set (Boost_COMPILER -vc140)
+	set (BOOST_INCLUDEDIR "C:\\boost_1_63_0")
+	set (BOOST_LIBRARYDIR "C:\\boost_1_63_0\\lib64-msvc-14.0")
+	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};C:\\Qt\\5.7\\msvc2015_64\\lib\\cmake\\Qt5Widgets;C:\\opt")
+	#set (LIB_DIRS "C:\\opt\\lib")
+	#set (INCLUDE_DIRS "C:\\opt\\include")
+
 else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH /usr/lib/x86_64-linux-gnu/cmake/Qt5)
@@ -40,69 +62,37 @@ enable_language(CXX)
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
-add_compile_options(-std=c++1y)
-
-find_package (OpenMP)
-find_package (Boost)
-find_package (GDAL)
-if(${WITH_GUI})
-	find_package(Qt5Widgets)
-endif()
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 set (CMAKE_AUTOUIC ON)
 set (CMAKE_AUTOMOC ON)
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 set (CMAKE_AUTOMOC_OPTIONS "-Iinclude")
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-
-set (CPACK_PACKAGE_NAME "GeoTools")
-set (CPACK_PACKAGE_VENDOR "dijital.ca")
-set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "GeoTools - Tools for working with geodata.")
-set (CPACK_PACKAGE_VERSION "1.0.0")
-set (CPACK_PACKAGE_VERSION_MAJOR "1")
-set (CPACK_PACKAGE_VERSION_MINOR "0")
-set (CPACK_PACKAGE_VERSION_PATCH "0")
-set (CPACK_PACKAGE_INSTALL_DIRECTORY "geotools")
-
-set (CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "GeoTools Applications")
-set (CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "GeoTools Libraries")
-set (CPACK_COMPONENT_HEADERS_DISPLAY_NAME "GeoTools Header Files")
-
-set (CPACK_COMPONENT_APPLICATIONS_DESCRIPTION "GeoTools applications.")
-set (CPACK_COMPONENT_LIBRARIES_DESCRIPTION "Libraries for extending GeoTools.")
-set (CPACK_COMPONENT_HEADERS_DESCRIPTION "C/C++ header files for use with GeoTools.")
-
-set (CPACK_COMPONENT_LIBRARIES_INSTALL_TYPES Full)
-set (CPACK_COMPONENT_APPLICATIONS_INSTALL_TYPES Full User)
-set (CPACK_COMPONENT_HEADERS_INSTALL_TYPES Full)
-
-set (CPACK_ALL_INSTALL_TYPES Full User)
-set (CPACK_COMPONENTS_ALL applications libraries headers)
-set (CPACK_INSTALL_CMAKE_PROJECTS /Users/robskelly/Documents/geotools/makefiles/pointstats-app;pointstats-app;ALL;/)
-
-include (CPack)
+find_package (OpenMP)
+find_package (Boost COMPONENTS system filesystem date_time)
+find_package (GDAL)
+if(${WITH_GUI})
+	find_package(Qt5Widgets REQUIRED)
+endif()
 
 project (geotools)
 
-if(${WIN32})
-	link_directories(C:/Qt/5.7/msvc2013_64 C:/CGAL-4.9/makefiles/lib C:/OSGeo4W64/lib ${Boost_LIBRARY_DIR})
-	include_directories(include C:/Qt/5.7/msvc2013_64/include C:/CGAL-4.9/makefiles/include C:/OSGeo4W64/include ${Boost_INCLUDE_DIR})
-else()
-	link_directories(${Boost_LIBRARY_DIR} /usr/local/opt/sqlite/lib /usr/local/lib /usr/lib)
-	include_directories(include ${Boost_INCLUDE_DIR} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
-endif()
+# Configure directories
+link_directories(. C:/opt/lib ${Boost_LIBRARY_DIR})
+include_directories(include ${Boost_INCLUDE_DIR} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+
+
+# Build support libraries ############################################################################################
 
 add_library (geotools STATIC src/geotools.cpp)
+
 add_library (util STATIC src/util.cpp)
-if(${WIN32})
-	target_link_libraries (util boost_system-vc110-mt-1_56 boost_filesystem-vc110-mt-1_56)
-else()
-	target_link_libraries (util boost_system boost_filesystem geotools)
-endif()
+target_link_libraries (util ${Boost_LIBRARIES} geotools)
+
 add_library (raster STATIC src/raster.cpp)
-target_link_libraries (raster gdal util geotools)
+target_link_libraries (raster ${GDAL_LIBRARY} util geotools)
 
 add_library (cellstats STATIC src/cellstats.cpp src/laspoint.cpp)
 target_link_libraries (cellstats gmp CGAL boost_system las geotools)
@@ -111,20 +101,18 @@ add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
 target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
 
 
+# Build programs #####################################################################################################
+
 #add_executable (flood src/flood.cpp)
-#target_link_libraries (flood gdal raster util geotools)
+#target_link_libraries (flood ${GDAL_LIBRARY} raster util geotools)
 
 
 add_executable (rasterstats src/rasterstats.cpp)
-target_link_libraries (rasterstats gdal raster util geotools)
+target_link_libraries (rasterstats ${GDAL_LIBRARY} raster util geotools)
 
 
 add_library (mosaic SHARED src/mosaic.cpp)
-if(${WIN32})
-	target_link_libraries (mosaic boost_system-vc110-mt-1_56 boost_filesystem-vc110-mt-1_56 gdal_i raster util geotools)
-else()
-	target_link_libraries (mosaic gdal boost_system boost_filesystem raster util geotools)
-endif()
+target_link_libraries (mosaic ${GDAL_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
 
 if(${WITH_GUI})
 	add_executable (mosaic-app src/apps/mosaic.cpp src/apps/mosaic_ui.cpp)
@@ -136,11 +124,7 @@ endif()
 
 
 add_library (treetops SHARED src/treetops.cpp)
-if(${WIN32})
-	target_link_libraries (treetops boost_system-vc110-mt-1_56 boost_filesystem-vc110-mt-1_56 gdal_i geos_c sqlite3_i spatialite_i raster util geotools)
-else()
-	target_link_libraries (treetops boost_system boost_filesystem gdal geos_c sqlite3 spatialite raster util geotools)
-endif()
+target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools)
 
 if(${WITH_GUI})
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp src/apps/crs_selector_ui.cpp)
@@ -152,13 +136,13 @@ endif()
 
 
 add_library (spectral SHARED src/spectral.cpp)
-target_link_libraries (spectral gdal sqlite3 spatialite raster util geotools)
+target_link_libraries (spectral ${GDAL_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools)
 add_executable (spectral-app src/apps/spectral.cpp)
 target_link_libraries (spectral-app PUBLIC spectral)
 
 
 add_library(pointstats SHARED src/pointstats.cpp)
-target_link_libraries (pointstats gdal laszip las boost_system boost_filesystem raster util geotools cellstats lasreader)
+target_link_libraries (pointstats ${GDAL_LIBRARY} laszip las ${Boost_LIBRARIES} raster util geotools cellstats lasreader)
 if(${WITH_GUI})
 	add_executable (pointstats-app src/apps/pointstats.cpp src/apps/pointstats_ui.cpp src/apps/crs_selector_ui.cpp src/apps/filelist.cpp)
 	target_link_libraries (pointstats-app PUBLIC pointstats Qt5::Gui Qt5::Core Qt5::Widgets)
@@ -168,7 +152,7 @@ else()
 endif()
 
 add_library(pointnormalize SHARED src/pointnormalize.cpp)
-target_link_libraries (pointnormalize gdal CGAL gmp laszip las boost_system boost_filesystem raster geotools lasreader)
+target_link_libraries (pointnormalize ${GDAL_LIBRARY} CGAL gmp laszip las ${Boost_LIBRARIES} raster geotools lasreader)
 if(${WITH_GUI})
 	add_executable (pointnormalize-app src/apps/pointnormalize.cpp src/apps/pointnormalize_ui.cpp src/apps/filelist.cpp)
 	target_link_libraries (pointnormalize-app PUBLIC pointnormalize Qt5::Gui Qt5::Core Qt5::Widgets)
@@ -178,7 +162,7 @@ else()
 endif()
 
 add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
-target_link_libraries (lasboundary PUBLIC gdal lasreader geos boost_system boost_filesystem raster util geotools)
+target_link_libraries (lasboundary PUBLIC ${GDAL_LIBRARY} lasreader geos ${Boost_LIBRARIES} raster util geotools)
 
 
 add_library(lasvalidate SHARED src/lasvalidate.cpp src/lasutil.cpp)
@@ -188,27 +172,28 @@ target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 
 
 #add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
-#target_link_libraries (pointzonalstats gdal las laszip geos boost_system boost_filesystem raster util geotools)
+#target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip geos ${Boost_LIBRARIES} raster util geotools)
 
 add_executable (pointgrid src/pointgrid.cpp)
-target_link_libraries (pointgrid gdal las laszip geos boost_system boost_filesystem raster util geotools lasreader)
+target_link_libraries (pointgrid ${GDAL_LIBRARY} las laszip geos ${Boost_LIBRARIES} raster util geotools lasreader)
 
 add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
-target_link_libraries (lasmerge las laszip boost_system boost_filesystem util geotools)
+target_link_libraries (lasmerge las laszip ${Boost_LIBRARIES} util geotools)
 
 
 #add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
-#target_link_libraries (lasreclass las laszip boost_system boost_filesystem util geotools)
+#target_link_libraries (lasreclass las laszip ${Boost_LIBRARIES} util geotools)
 
 
 #add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
-#target_link_libraries (lasclip gdal las laszip geos boost_system boost_filesystem util geotools)
+#target_link_libraries (lasclip ${GDAL_LIBRARY} las laszip geos ${Boost_LIBRARIES} util geotools)
 
 
 add_executable (las2csrs src/las2csrs.cpp src/lasutil.cpp)
-target_link_libraries (las2csrs gdal las laszip proj boost_system boost_filesystem util raster geotools)
+target_link_libraries (las2csrs ${GDAL_LIBRARY} las laszip proj ${Boost_LIBRARIES} util raster geotools)
 
 
+# Install ###########################################################################################################
 
 #install (TARGETS flood DESTINATION bin)
 install (TARGETS pointgrid DESTINATION bin)

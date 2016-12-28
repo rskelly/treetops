@@ -28,12 +28,14 @@
 namespace std {
 
     inline bool isnan(double value) {
-        return _isnan(value);
+        return _isnan(value) == 1;
     }
     
+	/*
     inline double round(double value) {
         return value < 0 ? -std::floor(0.5 - value) : std::floor(0.5 + value);
     }
+	*/
 }
 #endif
 
