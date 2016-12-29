@@ -60,8 +60,10 @@ int runWithGui(int argc, char **argv) {
 			try {
 				return receiver->event(e);
 			} catch(const std::exception &ex) {
-				// TODO: User error feedback.
-				g_error("Error: " << ex.what());
+				QMessageBox err;//((QWidget *) this);
+				err.setText("Error");
+				err.setInformativeText(QString(ex.what()));
+				err.exec();
 				return false;
 			}
 		}
