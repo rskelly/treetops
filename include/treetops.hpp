@@ -13,7 +13,7 @@ namespace geotools {
         namespace config {
 
             // Contains configuration information for performing tree top extraction.
-            class TreetopsConfig {
+            class G_DLL_EXPORT TreetopsConfig {
             public:
 
                 // Defines the boundaries of work to be performed. Every step of the process

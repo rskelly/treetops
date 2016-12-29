@@ -68,7 +68,7 @@ namespace geotools {
 			void topsSmoothedCHMChanged(QString);
 			void topsTreetopsDatabaseChanged(QString);
 			void topsTreetopsSRIDClicked();
-			void topsTreetopsSRIDChanged(int);
+			void topsTreetopsSRIDChanged(QString);
 
 			void crownsRadiusChanged(double);
 			void crownsHeightFractionChanged(double);

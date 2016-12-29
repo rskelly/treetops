@@ -219,7 +219,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	cancel = cancel == nullptr ? &__tt_cancel : cancel;
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.01);
+		m_callbacks->stepCallback(0.01f);
 		m_callbacks->statusCallback("Starting treetops...");
 	}
 
@@ -249,7 +249,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		return;
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.02);
+		m_callbacks->stepCallback(0.02f);
 		m_callbacks->statusCallback("Processing...");
 	}
 
@@ -313,7 +313,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 			if (m_callbacks) {
 				curRow += bufSize0;
-				m_callbacks->stepCallback(0.02 + (float) curRow / original.rows() * 0.48);
+				m_callbacks->stepCallback(0.02f + (float) curRow / original.rows() * 0.48f);
 			}
 		}
 
@@ -330,7 +330,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			const uint64_t &id = it.first;
 			const std::unique_ptr<Top> &t = it.second;
 			std::map<std::string, std::string> fields;
-			fields["id"] = std::to_string(id);
+			fields["id"] = std::to_string(t->id);
 			std::unique_ptr<Point> pt(new Point(t->x, t->y, t->uz, fields));
 			points.push_back(std::move(pt));
 
@@ -348,7 +348,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				points.clear();
 				if (m_callbacks)
 					m_callbacks->stepCallback(
-							(float) b / topCount0 * 0.3 + 0.48);
+							(float) b / topCount0 * 0.3f + 0.48f);
 			}
 			if(m_callbacks)
 				m_callbacks->statusCallback("Processing...");
@@ -356,7 +356,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	}
 
 	if (m_callbacks)
-		m_callbacks->stepCallback(0.99);
+		m_callbacks->stepCallback(0.99f);
 
 	if (*cancel)
 		return;
@@ -381,7 +381,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		cancel = &__tt_cancel;
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.01);
+		m_callbacks->stepCallback(0.01f);
 		m_callbacks->statusCallback("Starting crowns...");
 	}
 
@@ -393,6 +393,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	// Initialize the rasters.
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing rasters...");
+
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
 	outrast.setNodata(0, 1);
@@ -401,7 +402,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	double nodata = inrast.nodata();
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.02);
+		m_callbacks->stepCallback(0.02f);
 		m_callbacks->statusCallback("Preparing database...");
 	}
 
@@ -414,12 +415,12 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	db.getGeomCount(&geomCount);
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.03);
+		m_callbacks->stepCallback(0.03f);
 		m_callbacks->statusCallback("Processing crowns...");
 	}
 
 	// Build the list of offsets for D8 or D4 search.
-	double offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
 
 	// The number of extra rows above and below the buffer.
 	int32_t bufRows = (int) std::ceil(g_abs(config.crownsRadius / inrast.resolutionY()));
@@ -471,7 +472,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			}
 
 			if (m_callbacks) {
-				m_callbacks->stepCallback(0.03 + ((float) curRow / inrast.rows()) * 0.97);
+				m_callbacks->stepCallback(0.03f + ((float) curRow / inrast.rows()) * 0.97f);
 				m_callbacks->statusCallback("Processing crowns...");
 			}
 
@@ -491,7 +492,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 					if (r - row + bufRows < 0 || r - row + bufRows >= buf.rows())
 						continue;
 
-					uint64_t idx = (uint64_t) (r - row + bufRows) * inrast.cols() + c;
+					uint32_t idx = (uint64_t) (r - row + bufRows) * inrast.cols() + c;
 					if (visited[idx])
 						continue;
 

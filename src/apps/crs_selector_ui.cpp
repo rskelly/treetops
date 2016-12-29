@@ -26,7 +26,10 @@ CRSSelector::CRSSelector(QWidget *parent, Qt::WindowFlags f) :
 void CRSSelector::loadCrs(std::map<int, std::string> &target,
 		const std::string &filename) {
 	g_debug(" -- loadCRS");
-	std::string path(CPLFindFile("gdal", filename.c_str()));
+	const char *db = CPLFindFile("gdal", filename.c_str());
+	if (db == nullptr || db == "")
+		g_runerr("Database file was not found: " << filename);
+	std::string path(db);
 	CSVReader csv(path);
 	std::unordered_map<std::string, std::string> row;
 	while (csv.next(row)) {

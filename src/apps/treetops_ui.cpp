@@ -137,7 +137,7 @@ void WorkerThread::run() {
 		int step = 0;
 
 		if (cb)
-			cb->overallCallback(0.01);
+			cb->overallCallback(0.01f);
 
 		if (config.doSmoothing) {
 			t.smooth(config);
@@ -154,7 +154,7 @@ void WorkerThread::run() {
 			cb->overallCallback((float) ++step / steps);
 		}
 
-		cb->overallCallback(1.0);
+		cb->overallCallback(1.0f);
 
 	} catch (const std::exception &e) {
 		QMessageBox err((QWidget *) m_parent);
@@ -205,6 +205,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 		m_last = QDir::home();
 	}
 
+	QIntValidator *qiv = new QIntValidator(0, 999999, this);
+	txtTopsTreetopsSRID->setValidator(qiv);
+
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();
 	m_workerThread = new WorkerThread();
@@ -224,7 +227,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
-	spnTopsTreetopsSRID->setValue(m_config.srid);
+	txtTopsTreetopsSRID->setText(QString(m_config.srid));
 	// -- crowns
 	chkEnableCrowns->setChecked(m_config.doCrowns);
 	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
@@ -250,7 +253,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- tops
 	connect(spnTopsMinHeight, SIGNAL(valueChanged(double)), SLOT(topsMinHeightChanged(double)));
 	connect(spnTopsWindowSize, SIGNAL(valueChanged(int)), SLOT(topsWindowSizeChanged(int)));
-	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), SLOT(topsTreetopsSRIDChanged(int)));
+	connect(txtTopsTreetopsSRID, SIGNAL(textChanged(int)), SLOT(topsTreetopsSRIDChanged(int)));
 	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), SLOT(topsOriginalCHMChanged(QString)));
 	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(topsSmoothedCHMChanged(QString)));
 	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), SLOT(topsTreetopsDatabaseChanged(QString)));
@@ -286,8 +289,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 }
 
-void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
-	m_config.srid = srid;
+void TreetopsForm::topsTreetopsSRIDChanged(QString srid) {
+	m_config.srid = srid.toInt();
 	checkRun();
 }
 
@@ -296,7 +299,7 @@ void TreetopsForm::topsTreetopsSRIDClicked() {
 	cs.enableVertical(false);
 	cs.setHorizontalSRID(m_config.srid);
 	if (cs.exec())
-		spnTopsTreetopsSRID->setValue(cs.getHorizontalSRID());
+		txtTopsTreetopsSRID->setText(QString(cs.getHorizontalSRID()));
 }
 
 void TreetopsForm::updateView() {
@@ -490,18 +493,18 @@ void TreetopsForm::done() {
 }
 
 void TreetopsForm::exitClicked() {
-	g_trace("quit");
+	g_debug("quit");
 	m_form->close();
 }
 
 void TreetopsForm::cancelClicked() {
-	g_trace("cancel");
+	g_debug("cancel");
 	m_cancel = true;
 	checkRun();
 }
 
 void TreetopsForm::helpClicked() {
-	g_trace("help");
+	g_debug("help");
 	QDesktopServices::openUrl(QUrl("http://www.dijital.ca/geotools/help/treetops.html", QUrl::TolerantMode));
 }
 

@@ -28,12 +28,9 @@
 namespace std {
 
     inline bool isnan(double value) {
-        return _isnan(value);
+        return _isnan(value) == 1;
     }
     
-    inline double round(double value) {
-        return value < 0 ? -std::floor(0.5 - value) : std::floor(0.5 + value);
-    }
 }
 #endif
 
@@ -244,7 +241,7 @@ namespace geotools {
             // Populates the vector with the files contained in dir. If ext is specified, filters
             // the files by that extension (case-insensitive). If dir is a file, it is added to the list.
             // Returns the number of files found.
-            static int dirlist(const std::string &dir, std::vector<std::string> &files, 
+            static size_t dirlist(const std::string &dir, std::vector<std::string> &files, 
                 const std::string &ext = std::string());
 
             static std::unique_ptr<MappedFile> mapFile(const std::string &filename, 

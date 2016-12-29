@@ -137,7 +137,7 @@ void Grid<T>::logNormalize() {
 	T x = max();
 	double e = std::exp(1.0) - 1.0;
 	for(uint32_t i = 0; i < size(); ++i)
-		set(i, std::log(1.0 + e * (get(i) - n) / (x - n)));
+		set(i, (T) std::log(1.0 + e * (get(i) - n) / (x - n)));
 }
 
 template<class T>
@@ -270,7 +270,7 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 
 	g_debug("Smoothing grid...");
 	if (status) {
-		status->stepCallback(0.01);
+		status->stepCallback(0.01f);
 		status->statusCallback("Preparing to smooth...");
 	}
 
@@ -292,14 +292,15 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 
 	if(status)
 		status->statusCallback("Smoothing...");
+
 	#pragma omp parallel for
 	for (int16_t row = 0; row < rows(); row += bufRows - size) {
 		if (*cancel)
 			continue;
 		MemRaster<double> weights(size, size);
 		gaussianWeights(weights.grid(), size, sigma);
-		MemRaster<T> strip(cols(), g_min(bufRows, rows() - row));
-		MemRaster<T> smooth(cols(), g_min(bufRows, rows() - row));
+		MemRaster<T> strip(cols(), g_min(bufRows, rows() - row - 1));
+		MemRaster<T> smooth(cols(), g_min(bufRows, rows() - row - 1));
 		MemRaster<T> buf(size, size);
 		strip.setNodata((T) nd);
 		strip.fill((const T) nd);
@@ -339,7 +340,7 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 			#pragma omp atomic
 			++completed;
 			if (status)
-				status->stepCallback((float) completed / rows() * 0.98);
+				status->stepCallback((float) completed / rows() * 0.98f);
 		}
 		if (*cancel)
 			continue;
@@ -595,9 +596,8 @@ void MemRaster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &block,
 	if (srcCol < 0 || srcRow < 0 || srcCol >= block.cols()
 			|| srcRow >= block.rows())
 		g_argerr(
-				"Invalid source column or row: row: " << srcRow << "; col: "
-						<< srcCol << "; block: " << block.rows() << ","
-						<< block.rows());
+				"Invalid source column or row: row: " << srcRow << "; col: " 
+					<< srcCol << "; block: " << block.rows() << ","	<< block.rows());
 	int16_t cols = g_min(m_cols - col, block.cols() - srcCol);
 	int16_t rows = g_min(m_rows - row, block.rows() - srcRow);
 	if (xcols > 0)
@@ -675,12 +675,12 @@ uint64_t BlockCache<T>::toIdx(uint16_t band, uint16_t col, uint16_t row) const {
 
 template<class T>
 uint16_t BlockCache<T>::toCol(uint64_t idx) const {
-	return ((idx >> 16) & 0xffff) * m_bw;
+	return (uint16_t) ((idx >> 16) & 0xffff) * m_bw;
 }
 
 template<class T>
 uint16_t BlockCache<T>::toRow(uint64_t idx) const {
-	return (idx & 0xffff) * m_bh;
+	return (uint16_t) (idx & 0xffff) * m_bh;
 }
 
 template<class T>
@@ -1262,7 +1262,7 @@ void Raster<T>::writeBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd
 template<class T>
 void Raster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &grd,
 		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
-	writeBlock(col, row, grd, srcCol, srcRow, xcols, xrows);
+	writeBlock(1, col, row, grd, srcCol, srcRow, xcols, xrows);
 }
 
 template<class T>
@@ -1372,7 +1372,7 @@ double Raster<T>::height() const {
 
 template<class T>
 T Raster<T>::nodata(uint16_t band) const {
-	return m_ds->GetRasterBand(band)->GetNoDataValue();
+	return (T) m_ds->GetRasterBand(band)->GetNoDataValue();
 }
 
 template<class T>
