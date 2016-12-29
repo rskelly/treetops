@@ -154,7 +154,7 @@ void WorkerThread::run() {
 			cb->overallCallback((float) ++step / steps);
 		}
 
-		cb->overallCallback(1.0);
+		cb->overallCallback(1.0f);
 
 	} catch (const std::exception &e) {
 		QMessageBox err((QWidget *) m_parent);

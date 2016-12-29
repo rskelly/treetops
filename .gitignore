@@ -7,12 +7,10 @@
 **/*.qhc
 **/*.qch
 data/*
+nsis/*.exe
 makefiles
 tests/output
 nbproject
 .cproject
-/tmp/
-/triangle
 .settings
 .project
-/data/
