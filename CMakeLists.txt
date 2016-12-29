@@ -7,24 +7,27 @@ if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
 
+set (Boost_DEBUG OFF)
+set (Boost_USE_STATIC_LIBS OFF)
+set (Boost_USE_STATIC_RUNTIME OFF)
+
 set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 set (GEOS_LIBRARY geos_c)
 
-set (Boost_DEBUG OF)
-set (Boost_USE_STATIC_LIBS OFF)
-set (Boost_USE_STATIC_RUNTIME OFF)
-
 if (${APPLE})
+
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
 	endif()
+
 	# For GDAL2
 	set (GDAL_LIBRARY /usr/local/opt/gdal2/lib)
 	set (GDAL_INCLUDE_DIR /usr/local/opt/gdal2/include)
 	set (CMAKE_C_COMPILER /usr/local/bin/clang-omp CACHE STRING "C compiler" FORCE)
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
 	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+
 elseif(${WIN32})
 	
 	# Preparing to build on Windows
@@ -43,11 +46,13 @@ elseif(${WIN32})
 
 	# Configure boost.
 	set (Boost_COMPILER -vc140)
+	set (Boost_NO_SYSTEM_PATHS  ON)
 	set (BOOST_INCLUDEDIR "C:\\boost_1_63_0")
 	set (BOOST_LIBRARYDIR "C:\\boost_1_63_0\\lib64-msvc-14.0")
-	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};C:\\Qt\\5.7\\msvc2015_64\\lib\\cmake\\Qt5Widgets;C:\\opt")
-	#set (LIB_DIRS "C:\\opt\\lib")
-	#set (INCLUDE_DIRS "C:\\opt\\include")
+	
+	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};C:\\Qt\\5.7\\msvc2015_64\\lib\\cmake\\Qt5Widgets")
+	set (LIB_PATH "C:\\opt\\lib")
+	set (INC_PATH "C:\\opt\\include")
 
 else()
 	if(${WITH_GUI})
@@ -80,8 +85,8 @@ endif()
 project (geotools)
 
 # Configure directories
-link_directories(. C:/opt/lib ${Boost_LIBRARY_DIR})
-include_directories(include ${Boost_INCLUDE_DIR} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
+include_directories(include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
 
 
 # Build support libraries ############################################################################################

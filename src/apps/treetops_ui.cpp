@@ -137,7 +137,7 @@ void WorkerThread::run() {
 		int step = 0;
 
 		if (cb)
-			cb->overallCallback(0.01);
+			cb->overallCallback(0.01f);
 
 		if (config.doSmoothing) {
 			t.smooth(config);

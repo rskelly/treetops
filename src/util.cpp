@@ -546,7 +546,7 @@ bool Util::mkdir(const std::string &dir) {
 	return true;
 }
 
-int Util::dirlist(const std::string &dir, std::vector<std::string> &files,
+size_t Util::dirlist(const std::string &dir, std::vector<std::string> &files,
 		const std::string &ext) {
 	using namespace boost::filesystem;
 	using namespace boost::algorithm;
