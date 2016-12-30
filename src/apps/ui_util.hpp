@@ -5,8 +5,8 @@
  *      Author: rob
  */
 
-#ifndef SRC_APPS_UI_UTIL_CPP_
-#define SRC_APPS_UI_UTIL_CPP_
+#ifndef __UI_UTIL_HPP__
+#define __UI_UTIL_HPP__
 
 #include <string>
 
@@ -24,19 +24,44 @@ namespace geotools {
 				return QString(str.c_str());
 			}
 
+			// Convenience: returns a QString from an int.
+			QString qstr(int val) {
+				QString s;
+				s.setNum(val);
+				return s;
+			}
+
 			// Convenience: open an input file dialog and return the string.
 			std::string getInputFile(QWidget *form, const std::string &title, QDir &path,
 					const std::string &filter) {
-				QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
-				path.setPath(res);
+				QFileDialog *d = new QFileDialog(form, qstr(title), path.path());//, qstr(filter));
+				d->setAcceptMode(QFileDialog::AcceptOpen);
+				d->setFileMode(QFileDialog::ExistingFile);
+				d->setViewMode(QFileDialog::Detail);
+				d->setDirectory(path);
+				//d->setOption( QFileDialog::DontUseNativeDialog, true);
+				QString res;
+				if(d->exec()) {
+					res = d->selectedFiles().first();
+					path.setPath(res);
+				}
 				return res.toStdString();
 			}
 
 			// Convenience: open an output file dialog and return the string.
 			std::string getOutputFile(QWidget *form, const std::string &title, QDir &path,
 					const std::string &filter) {
-				QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
-				path.setPath(res);
+				QFileDialog *d = new QFileDialog(form, qstr(title), path.path());//, qstr(filter));
+				d->setAcceptMode(QFileDialog::AcceptSave);
+				d->setFileMode(QFileDialog::AnyFile);
+				d->setViewMode(QFileDialog::Detail);
+				d->setDirectory(path);
+				//d->setOption( QFileDialog::DontUseNativeDialog, true);
+				QString res;
+				if(d->exec()) {
+					res = d->selectedFiles().first();
+					path.setPath(res);
+				}
 				return res.toStdString();
 			}
 
@@ -44,4 +69,4 @@ namespace geotools {
 	}
 }
 
-#endif /* SRC_APPS_UI_UTIL_CPP_ */
+#endif /* __UI_UTIL_HPP__ */

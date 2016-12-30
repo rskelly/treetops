@@ -27,7 +27,7 @@ void CRSSelector::loadCrs(std::map<int, std::string> &target,
 		const std::string &filename) {
 	g_debug(" -- loadCRS");
 	const char *db = CPLFindFile("gdal", filename.c_str());
-	if (db == nullptr || db == "")
+	if (db == nullptr)
 		g_runerr("Database file was not found: " << filename);
 	std::string path(db);
 	CSVReader csv(path);

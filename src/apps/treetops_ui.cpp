@@ -120,7 +120,7 @@ void TreetopsCallbacks::statusCallback(const std::string &msg) const {
 
 // WorkerThread implementation
 
-void WorkerThread::run() {
+void TTWorkerThread::run() {
 
 	using namespace geotools::treetops;
 	using namespace geotools::treetops::config;
@@ -164,16 +164,17 @@ void WorkerThread::run() {
 	}
 }
 
-void WorkerThread::init(TreetopsForm *parent) {
+void TTWorkerThread::init(TreetopsForm *parent) {
 	m_parent = parent;
 }
 
-WorkerThread::~WorkerThread(){}
+TTWorkerThread::~TTWorkerThread(){}
 
 
 // TreetopsForm implementation
 
-TreetopsForm::TreetopsForm(QWidget *p) :
+TreetopsForm::TreetopsForm(QWidget *parent) :
+	QWidget(parent),
 	m_cancel(false),
 	m_form(nullptr),
 	m_callbacks(nullptr),
@@ -205,12 +206,14 @@ void TreetopsForm::setupUi(QWidget *form) {
 		m_last = QDir::home();
 	}
 
-	QIntValidator *qiv = new QIntValidator(0, 999999, this);
-	txtTopsTreetopsSRID->setValidator(qiv);
+	//chkEnableSmoothing->releaseKeyboard();
+
+	//QIntValidator *qiv = new QIntValidator(0, 999999, this);
+	//txtTopsTreetopsSRID->setValidator(qiv);
 
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();
-	m_workerThread = new WorkerThread();
+	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
 
 	// Populate fields with saved or default values.
@@ -227,7 +230,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
-	txtTopsTreetopsSRID->setText(QString(m_config.srid));
+	spnTopsTreetopsSRID->setValue(m_config.srid);
 	// -- crowns
 	chkEnableCrowns->setChecked(m_config.doCrowns);
 	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
@@ -253,7 +256,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- tops
 	connect(spnTopsMinHeight, SIGNAL(valueChanged(double)), SLOT(topsMinHeightChanged(double)));
 	connect(spnTopsWindowSize, SIGNAL(valueChanged(int)), SLOT(topsWindowSizeChanged(int)));
-	connect(txtTopsTreetopsSRID, SIGNAL(textChanged(int)), SLOT(topsTreetopsSRIDChanged(int)));
+	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), SLOT(topsTreetopsSRIDChanged(int)));
 	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), SLOT(topsOriginalCHMChanged(QString)));
 	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(topsSmoothedCHMChanged(QString)));
 	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), SLOT(topsTreetopsDatabaseChanged(QString)));
@@ -289,8 +292,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 }
 
-void TreetopsForm::topsTreetopsSRIDChanged(QString srid) {
-	m_config.srid = srid.toInt();
+void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
+	m_config.srid = srid;
 	checkRun();
 }
 
@@ -299,14 +302,14 @@ void TreetopsForm::topsTreetopsSRIDClicked() {
 	cs.enableVertical(false);
 	cs.setHorizontalSRID(m_config.srid);
 	if (cs.exec())
-		txtTopsTreetopsSRID->setText(QString(cs.getHorizontalSRID()));
+		spnTopsTreetopsSRID->setValue(cs.getHorizontalSRID());
 }
 
 void TreetopsForm::updateView() {
 }
 
 void TreetopsForm::smoothOriginalCHMClicked() {
-	m_config.smoothOriginalCHM = getInputFile(this, "CHM for Smoothing", m_last, RASTER_PATTERN);
+	m_config.smoothOriginalCHM = getInputFile(m_form, "CHM for Smoothing", m_last, RASTER_PATTERN);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
 	checkRun();
 	if (m_config.topsOriginalCHM.empty()) {
@@ -317,7 +320,7 @@ void TreetopsForm::smoothOriginalCHMClicked() {
 }
 
 void TreetopsForm::smoothSmoothedCHMClicked() {
-	m_config.smoothSmoothedCHM = getOutputFile(this, "Smoothed CHM", m_last, RASTER_PATTERN);
+	m_config.smoothSmoothedCHM = getOutputFile(m_form, "Smoothed CHM", m_last, RASTER_PATTERN);
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	checkRun();
 	if (m_config.topsSmoothedCHM.empty()) {
@@ -331,7 +334,7 @@ void TreetopsForm::smoothSmoothedCHMClicked() {
 }
 
 void TreetopsForm::topsSmoothedCHMClicked() {
-	m_config.topsSmoothedCHM = getInputFile(this, "Smoothed CHM for Treetops", m_last, RASTER_PATTERN);
+	m_config.topsSmoothedCHM = getInputFile(m_form, "Smoothed CHM for Treetops", m_last, RASTER_PATTERN);
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	checkRun();
 	if (m_config.crownsSmoothedCHM.empty()) {
@@ -341,13 +344,13 @@ void TreetopsForm::topsSmoothedCHMClicked() {
 }
 
 void TreetopsForm::topsOriginalCHMClicked() {
-	m_config.topsOriginalCHM = getInputFile(this, "Original CHM for Treetops", m_last, RASTER_PATTERN);
+	m_config.topsOriginalCHM = getInputFile(m_form, "Original CHM for Treetops", m_last, RASTER_PATTERN);
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	checkRun();
 }
 
 void TreetopsForm::topsTreetopsDatabaseClicked() {
-	m_config.topsTreetopsDatabase = getOutputFile(this, "Treetops Database", m_last, VECTOR_PATTERN);
+	m_config.topsTreetopsDatabase = getOutputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN);
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	checkRun();
 	if (m_config.crownsTreetopsDatabase.empty()) {
@@ -358,25 +361,25 @@ void TreetopsForm::topsTreetopsDatabaseClicked() {
 }
 
 void TreetopsForm::crownsSmoothedCHMClicked() {
-	m_config.crownsSmoothedCHM = getInputFile(this, "Smoothed CHM for Crown Delineation", m_last, RASTER_PATTERN);
+	m_config.crownsSmoothedCHM = getInputFile(m_form, "Smoothed CHM for Crown Delineation", m_last, RASTER_PATTERN);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	checkRun();
 }
 
 void TreetopsForm::crownsTreetopsDatabaseClicked() {
-	m_config.crownsTreetopsDatabase = getInputFile(this, "Treetops Database", m_last, VECTOR_PATTERN);
+	m_config.crownsTreetopsDatabase = getInputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN);
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsRasterClicked() {
-	m_config.crownsCrownsRaster = getOutputFile(this, "Crowns Raster", m_last, RASTER_PATTERN);
+	m_config.crownsCrownsRaster = getOutputFile(m_form, "Crowns Raster", m_last, RASTER_PATTERN);
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsDatabaseClicked() {
-	m_config.crownsCrownsDatabase = getOutputFile(this, "Crowns Database", m_last, VECTOR_PATTERN);
+	m_config.crownsCrownsDatabase = getOutputFile(m_form, "Crowns Database", m_last, VECTOR_PATTERN);
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
 	checkRun();
 }

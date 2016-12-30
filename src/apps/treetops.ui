@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>TreetopsForm</class>
  <widget class="QWidget" name="TreetopsForm">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -25,6 +28,9 @@
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QGroupBox" name="groupBox">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -49,6 +55,9 @@
          <height>20</height>
         </rect>
        </property>
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
+       </property>
        <property name="text">
         <string>Smooth Source Raster</string>
        </property>
@@ -62,7 +71,7 @@
          <height>64</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+       <layout class="QHBoxLayout" name="laySmoothing" stretch="1,1">
         <item>
          <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0,0">
           <item row="0" column="0">
@@ -87,10 +96,17 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="txtSmoothOriginalCHM"/>
+           <widget class="QLineEdit" name="txtSmoothOriginalCHM">
+            <property name="clearButtonEnabled">
+             <bool>false</bool>
+            </property>
+           </widget>
           </item>
           <item row="0" column="1" colspan="2">
            <widget class="QSpinBox" name="spnSmoothWindow">
+            <property name="mouseTracking">
+             <bool>true</bool>
+            </property>
             <property name="minimum">
              <number>3</number>
             </property>
@@ -126,6 +142,9 @@
           </item>
           <item row="0" column="1" colspan="2">
            <widget class="QDoubleSpinBox" name="spnSmoothSigma">
+            <property name="mouseTracking">
+             <bool>true</bool>
+            </property>
             <property name="minimum">
              <double>0.000000000000000</double>
             </property>
@@ -286,7 +305,14 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QLineEdit" name="txtTopsTreetopsSRID"/>
+           <widget class="QSpinBox" name="spnTopsTreetopsSRID">
+            <property name="focusPolicy">
+             <enum>Qt::WheelFocus</enum>
+            </property>
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -559,6 +585,42 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>chkEnableSmoothing</tabstop>
+  <tabstop>spnSmoothWindow</tabstop>
+  <tabstop>txtSmoothOriginalCHM</tabstop>
+  <tabstop>btnSmoothOriginalCHM</tabstop>
+  <tabstop>spnSmoothSigma</tabstop>
+  <tabstop>txtSmoothSmoothedCHM</tabstop>
+  <tabstop>btnSmoothSmoothedCHM</tabstop>
+  <tabstop>chkEnableTops</tabstop>
+  <tabstop>spnTopsMinHeight</tabstop>
+  <tabstop>txtTopsOriginalCHM</tabstop>
+  <tabstop>btnTopsOriginalCHM</tabstop>
+  <tabstop>txtTopsTreetopsDatabase</tabstop>
+  <tabstop>btnTopsTreetopsDatabase</tabstop>
+  <tabstop>spnTopsWindowSize</tabstop>
+  <tabstop>txtTopsSmoothedCHM</tabstop>
+  <tabstop>btnTopsSmoothedCHM</tabstop>
+  <tabstop>spnTopsTreetopsSRID</tabstop>
+  <tabstop>btnTopsTreetopsSRID</tabstop>
+  <tabstop>chkEnableCrowns</tabstop>
+  <tabstop>spnCrownsHeightFraction</tabstop>
+  <tabstop>spnCrownsMinHeight</tabstop>
+  <tabstop>txtCrownsSmoothedCHM</tabstop>
+  <tabstop>btnCrownsSmoothedCHM</tabstop>
+  <tabstop>txtCrownsCrownsRaster</tabstop>
+  <tabstop>btnCrownsCrownsRaster</tabstop>
+  <tabstop>spnCrownsRadius</tabstop>
+  <tabstop>txtCrownsTreetopsDatabase</tabstop>
+  <tabstop>btnCrownsTreetopsDatabase</tabstop>
+  <tabstop>txtCrownsCrownsDatabase</tabstop>
+  <tabstop>btnCrownsCrownsDatabase</tabstop>
+  <tabstop>btnHelp</tabstop>
+  <tabstop>btnRun</tabstop>
+  <tabstop>btnCancel</tabstop>
+  <tabstop>btnExit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

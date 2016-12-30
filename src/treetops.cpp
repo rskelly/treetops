@@ -327,7 +327,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		for (const auto &it : tops0) {
 			if (*cancel)
 				break;
-			const uint64_t &id = it.first;
 			const std::unique_ptr<Top> &t = it.second;
 			std::map<std::string, std::string> fields;
 			fields["id"] = std::to_string(t->id);
@@ -347,8 +346,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				}
 				points.clear();
 				if (m_callbacks)
-					m_callbacks->stepCallback(
-							(float) b / topCount0 * 0.3f + 0.48f);
+					m_callbacks->stepCallback((float) b / topCount0 * 0.3f + 0.48f);
 			}
 			if(m_callbacks)
 				m_callbacks->statusCallback("Processing...");

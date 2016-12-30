@@ -32,15 +32,16 @@ namespace geotools {
 
 	namespace ui {
 
-		class WorkerThread;
+		class TTWorkerThread;
 
 		class TreetopsForm: public QWidget, public Ui::TreetopsForm {
-			friend class WorkerThread;Q_OBJECT
+			friend class TTWorkerThread;
+			Q_OBJECT
 		private:
 			bool m_cancel;
 			QWidget *m_form;
 			geotools::util::Callbacks *m_callbacks;
-			WorkerThread *m_workerThread;
+			TTWorkerThread *m_workerThread;
 			QDir m_last;
 			TreetopsConfig m_config;
 
@@ -49,7 +50,7 @@ namespace geotools {
 
 		public:
 			TreetopsForm(QWidget *p = Q_NULLPTR);
-			void setupUi(QWidget *Form);
+			void setupUi(QWidget *parent);
 			~TreetopsForm();
 
 		public slots:
@@ -68,7 +69,7 @@ namespace geotools {
 			void topsSmoothedCHMChanged(QString);
 			void topsTreetopsDatabaseChanged(QString);
 			void topsTreetopsSRIDClicked();
-			void topsTreetopsSRIDChanged(QString);
+			void topsTreetopsSRIDChanged(int);
 
 			void crownsRadiusChanged(double);
 			void crownsHeightFractionChanged(double);
@@ -98,13 +99,13 @@ namespace geotools {
 			void done();
 		};
 
-		class WorkerThread: public QThread {
+		class TTWorkerThread: public QThread {
 		private:
 			TreetopsForm *m_parent;
 			void run();
 		public:
 			void init(TreetopsForm *parent);
-			virtual ~WorkerThread();
+			virtual ~TTWorkerThread();
 		};
 
 	}
