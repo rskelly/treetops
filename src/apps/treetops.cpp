@@ -11,6 +11,8 @@
 #include "treetops_ui.hpp"
 #endif
 
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+
 void usage() {
 	std::cerr << "Usage: treetops <options>\n"
 			<< "This program finds tree tops by locating the maximum value in a \n"

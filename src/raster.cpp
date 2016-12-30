@@ -1589,8 +1589,34 @@ bool Raster<T>::has(uint32_t idx) const {
 	return idx < (uint32_t) (m_cols * m_rows);
 }
 
+// Keeps track of polygonization progress and provides a cancellation mechanism.
+class __PolyProgressData {
+public:
+	Callbacks *cb;
+	bool *cancel;
+	bool _cancel;
+	__PolyProgressData(Callbacks *cb, bool *cancel) :
+		cb(cb), cancel(cancel), _cancel(false) {
+		if (cancel == nullptr)
+			cancel = &_cancel;
+	}
+};
+
+// Callback for polygonization.
+int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg) {
+	__PolyProgressData *data = (__PolyProgressData *)pProgressArg;
+	if (data) {
+		data->cb->stepCallback((float)dfComplete);
+		// TODO: The message doesn't really do anything.
+		// if(pszMessage != NULL)
+		//	data->cb->statusCallback(std::string(pszMessage));
+		return *(data->cancel) ? 0 : 1;
+	}
+	return 1;
+}
+
 template<class T>
-void Raster<T>::polygonize(const std::string &filename, uint16_t band) {
+void Raster<T>::polygonize(const std::string &filename, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
@@ -1606,7 +1632,12 @@ void Raster<T>::polygonize(const std::string &filename, uint16_t band) {
 	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
-	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
+	if (callbacks) {
+		__PolyProgressData pd(callbacks, cancel);
+		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &__polyProgress, &pd);
+	} else {
+		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
+	}
 	GDALClose(ds);
 }
 

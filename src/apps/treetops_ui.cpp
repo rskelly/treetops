@@ -132,24 +132,27 @@ void TTWorkerThread::run() {
 		const TreetopsCallbacks *cb =
 				(TreetopsCallbacks *) m_parent->m_callbacks;
 
-		int steps = ((int) config.doSmoothing) + ((int) config.doTops)
-				+ ((int) config.doCrowns);
+		int steps = (((int) config.doSmoothing) + ((int) config.doTops)
+				+ ((int) config.doCrowns)) * 2;
 		int step = 0;
 
 		if (cb)
 			cb->overallCallback(0.01f);
 
 		if (config.doSmoothing) {
+			cb->overallCallback((float) ++step / steps);
 			t.smooth(config);
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doTops) {
+			cb->overallCallback((float) ++step / steps);
 			t.treetops(config);
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doCrowns) {
+			cb->overallCallback((float) ++step / steps);
 			t.treecrowns(config);
 			cb->overallCallback((float) ++step / steps);
 		}

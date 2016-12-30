@@ -526,7 +526,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)
 			m_callbacks->statusCallback("Polygonizing...");
-		outrast.polygonize(config.crownsCrownsDatabase, 1);
+		outrast.polygonize(config.crownsCrownsDatabase, 1, m_callbacks, cancel);
 	}
 
 	if (m_callbacks) {
