@@ -47,6 +47,7 @@ namespace geotools {
 
 			void checkRun();
 			void updateView();
+			void resetProgress();
 
 		public:
 			TreetopsForm(QWidget *p = Q_NULLPTR);
@@ -102,10 +103,15 @@ namespace geotools {
 		class TTWorkerThread: public QThread {
 		private:
 			TreetopsForm *m_parent;
+			std::string m_message;
+			bool m_isError;
 			void run();
+
 		public:
 			void init(TreetopsForm *parent);
 			virtual ~TTWorkerThread();
+			std::string message() const;
+			bool isError() const;
 		};
 
 	}

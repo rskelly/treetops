@@ -130,10 +130,10 @@ void TTWorkerThread::run() {
 		t.setCallbacks(m_parent->m_callbacks);
 		const TreetopsConfig &config = m_parent->m_config;
 		const TreetopsCallbacks *cb =
-				(TreetopsCallbacks *) m_parent->m_callbacks;
+			(TreetopsCallbacks *)m_parent->m_callbacks;
 
-		int steps = (((int) config.doSmoothing) + ((int) config.doTops)
-				+ ((int) config.doCrowns)) * 2;
+		int steps = (((int)config.doSmoothing) + ((int)config.doTops)
+			+ ((int)config.doCrowns)) * 2;
 		int step = 0;
 
 		if (cb)
@@ -160,15 +160,23 @@ void TTWorkerThread::run() {
 		cb->overallCallback(1.0f);
 
 	} catch (const std::exception &e) {
-		QMessageBox err((QWidget *) m_parent);
-		err.setText("Error");
-		err.setInformativeText(QString(e.what()));
-		err.exec();
+		m_message = stripBoost(e.what());
+		m_isError = true;
 	}
 }
 
 void TTWorkerThread::init(TreetopsForm *parent) {
 	m_parent = parent;
+	m_isError = false;
+	m_message.clear();
+}
+
+std::string TTWorkerThread::message() const {
+	return m_message;
+}
+
+bool TTWorkerThread::isError() const {
+	return m_isError;
 }
 
 TTWorkerThread::~TTWorkerThread(){}
@@ -208,11 +216,6 @@ void TreetopsForm::setupUi(QWidget *form) {
 	} else {
 		m_last = QDir::home();
 	}
-
-	//chkEnableSmoothing->releaseKeyboard();
-
-	//QIntValidator *qiv = new QIntValidator(0, 999999, this);
-	//txtTopsTreetopsSRID->setValidator(qiv);
 
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();
@@ -293,6 +296,13 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
+	checkRun();
+}
+
+void TreetopsForm::resetProgress() {
+	prgStep->setValue(0);
+	prgOverall->setValue(0);
+	lblStatus->setText("[Not Started]");
 }
 
 void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
@@ -491,10 +501,15 @@ void TreetopsForm::runClicked() {
 	btnExit->setEnabled(false);
 	m_workerThread->init(this);
 	m_workerThread->start();
+	resetProgress();
 	checkRun();
 }
 
 void TreetopsForm::done() {
+	if (m_workerThread->isError()) {
+		errorDialog(m_form, "Error", m_workerThread->message());
+		resetProgress();
+	}
 	checkRun();
 }
 

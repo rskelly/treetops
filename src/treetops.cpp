@@ -498,7 +498,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 					if (v != nodata           												// is not nodata
 						&& v < n->z		      												// is less than the neighbouring pixel
 						&& v >= config.crownsMinHeight 										// is greater than the min height
-						&& (v / n->tz) >= config.crownsHeightFraction 						// is greater than the threshold height
+						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
 						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 					) {
 						std::unique_ptr<Node> nd(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));

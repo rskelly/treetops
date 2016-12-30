@@ -31,6 +31,23 @@ namespace geotools {
 				return s;
 			}
 
+			// Hack to strip the boost::... part of an error message
+			std::string stripBoost(const std::string &msg) {
+				if (msg.substr(0, 7) == "boost::")
+					return msg.substr(msg.find(" ", 0));
+				return msg;
+			}
+
+			void errorDialog(QWidget *parent, const std::string &title, const std::string &text, 
+				const std::string &detail = "") {
+				QMessageBox err(parent);
+				err.setWindowTitle(qstr(title));
+				err.setText(qstr(text));
+				if(!detail.empty())
+					err.setDetailedText(qstr(detail));
+				err.exec();
+			}
+
 			// Convenience: open an input file dialog and return the string.
 			std::string getInputFile(QWidget *form, const std::string &title, QDir &path,
 					const std::string &filter) {
