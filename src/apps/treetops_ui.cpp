@@ -20,7 +20,7 @@ using namespace geotools::ui::util;
 using namespace geotools::treetops;
 using namespace geotools::treetops::config;
 
-QSettings _settings("Treetops", "GeoTools");
+QSettings _settings("Treetops", "dijital.ca");
 
 // Load the config settings for this app.
 void _loadConfig(TreetopsConfig &config) {
