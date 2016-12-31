@@ -9,529 +9,47 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>619</width>
-    <height>595</height>
+    <width>697</width>
+    <height>582</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Treetops</string>
   </property>
-  <widget class="QWidget" name="verticalLayoutWidget">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
-     <width>601</width>
-     <height>574</height>
+     <y>9</y>
+     <width>679</width>
+     <height>561</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
-     <widget class="QGroupBox" name="groupBox">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>110</height>
-       </size>
-      </property>
-      <property name="title">
-       <string>Raster Smoothing</string>
-      </property>
-      <widget class="QCheckBox" name="chkEnableSmoothing">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>20</y>
-         <width>617</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="focusPolicy">
-        <enum>Qt::StrongFocus</enum>
-       </property>
-       <property name="text">
-        <string>Smooth Source Raster</string>
-       </property>
-      </widget>
-      <widget class="QWidget" name="horizontalLayoutWidget">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>40</y>
-         <width>601</width>
-         <height>64</height>
-        </rect>
-       </property>
-       <layout class="QHBoxLayout" name="laySmoothing" stretch="1,1">
-        <item>
-         <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0,0">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Window Size</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QToolButton" name="btnSmoothOriginalCHM">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Original CHM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="txtSmoothOriginalCHM">
-            <property name="clearButtonEnabled">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QSpinBox" name="spnSmoothWindow">
-            <property name="mouseTracking">
-             <bool>true</bool>
-            </property>
-            <property name="minimum">
-             <number>3</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="1" column="2">
-           <widget class="QToolButton" name="btnSmoothSmoothedCHM">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="txtSmoothSmoothedCHM"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_12">
-            <property name="text">
-             <string>Smoothed CHM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Sigma</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QDoubleSpinBox" name="spnSmoothSigma">
-            <property name="mouseTracking">
-             <bool>true</bool>
-            </property>
-            <property name="minimum">
-             <double>0.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>0.800000000000000</double>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="groupBox_2">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>145</height>
-       </size>
-      </property>
-      <property name="title">
-       <string>Tree Tops</string>
-      </property>
-      <widget class="QCheckBox" name="chkEnableTops">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>20</y>
-         <width>617</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Generate Tree Tops</string>
-       </property>
-      </widget>
-      <widget class="QWidget" name="horizontalLayoutWidget_5">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>40</y>
-         <width>601</width>
-         <height>101</height>
-        </rect>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,1">
-        <item>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Min. Top Height</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QDoubleSpinBox" name="spnTopsMinHeight">
-            <property name="maximum">
-             <double>300.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>4.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Original CHM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="txtTopsOriginalCHM"/>
-          </item>
-          <item row="1" column="2">
-           <widget class="QToolButton" name="btnTopsOriginalCHM">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Treetops Database</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="txtTopsTreetopsDatabase"/>
-          </item>
-          <item row="2" column="2">
-           <widget class="QToolButton" name="btnTopsTreetopsDatabase">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Window Size</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QSpinBox" name="spnTopsWindowSize">
-            <property name="minimum">
-             <number>3</number>
-            </property>
-            <property name="value">
-             <number>7</number>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QToolButton" name="btnTopsSmoothedCHM">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_16">
-            <property name="text">
-             <string>Smoothed CHM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_17">
-            <property name="text">
-             <string>Treetops SRID</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QToolButton" name="btnTopsTreetopsSRID">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSpinBox" name="spnTopsTreetopsSRID">
-            <property name="focusPolicy">
-             <enum>Qt::WheelFocus</enum>
-            </property>
-            <property name="maximum">
-             <number>999999</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="groupBox_3">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>185</height>
-       </size>
-      </property>
-      <property name="title">
-       <string>Tree Crowns</string>
-      </property>
-      <widget class="QCheckBox" name="chkEnableCrowns">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>20</y>
-         <width>617</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Generate Tree Crowns</string>
-       </property>
-      </widget>
-      <widget class="QWidget" name="horizontalLayoutWidget_2">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>40</y>
-         <width>601</width>
-         <height>131</height>
-        </rect>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1">
-        <item>
-         <layout class="QGridLayout" name="gridLayout_5">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_8">
-            <property name="text">
-             <string>Min. Crown Height</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_13">
-            <property name="text">
-             <string>Smoothed CHM</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" colspan="2">
-           <widget class="QDoubleSpinBox" name="spnCrownsMinHeight">
-            <property name="maximum">
-             <double>300.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>4.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QToolButton" name="btnCrownsSmoothedCHM">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="txtCrownsSmoothedCHM"/>
-          </item>
-          <item row="3" column="2">
-           <widget class="QToolButton" name="btnCrownsCrownsRaster">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QDoubleSpinBox" name="spnCrownsHeightFraction">
-            <property name="maximum">
-             <double>1.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>0.100000000000000</double>
-            </property>
-            <property name="value">
-             <double>0.650000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_7">
-            <property name="text">
-             <string>Crown Height Fraction</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="txtCrownsCrownsRaster"/>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>Crowns Raster</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_14">
-            <property name="text">
-             <string>Crowns Database</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="txtCrownsTreetopsDatabase"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_15">
-            <property name="text">
-             <string>Treetops Database</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>Max. Crown Radius</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QDoubleSpinBox" name="spnCrownsRadius">
-            <property name="minimum">
-             <double>1.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>10.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="txtCrownsCrownsDatabase"/>
-          </item>
-          <item row="3" column="2">
-           <widget class="QToolButton" name="btnCrownsCrownsDatabase">
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Fixed</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
-    <item>
-     <widget class="QProgressBar" name="prgStep">
-      <property name="value">
-       <number>0</number>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QProgressBar" name="prgOverall">
-      <property name="value">
-       <number>0</number>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="lblStatus">
+   <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0,0,0,0,0,0">
+    <item row="6" column="2">
+     <widget class="QToolButton" name="btnTopsOriginalCHM">
       <property name="text">
-       <string>[Not Started]</string>
+       <string>...</string>
       </property>
      </widget>
     </item>
-    <item>
+    <item row="14" column="0">
+     <spacer name="verticalSpacer_4">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>10</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="19" column="0" colspan="7">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <widget class="QPushButton" name="btnHelp">
@@ -582,44 +100,524 @@
       </item>
      </layout>
     </item>
+    <item row="17" column="0" colspan="7">
+     <widget class="QLabel" name="lblStatus">
+      <property name="text">
+       <string>[Not Started]</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="4">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Window Size</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnTopsWindowSize</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="1" colspan="2">
+     <widget class="QDoubleSpinBox" name="spnCrownsHeightFraction">
+      <property name="maximum">
+       <double>1.000000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.100000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.650000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="0">
+     <widget class="QLabel" name="label_13">
+      <property name="text">
+       <string>Smoothed CHM</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtCrownsSmoothedCHM</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="6">
+     <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="15" column="0" colspan="7">
+     <widget class="QProgressBar" name="prgStep">
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>Min. Top Height</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnTopsMinHeight</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QLabel" name="label_5">
+      <property name="text">
+       <string>Original CHM</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtTopsOriginalCHM</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="2">
+     <widget class="QToolButton" name="btnCrownsSmoothedCHM">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="5">
+     <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
+    </item>
+    <item row="1" column="5" colspan="2">
+     <widget class="QDoubleSpinBox" name="spnSmoothSigma">
+      <property name="mouseTracking">
+       <bool>true</bool>
+      </property>
+      <property name="minimum">
+       <double>0.000000000000000</double>
+      </property>
+      <property name="value">
+       <double>0.800000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QLineEdit" name="txtTopsOriginalCHM"/>
+    </item>
+    <item row="7" column="5">
+     <widget class="QSpinBox" name="spnTopsTreetopsSRID">
+      <property name="focusPolicy">
+       <enum>Qt::WheelFocus</enum>
+      </property>
+      <property name="maximum">
+       <number>999999</number>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <spacer name="verticalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>10</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="6" column="4">
+     <widget class="QLabel" name="label_16">
+      <property name="text">
+       <string>Smoothed CHM</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtTopsSmoothedCHM</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="5" colspan="2">
+     <widget class="QSpinBox" name="spnTopsWindowSize">
+      <property name="minimum">
+       <number>3</number>
+      </property>
+      <property name="value">
+       <number>7</number>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="2">
+     <widget class="QToolButton" name="btnTopsTreetopsDatabase">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="0">
+     <widget class="QLabel" name="label_6">
+      <property name="text">
+       <string>Treetops Database</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtTopsTreetopsDatabase</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0" colspan="7">
+     <widget class="QCheckBox" name="chkEnableTops">
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Generate Tree Tops</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1" colspan="2">
+     <widget class="QDoubleSpinBox" name="spnTopsMinHeight">
+      <property name="maximum">
+       <double>300.000000000000000</double>
+      </property>
+      <property name="value">
+       <double>4.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="1">
+     <widget class="QLineEdit" name="txtTopsTreetopsDatabase"/>
+    </item>
+    <item row="16" column="0" colspan="7">
+     <widget class="QProgressBar" name="prgOverall">
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="2">
+     <widget class="QToolButton" name="btnSmoothOriginalCHM">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="11" column="0">
+     <widget class="QLabel" name="label_8">
+      <property name="text">
+       <string>Min. Crown Height</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnCrownsMinHeight</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>Window Size</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnSmoothWindow</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="5">
+     <widget class="QLineEdit" name="txtSmoothSmoothedCHM"/>
+    </item>
+    <item row="1" column="4">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Sigma</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnSmoothSigma</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="6">
+     <widget class="QToolButton" name="btnTopsSmoothedCHM">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="4">
+     <widget class="QLabel" name="label_12">
+      <property name="text">
+       <string>Smoothed CHM</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtSmoothSmoothedCHM</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_11">
+      <property name="text">
+       <string>Original CHM</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtSmoothOriginalCHM</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1" colspan="2">
+     <widget class="QSpinBox" name="spnSmoothWindow">
+      <property name="mouseTracking">
+       <bool>true</bool>
+      </property>
+      <property name="minimum">
+       <number>3</number>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="3">
+     <spacer name="horizontalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>10</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="2" column="6">
+     <widget class="QToolButton" name="btnSmoothSmoothedCHM">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="txtSmoothOriginalCHM">
+      <property name="clearButtonEnabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="7">
+     <widget class="QCheckBox" name="chkEnableSmoothing">
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::StrongFocus</enum>
+      </property>
+      <property name="text">
+       <string>Smooth Source Raster</string>
+      </property>
+     </widget>
+    </item>
+    <item row="11" column="1" colspan="2">
+     <widget class="QDoubleSpinBox" name="spnCrownsMinHeight">
+      <property name="maximum">
+       <double>300.000000000000000</double>
+      </property>
+      <property name="value">
+       <double>4.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="13" column="0">
+     <widget class="QLabel" name="label_10">
+      <property name="text">
+       <string>Crowns Raster</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtCrownsCrownsRaster</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="8" column="0">
+     <spacer name="verticalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>10</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="7" column="4">
+     <widget class="QLabel" name="label_17">
+      <property name="text">
+       <string>Treetops SRID</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnTopsTreetopsSRID</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="text">
+       <string>Crown Height Fraction</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnCrownsHeightFraction</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="13" column="4">
+     <widget class="QLabel" name="label_14">
+      <property name="text">
+       <string>Crowns Database</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtCrownsCrownsDatabase</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="6">
+     <widget class="QToolButton" name="btnTopsTreetopsSRID">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="4">
+     <widget class="QLabel" name="label_9">
+      <property name="text">
+       <string>Max. Crown Radius</string>
+      </property>
+      <property name="buddy">
+       <cstring>spnCrownsRadius</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="5" colspan="2">
+     <widget class="QDoubleSpinBox" name="spnCrownsRadius">
+      <property name="minimum">
+       <double>1.000000000000000</double>
+      </property>
+      <property name="value">
+       <double>10.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="9" column="0" colspan="7">
+     <widget class="QCheckBox" name="chkEnableCrowns">
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Generate Tree Crowns</string>
+      </property>
+     </widget>
+    </item>
+    <item row="13" column="1">
+     <widget class="QLineEdit" name="txtCrownsCrownsRaster"/>
+    </item>
+    <item row="13" column="2">
+     <widget class="QToolButton" name="btnCrownsCrownsRaster">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="1">
+     <widget class="QLineEdit" name="txtCrownsSmoothedCHM"/>
+    </item>
+    <item row="13" column="5">
+     <widget class="QLineEdit" name="txtCrownsCrownsDatabase"/>
+    </item>
+    <item row="12" column="5">
+     <widget class="QLineEdit" name="txtCrownsTreetopsDatabase"/>
+    </item>
+    <item row="13" column="6">
+     <widget class="QToolButton" name="btnCrownsCrownsDatabase">
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item row="12" column="4">
+     <widget class="QLabel" name="label_15">
+      <property name="text">
+       <string>Treetops Database</string>
+      </property>
+      <property name="buddy">
+       <cstring>txtCrownsTreetopsDatabase</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="18" column="0">
+     <spacer name="verticalSpacer_5">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>10</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
    </layout>
   </widget>
+  <zorder>verticalLayoutWidget</zorder>
+  <zorder>layoutWidget</zorder>
+  <zorder>chkEnableSmoothing</zorder>
  </widget>
  <tabstops>
   <tabstop>chkEnableSmoothing</tabstop>
   <tabstop>spnSmoothWindow</tabstop>
+  <tabstop>spnSmoothSigma</tabstop>
   <tabstop>txtSmoothOriginalCHM</tabstop>
   <tabstop>btnSmoothOriginalCHM</tabstop>
-  <tabstop>spnSmoothSigma</tabstop>
   <tabstop>txtSmoothSmoothedCHM</tabstop>
   <tabstop>btnSmoothSmoothedCHM</tabstop>
   <tabstop>chkEnableTops</tabstop>
   <tabstop>spnTopsMinHeight</tabstop>
+  <tabstop>spnTopsWindowSize</tabstop>
   <tabstop>txtTopsOriginalCHM</tabstop>
   <tabstop>btnTopsOriginalCHM</tabstop>
-  <tabstop>txtTopsTreetopsDatabase</tabstop>
-  <tabstop>btnTopsTreetopsDatabase</tabstop>
-  <tabstop>spnTopsWindowSize</tabstop>
   <tabstop>txtTopsSmoothedCHM</tabstop>
   <tabstop>btnTopsSmoothedCHM</tabstop>
+  <tabstop>txtTopsTreetopsDatabase</tabstop>
+  <tabstop>btnTopsTreetopsDatabase</tabstop>
   <tabstop>spnTopsTreetopsSRID</tabstop>
   <tabstop>btnTopsTreetopsSRID</tabstop>
   <tabstop>chkEnableCrowns</tabstop>
   <tabstop>spnCrownsHeightFraction</tabstop>
+  <tabstop>spnCrownsRadius</tabstop>
   <tabstop>spnCrownsMinHeight</tabstop>
   <tabstop>txtCrownsSmoothedCHM</tabstop>
   <tabstop>btnCrownsSmoothedCHM</tabstop>
-  <tabstop>txtCrownsCrownsRaster</tabstop>
-  <tabstop>btnCrownsCrownsRaster</tabstop>
-  <tabstop>spnCrownsRadius</tabstop>
   <tabstop>txtCrownsTreetopsDatabase</tabstop>
   <tabstop>btnCrownsTreetopsDatabase</tabstop>
+  <tabstop>txtCrownsCrownsRaster</tabstop>
+  <tabstop>btnCrownsCrownsRaster</tabstop>
   <tabstop>txtCrownsCrownsDatabase</tabstop>
   <tabstop>btnCrownsCrownsDatabase</tabstop>
-  <tabstop>btnHelp</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnCancel</tabstop>
   <tabstop>btnExit</tabstop>
+  <tabstop>btnHelp</tabstop>
  </tabstops>
  <resources/>
  <connections/>

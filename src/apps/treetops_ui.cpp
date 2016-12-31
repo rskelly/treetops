@@ -201,6 +201,19 @@ TreetopsForm::~TreetopsForm() {
 	}
 }
 
+bool TreetopsForm::eventFilter(QObject* object, QEvent* event) {
+	if(object == spnTopsTreetopsSRID) {
+		std::cerr <<"x\n";
+		return false;
+	}
+	return true;
+}
+
+void TreetopsForm::enableGroup(const std::vector<QWidget*> &grp, bool enable) {
+	for(QWidget *w : grp)
+		w->setEnabled(enable);
+}
+
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
 
@@ -221,6 +234,40 @@ void TreetopsForm::setupUi(QWidget *form) {
 	m_callbacks = new TreetopsCallbacks();
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
+
+	// Create virtual groups
+	m_smoothGroup.push_back(spnSmoothWindow);
+	m_smoothGroup.push_back(spnSmoothSigma);
+	m_smoothGroup.push_back(txtSmoothOriginalCHM);
+	m_smoothGroup.push_back(btnSmoothOriginalCHM);
+	m_smoothGroup.push_back(txtSmoothSmoothedCHM);
+	m_smoothGroup.push_back(btnSmoothSmoothedCHM);
+	m_topsGroup.push_back(spnTopsMinHeight);
+	m_topsGroup.push_back(spnTopsWindowSize);
+	m_topsGroup.push_back(txtTopsOriginalCHM);
+	m_topsGroup.push_back(btnTopsOriginalCHM);
+	m_topsGroup.push_back(txtTopsSmoothedCHM);
+	m_topsGroup.push_back(btnTopsSmoothedCHM);
+	m_topsGroup.push_back(txtTopsTreetopsDatabase);
+	m_topsGroup.push_back(btnTopsTreetopsDatabase);
+	m_topsGroup.push_back(spnTopsTreetopsSRID);
+	m_topsGroup.push_back(btnTopsTreetopsSRID);
+	m_crownsGroup.push_back(spnCrownsHeightFraction);
+	m_crownsGroup.push_back(spnCrownsRadius);
+	m_crownsGroup.push_back(spnCrownsMinHeight);
+	m_crownsGroup.push_back(txtCrownsSmoothedCHM);
+	m_crownsGroup.push_back(btnCrownsSmoothedCHM);
+	m_crownsGroup.push_back(txtCrownsTreetopsDatabase);
+	m_crownsGroup.push_back(btnCrownsTreetopsDatabase);
+	m_crownsGroup.push_back(txtCrownsCrownsRaster);
+	m_crownsGroup.push_back(btnCrownsCrownsRaster);
+	m_crownsGroup.push_back(txtCrownsCrownsDatabase);
+	m_crownsGroup.push_back(btnCrownsCrownsDatabase);
+
+	// Set enabled if so configured.
+	enableGroup(m_smoothGroup, m_config.doSmoothing);
+	enableGroup(m_topsGroup, m_config.doTops);
+	enableGroup(m_crownsGroup, m_config.doCrowns);
 
 	// Populate fields with saved or default values.
 	// -- smoothing
@@ -399,16 +446,19 @@ void TreetopsForm::crownsCrownsDatabaseClicked() {
 
 void TreetopsForm::doSmoothChanged(bool v) {
 	m_config.doSmoothing = v;
+	enableGroup(m_smoothGroup, v);
 	checkRun();
 }
 
 void TreetopsForm::doTopsChanged(bool v) {
 	m_config.doTops = v;
+	enableGroup(m_topsGroup, v);
 	checkRun();
 }
 
 void TreetopsForm::doCrownsChanged(bool v) {
 	m_config.doCrowns = v;
+	enableGroup(m_crownsGroup, v);
 	checkRun();
 }
 

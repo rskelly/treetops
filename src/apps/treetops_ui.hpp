@@ -45,14 +45,20 @@ namespace geotools {
 			QDir m_last;
 			TreetopsConfig m_config;
 
+			std::vector<QWidget*> m_smoothGroup;
+			std::vector<QWidget*> m_topsGroup;
+			std::vector<QWidget*> m_crownsGroup;
+
 			void checkRun();
 			void updateView();
 			void resetProgress();
+			void enableGroup(const std::vector<QWidget*> &grp, bool enable);
 
 		public:
 			TreetopsForm(QWidget *p = Q_NULLPTR);
 			void setupUi(QWidget *parent);
 			~TreetopsForm();
+			bool eventFilter(QObject* object, QEvent* event);
 
 		public slots:
 			void doSmoothChanged(bool);
