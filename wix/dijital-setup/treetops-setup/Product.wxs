@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?define ProductVersion = "0.0.1"?>
+<?define ProductUpgradeCode = "F6130536-F3D2-44E2-B496-82A5739D3B60"?>
+<?define CompanyName = "dijital.ca"?>
+<?define AppName = "treetops"?>
+<?define AppExecutable = "treetops-app.exe"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <Product Id="E2F73549-DB3C-4310-8CC5-E0219D54C15C" Name="$(var.AppName)"
+            Language="1033" Version="$(var.ProductVersion)"
+            Manufacturer="$(var.CompanyName)" UpgradeCode="$(var.ProductUpgradeCode)">
+
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+    <Media Id="1" Cabinet="cab1.cab" EmbedCab="yes"/>
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.AppName) is already installed." />
+
+    <Feature Id="ProductFeature" Title="$(var.AppName) Setup" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentRef Id="ProgramMenuDir" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="dijital.ca" />
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder" Name="Programs">
+        <Directory Id="ApplicationProgramsFolder" Name="$(var.CompanyName)">
+          <Component Id="ProgramMenuDir" Guid="EAF5553D-04B0-4D80-9ACB-00E857660283">
+            <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="Software\$(var.CompanyName)\$(var.AppName)"
+                           Type="integer" Value="1" Name="installed" KeyPath="yes" />
+            <Shortcut Id="UninstallProduct"
+              Name="Uninstall $(var.AppName)"
+              Target="[SystemFolder]msiexec.exe"
+              Arguments="/x [ProductCode]"
+              Description="Uninstalls $(var.AppName)" />
+          </Component>
+        </Directory>
+      </Directory>
+
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="ProductLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E81">
+        <File Source="..\..\..\makefiles\Release\treetops.dll" />
+      </Component>
+      <Component Id="ProductComponent" Guid="0AFB8DFB-CB83-4C31-AA6B-42032B5EEA96">
+        <File Source="..\..\..\makefiles\Release\treetops-app.exe">
+          <Shortcut Id="StartMenuShortcut" Directory="ApplicationProgramsFolder"
+                    Name="$(var.AppName)" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+        </File>
+      </Component>
+
+      <Component Id="Dep1" Guid="BF24905B-AF3C-433F-96A8-3E8A83FFB176">
+        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_date_time-vc140-mt-1_63.dll" />
+      </Component>
+      <Component Id="Dep2" Guid="764A418F-4D84-4607-9B2E-6BFD0A2AE0C3">
+        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_system-vc140-mt-1_63.dll" />
+      </Component>
+      <Component Id="Dep3" Guid="F7C5B6CB-4116-46DB-81B9-771E0E04432D">
+        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_filesystem-vc140-mt-1_63.dll" />
+      </Component>
+      <Component Id="Dep4" Guid="0E6CE6B5-7B1D-498A-8F94-118AD1B3B95F">
+        <File Source="C:\opt\bin\expat.dll" />
+      </Component>
+      <Component Id="Dep5" Guid="A954573A-4205-4BD8-9FF0-F3816BD8008C">
+        <File Source="C:\opt\bin\freexl.dll" />
+      </Component>
+      <Component Id="Dep6" Guid="17BA70B7-4A5B-4272-A81A-1629ECD9C510">
+        <File Source="C:\opt\bin\gdal201.dll" />
+      </Component>
+      <Component Id="Dep7" Guid="DF004BFA-84F1-474D-897B-12B69EB1AD4D">
+        <File Source="C:\opt\bin\geos.dll" />
+      </Component>
+      <Component Id="Dep8" Guid="6BAB57A6-552E-4023-9166-A456D0BCBF1A">
+        <File Source="C:\opt\bin\geos_c.dll" />
+      </Component>
+      <Component Id="Dep9" Guid="53DF5F26-4D21-447E-89B2-98B00C8BE26F">
+        <File Source="C:\opt\bin\iconv.dll" />
+      </Component>
+      <Component Id="Dep10" Guid="ECDF7FED-8AE5-41F1-A7BC-08F3FF45081D">
+        <File Source="C:\opt\bin\libcurl.dll" />
+      </Component>
+      <Component Id="Dep11" Guid="859F99D2-EE7A-4C2A-948A-98D1690305DD">
+        <File Source="C:\opt\bin\libeay32.dll" />
+      </Component>
+      <Component Id="Dep12" Guid="527C2F03-6AB5-4376-BA4C-FE8EC3898FA5">
+        <File Source="C:\opt\bin\libmysql.dll" />
+      </Component>
+      <Component Id="Dep13" Guid="232DCE5A-E4EA-4B5E-A625-9CECF718B9CA">
+        <File Source="C:\opt\bin\libpq.dll" />
+      </Component>
+      <Component Id="Dep14" Guid="7C3D6590-74C8-488A-A340-19EAA8BB4432">
+        <File Source="C:\opt\bin\libxml2.dll" />
+      </Component>
+      <Component Id="Dep15" Guid="5EC46216-751B-43B7-A863-F5612E0CCDCA">
+        <File Source="C:\opt\bin\openjp2.dll" />
+      </Component>
+      <Component Id="Dep16" Guid="FDD5CBCD-C9EF-423D-827F-A9892954D6DF">
+        <File Source="C:\opt\bin\proj.dll" />
+      </Component>
+      <Component Id="Dep17" Guid="5644074F-BA29-4E42-B9FC-4B4E0E81BB72">
+        <File Source="C:\opt\bin\spatialite.dll" />
+      </Component>
+      <Component Id="Dep18" Guid="17EF806E-7DF0-4BA9-8B67-665944E1DC4B">
+        <File Source="C:\opt\bin\sqlite3.dll" />
+      </Component>
+      <Component Id="Dep19" Guid="A1252537-0F4B-4693-8AE1-D3A67DDEE1CC">
+        <File Source="C:\opt\bin\ssleay32.dll" />
+      </Component>
+      <Component Id="Dep20" Guid="22CA6EC3-7B59-4E4B-BC21-A06172790CAD">
+        <File Source="C:\opt\bin\xerces-c_3_1.dll" />
+      </Component>
+      <Component Id="Dep21" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E7">
+        <File Source="C:\opt\bin\zlib1.dll" />
+      </Component>
+      <Component Id="Dep22" Guid="1C83F510-AFA5-4402-B8A6-31790A326397">
+        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Core.dll" />
+      </Component>
+      <Component Id="Dep23" Guid="E3B4B58D-90C9-4486-9FA2-627D6CD82DA8">
+        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Widgets.dll" />
+      </Component>
+      <Component Id="Dep24" Guid="0D951344-4F6B-4390-B553-2ED4FBABED6A">
+        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Gui.dll" />
+      </Component>
+      <!-- // TODO: Load proj database files/etc. Optionally -->
+    </ComponentGroup>
+  </Fragment>
+</Wix>
