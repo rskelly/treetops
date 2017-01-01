@@ -116,13 +116,13 @@ void PointStatsCallbacks::statusCallback(const std::string &msg) const {
 	emit statusUpdate(QString(msg.c_str()));
 }
 
-void WorkerThread::init(PointStatsForm *parent,
+void PSWorkerThread::init(PointStatsForm *parent,
 		const geotools::util::Bounds &bounds) {
 	m_parent = parent;
 	m_bounds = bounds;
 }
 
-void WorkerThread::run() {
+void PSWorkerThread::run() {
 	try {
 		m_error = "";
 		geotools::point::PointStats l;
@@ -133,17 +133,21 @@ void WorkerThread::run() {
 	}
 }
 
-bool WorkerThread::hasError() {
+bool PSWorkerThread::hasError() {
 	return !m_error.empty();
 }
 
-std::string WorkerThread::getError() {
+std::string PSWorkerThread::getError() {
 	return m_error;
 }
 
 PointStatsForm::PointStatsForm(QWidget *p) :
-		QWidget(p), m_form(nullptr), m_last(QDir::home()), m_workerThread(
-				nullptr), m_callbacks(nullptr) {
+		QWidget(p),
+		m_form(nullptr),
+		m_last(QDir::home()),
+		m_workerThread(nullptr),
+		m_callbacks(nullptr),
+		m_cancel(false) {
 }
 
 PointStatsForm::~PointStatsForm() {
@@ -169,7 +173,7 @@ void PointStatsForm::setupUi(QWidget *form) {
 		m_last = QDir::home();
 	}
 
-	m_workerThread = new WorkerThread();
+	m_workerThread = new PSWorkerThread();
 	m_callbacks = new PointStatsCallbacks();
 
 	_loadConfig(m_config);
