@@ -1,5 +1,6 @@
 #include <QWidget>
 #include <QFileDialog>
+#include <QDir>
 
 #include "omp.h"
 
