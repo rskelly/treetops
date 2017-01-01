@@ -2,26 +2,23 @@
 <ui version="4.0">
  <class>TreetopsForm</class>
  <widget class="QWidget" name="TreetopsForm">
-  <property name="enabled">
-   <bool>true</bool>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>697</width>
-    <height>582</height>
+    <width>712</width>
+    <height>584</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Treetops</string>
+   <string>Form</string>
   </property>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>9</y>
-     <width>679</width>
+     <y>10</y>
+     <width>691</width>
      <height>561</height>
     </rect>
    </property>
@@ -110,7 +107,7 @@
     <item row="5" column="4">
      <widget class="QLabel" name="label_3">
       <property name="text">
-       <string>Window Size</string>
+       <string>W&amp;indow Size</string>
       </property>
       <property name="buddy">
        <cstring>spnTopsWindowSize</cstring>
@@ -157,7 +154,7 @@
     <item row="5" column="0">
      <widget class="QLabel" name="label_4">
       <property name="text">
-       <string>Min. Top Height</string>
+       <string>&amp;Min. Top Height</string>
       </property>
       <property name="buddy">
        <cstring>spnTopsMinHeight</cstring>
@@ -167,7 +164,7 @@
     <item row="6" column="0">
      <widget class="QLabel" name="label_5">
       <property name="text">
-       <string>Original CHM</string>
+       <string>Origina&amp;l CHM</string>
       </property>
       <property name="buddy">
        <cstring>txtTopsOriginalCHM</cstring>
@@ -229,7 +226,7 @@
     <item row="6" column="4">
      <widget class="QLabel" name="label_16">
       <property name="text">
-       <string>Smoothed CHM</string>
+       <string>S&amp;moothed CHM</string>
       </property>
       <property name="buddy">
        <cstring>txtTopsSmoothedCHM</cstring>
@@ -256,7 +253,7 @@
     <item row="7" column="0">
      <widget class="QLabel" name="label_6">
       <property name="text">
-       <string>Treetops Database</string>
+       <string>&amp;Treetops Database</string>
       </property>
       <property name="buddy">
        <cstring>txtTopsTreetopsDatabase</cstring>
@@ -306,7 +303,7 @@
     <item row="11" column="0">
      <widget class="QLabel" name="label_8">
       <property name="text">
-       <string>Min. Crown Height</string>
+       <string>Mi&amp;n. Crown Height</string>
       </property>
       <property name="buddy">
        <cstring>spnCrownsMinHeight</cstring>
@@ -316,7 +313,7 @@
     <item row="1" column="0">
      <widget class="QLabel" name="label">
       <property name="text">
-       <string>Window Size</string>
+       <string>Window Si&amp;ze</string>
       </property>
       <property name="buddy">
        <cstring>spnSmoothWindow</cstring>
@@ -329,7 +326,7 @@
     <item row="1" column="4">
      <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Sigma</string>
+       <string>Si&amp;gma</string>
       </property>
       <property name="buddy">
        <cstring>spnSmoothSigma</cstring>
@@ -432,7 +429,7 @@
     <item row="13" column="0">
      <widget class="QLabel" name="label_10">
       <property name="text">
-       <string>Crowns Raster</string>
+       <string>&amp;Crowns Raster</string>
       </property>
       <property name="buddy">
        <cstring>txtCrownsCrownsRaster</cstring>
@@ -458,7 +455,7 @@
     <item row="7" column="4">
      <widget class="QLabel" name="label_17">
       <property name="text">
-       <string>Treetops SRID</string>
+       <string>&amp;Treetops SRID</string>
       </property>
       <property name="buddy">
        <cstring>spnTopsTreetopsSRID</cstring>
@@ -468,7 +465,7 @@
     <item row="10" column="0">
      <widget class="QLabel" name="label_7">
       <property name="text">
-       <string>Crown Height Fraction</string>
+       <string>&amp;Crown Height Fraction</string>
       </property>
       <property name="buddy">
        <cstring>spnCrownsHeightFraction</cstring>
@@ -478,7 +475,7 @@
     <item row="13" column="4">
      <widget class="QLabel" name="label_14">
       <property name="text">
-       <string>Crowns Database</string>
+       <string>Crowns &amp;Database</string>
       </property>
       <property name="buddy">
        <cstring>txtCrownsCrownsDatabase</cstring>
@@ -495,7 +492,7 @@
     <item row="10" column="4">
      <widget class="QLabel" name="label_9">
       <property name="text">
-       <string>Max. Crown Radius</string>
+       <string>Ma&amp;x. Crown Radius</string>
       </property>
       <property name="buddy">
        <cstring>spnCrownsRadius</cstring>
@@ -554,7 +551,7 @@
     <item row="12" column="4">
      <widget class="QLabel" name="label_15">
       <property name="text">
-       <string>Treetops Database</string>
+       <string>Treetops &amp;Database</string>
       </property>
       <property name="buddy">
        <cstring>txtCrownsTreetopsDatabase</cstring>
@@ -579,46 +576,7 @@
     </item>
    </layout>
   </widget>
-  <zorder>verticalLayoutWidget</zorder>
-  <zorder>layoutWidget</zorder>
-  <zorder>chkEnableSmoothing</zorder>
  </widget>
- <tabstops>
-  <tabstop>chkEnableSmoothing</tabstop>
-  <tabstop>spnSmoothWindow</tabstop>
-  <tabstop>spnSmoothSigma</tabstop>
-  <tabstop>txtSmoothOriginalCHM</tabstop>
-  <tabstop>btnSmoothOriginalCHM</tabstop>
-  <tabstop>txtSmoothSmoothedCHM</tabstop>
-  <tabstop>btnSmoothSmoothedCHM</tabstop>
-  <tabstop>chkEnableTops</tabstop>
-  <tabstop>spnTopsMinHeight</tabstop>
-  <tabstop>spnTopsWindowSize</tabstop>
-  <tabstop>txtTopsOriginalCHM</tabstop>
-  <tabstop>btnTopsOriginalCHM</tabstop>
-  <tabstop>txtTopsSmoothedCHM</tabstop>
-  <tabstop>btnTopsSmoothedCHM</tabstop>
-  <tabstop>txtTopsTreetopsDatabase</tabstop>
-  <tabstop>btnTopsTreetopsDatabase</tabstop>
-  <tabstop>spnTopsTreetopsSRID</tabstop>
-  <tabstop>btnTopsTreetopsSRID</tabstop>
-  <tabstop>chkEnableCrowns</tabstop>
-  <tabstop>spnCrownsHeightFraction</tabstop>
-  <tabstop>spnCrownsRadius</tabstop>
-  <tabstop>spnCrownsMinHeight</tabstop>
-  <tabstop>txtCrownsSmoothedCHM</tabstop>
-  <tabstop>btnCrownsSmoothedCHM</tabstop>
-  <tabstop>txtCrownsTreetopsDatabase</tabstop>
-  <tabstop>btnCrownsTreetopsDatabase</tabstop>
-  <tabstop>txtCrownsCrownsRaster</tabstop>
-  <tabstop>btnCrownsCrownsRaster</tabstop>
-  <tabstop>txtCrownsCrownsDatabase</tabstop>
-  <tabstop>btnCrownsCrownsDatabase</tabstop>
-  <tabstop>btnRun</tabstop>
-  <tabstop>btnCancel</tabstop>
-  <tabstop>btnExit</tabstop>
-  <tabstop>btnHelp</tabstop>
- </tabstops>
  <resources/>
  <connections/>
 </ui>

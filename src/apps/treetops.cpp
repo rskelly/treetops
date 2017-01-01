@@ -9,7 +9,6 @@
 
 #ifdef WITH_GUI
 #include "treetops_ui.hpp"
-#include "ui_util.hpp"
 #endif
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
@@ -73,10 +72,6 @@ int runWithGui(int argc, char **argv) {
 	};
 	TTApplication q(argc, argv);
 	QWidget *w = new QWidget();
-
-	QDir d = QDir::home();
-	geotools::ui::util::getInputFile(w, "CHM for Smoothing", d, "");
-
 	geotools::ui::TreetopsForm f;
 	f.setupUi(w);
 	w->show();
