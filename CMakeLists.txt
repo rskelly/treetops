@@ -15,6 +15,8 @@ set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 set (GEOS_LIBRARY geos_c)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-long-long -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
+
 if (${APPLE})
 
 	if(${WITH_GUI})
@@ -59,7 +61,6 @@ else()
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/home/rob/Qt5.7.0/5.7/gcc_64/lib/cmake/Qt5Widgets/")
 	endif()
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
 	option(CGAL_DISABLE_ROUNDING_MATH_CHECK "Disable rounding math check in CGAL. This permits Valgrind to run." ON)
 endif()
 
