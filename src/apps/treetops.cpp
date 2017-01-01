@@ -71,10 +71,8 @@ int runWithGui(int argc, char **argv) {
 		}
 	};
 	TTApplication q(argc, argv);
-	QWidget *w = new QWidget();
 	geotools::ui::TreetopsForm f;
-	f.setupUi(w);
-	w->show();
+	f.show();
 	return q.exec();
 #else
 	std::cerr << "GUI not enabled." << std::endl;

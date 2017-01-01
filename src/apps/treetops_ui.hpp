@@ -49,16 +49,22 @@ namespace geotools {
 			std::vector<QWidget*> m_topsGroup;
 			std::vector<QWidget*> m_crownsGroup;
 
+			// Check if the program is runnable; set buttons accordingly.
 			void checkRun();
+
+			// Update the view.
 			void updateView();
+
+			// Reset the progress bars and status message.
 			void resetProgress();
+
+			// (Dis|En)able a group of components.
 			void enableGroup(const std::vector<QWidget*> &grp, bool enable);
 
 		public:
 			TreetopsForm(QWidget *p = Q_NULLPTR);
 			void setupUi(QWidget *parent);
 			~TreetopsForm();
-			bool eventFilter(QObject* object, QEvent* event);
 
 		public slots:
 			void doSmoothChanged(bool);

@@ -187,6 +187,8 @@ TreetopsForm::TreetopsForm(QWidget *parent) :
 	m_form(nullptr),
 	m_callbacks(nullptr),
 	m_workerThread(nullptr) {
+	if(!parent)
+		this->setupUi(this);
 }
 
 TreetopsForm::~TreetopsForm() {
@@ -196,14 +198,6 @@ TreetopsForm::~TreetopsForm() {
 		m_workerThread->exit(0);
 		delete m_workerThread;
 	}
-}
-
-bool TreetopsForm::eventFilter(QObject* object, QEvent* event) {
-	if(object == spnTopsTreetopsSRID) {
-		std::cerr <<"x\n";
-		return false;
-	}
-	return true;
 }
 
 void TreetopsForm::enableGroup(const std::vector<QWidget*> &grp, bool enable) {
@@ -293,44 +287,44 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// Connect events
 	// -- section toggles
-	connect(chkEnableSmoothing, SIGNAL(toggled(bool)), SLOT(doSmoothChanged(bool)));
-	connect(chkEnableTops, SIGNAL(toggled(bool)), SLOT(doTopsChanged(bool)));
-	connect(chkEnableCrowns, SIGNAL(toggled(bool)), SLOT(doCrownsChanged(bool)));
+	connect(chkEnableSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
+	connect(chkEnableTops, SIGNAL(toggled(bool)), this, SLOT(doTopsChanged(bool)));
+	connect(chkEnableCrowns, SIGNAL(toggled(bool)), this, SLOT(doCrownsChanged(bool)));
 	// -- smoothing
-	connect(spnSmoothWindow, SIGNAL(valueChanged(int)), SLOT(smoothWindowSizeChanged(int)));
-	connect(spnSmoothSigma, SIGNAL(valueChanged(double)), SLOT(smoothSigmaChanged(double)));
-	connect(txtSmoothOriginalCHM, SIGNAL(textChanged(QString)), SLOT(smoothOriginalCHMChanged(QString)));
-	connect(txtSmoothSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(smoothSmoothedCHMChanged(QString)));
-	connect(btnSmoothOriginalCHM, SIGNAL(clicked()), SLOT(smoothOriginalCHMClicked()));
-	connect(btnSmoothSmoothedCHM, SIGNAL(clicked()), SLOT(smoothSmoothedCHMClicked()));
+	connect(spnSmoothWindow, SIGNAL(valueChanged(int)), this, SLOT(smoothWindowSizeChanged(int)));
+	connect(spnSmoothSigma, SIGNAL(valueChanged(double)), this, SLOT(smoothSigmaChanged(double)));
+	connect(txtSmoothOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothOriginalCHMChanged(QString)));
+	connect(txtSmoothSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothSmoothedCHMChanged(QString)));
+	connect(btnSmoothOriginalCHM, SIGNAL(clicked()), this, SLOT(smoothOriginalCHMClicked()));
+	connect(btnSmoothSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothSmoothedCHMClicked()));
 	// -- tops
-	connect(spnTopsMinHeight, SIGNAL(valueChanged(double)), SLOT(topsMinHeightChanged(double)));
-	connect(spnTopsWindowSize, SIGNAL(valueChanged(int)), SLOT(topsWindowSizeChanged(int)));
-	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), SLOT(topsTreetopsSRIDChanged(int)));
-	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), SLOT(topsOriginalCHMChanged(QString)));
-	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(topsSmoothedCHMChanged(QString)));
-	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), SLOT(topsTreetopsDatabaseChanged(QString)));
-	connect(btnTopsOriginalCHM, SIGNAL(clicked()), SLOT(topsOriginalCHMClicked()));
-	connect(btnTopsSmoothedCHM, SIGNAL(clicked()), SLOT(topsSmoothedCHMClicked()));
-	connect(btnTopsTreetopsDatabase, SIGNAL(clicked()), SLOT(topsTreetopsDatabaseClicked()));
+	connect(spnTopsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(topsMinHeightChanged(double)));
+	connect(spnTopsWindowSize, SIGNAL(valueChanged(int)), this, SLOT(topsWindowSizeChanged(int)));
+	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
+	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(topsOriginalCHMChanged(QString)));
+	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(topsSmoothedCHMChanged(QString)));
+	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(topsTreetopsDatabaseChanged(QString)));
+	connect(btnTopsOriginalCHM, SIGNAL(clicked()), this, SLOT(topsOriginalCHMClicked()));
+	connect(btnTopsSmoothedCHM, SIGNAL(clicked()), this, SLOT(topsSmoothedCHMClicked()));
+	connect(btnTopsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(topsTreetopsDatabaseClicked()));
 	// -- crowns
-	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), SLOT(crownsRadiusChanged(double)));
-	connect(spnCrownsHeightFraction, SIGNAL(valueChanged(double)), SLOT(crownsHeightFractionChanged(double)));
-	connect(spnCrownsMinHeight, SIGNAL(valueChanged(double)), SLOT(crownsMinHeightChanged(double)));
-	connect(txtCrownsSmoothedCHM, SIGNAL(textChanged(QString)), SLOT(crownsSmoothedCHMChanged(QString)));
-	connect(txtCrownsTreetopsDatabase, SIGNAL(textChanged(QString)), SLOT(crownsTreetopsDatabaseChanged(QString)));
-	connect(txtCrownsCrownsRaster, SIGNAL(textChanged(QString)), SLOT(crownsCrownsRasterChanged(QString)));
-	connect(txtCrownsCrownsDatabase, SIGNAL(textChanged(QString)), SLOT(crownsCrownsDatabaseChanged(QString)));
-	connect(btnCrownsSmoothedCHM, SIGNAL(clicked()), SLOT(crownsSmoothedCHMClicked()));
-	connect(btnCrownsTreetopsDatabase, SIGNAL(clicked()), SLOT(crownsTreetopsDatabaseClicked()));
-	connect(btnCrownsCrownsRaster, SIGNAL(clicked()), SLOT(crownsCrownsRasterClicked()));
-	connect(btnCrownsCrownsDatabase, SIGNAL(clicked()), SLOT(crownsCrownsDatabaseClicked()));
-	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), SLOT(topsTreetopsSRIDClicked()));
+	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), this, SLOT(crownsRadiusChanged(double)));
+	connect(spnCrownsHeightFraction, SIGNAL(valueChanged(double)), this, SLOT(crownsHeightFractionChanged(double)));
+	connect(spnCrownsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(crownsMinHeightChanged(double)));
+	connect(txtCrownsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsSmoothedCHMChanged(QString)));
+	connect(txtCrownsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsTreetopsDatabaseChanged(QString)));
+	connect(txtCrownsCrownsRaster, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsRasterChanged(QString)));
+	connect(txtCrownsCrownsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsDatabaseChanged(QString)));
+	connect(btnCrownsSmoothedCHM, SIGNAL(clicked()), this, SLOT(crownsSmoothedCHMClicked()));
+	connect(btnCrownsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(crownsTreetopsDatabaseClicked()));
+	connect(btnCrownsCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsCrownsRasterClicked()));
+	connect(btnCrownsCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsCrownsDatabaseClicked()));
+	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), this, SLOT(topsTreetopsSRIDClicked()));
 	// -- program buttons
-	connect(btnExit, SIGNAL(clicked()), SLOT(exitClicked()));
-	connect(btnRun, SIGNAL(clicked()), SLOT(runClicked()));
-	connect(btnCancel, SIGNAL(clicked()), SLOT(cancelClicked()));
-	connect(btnHelp, SIGNAL(clicked()), SLOT(helpClicked()));
+	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
+	connect(btnRun, SIGNAL(clicked()), this, SLOT(runClicked()));
+	connect(btnCancel, SIGNAL(clicked()), this, SLOT(cancelClicked()));
+	connect(btnHelp, SIGNAL(clicked()), this, SLOT(helpClicked()));
 	// -- callbacks
 	if (m_callbacks) {
 		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
@@ -412,8 +406,7 @@ void TreetopsForm::topsTreetopsDatabaseClicked() {
 	checkRun();
 	if (m_config.crownsTreetopsDatabase.empty()) {
 		m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
-		txtCrownsTreetopsDatabase->setText(
-				qstr(m_config.crownsTreetopsDatabase));
+		txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	}
 }
 
