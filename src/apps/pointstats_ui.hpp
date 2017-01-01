@@ -30,14 +30,15 @@ signals:
 	void statusUpdate(QString) const;
 };
 
-class WorkerThread;
+class PSWorkerThread;
 
 class PointStatsForm: public QWidget, public Ui::PointStatsForm {
-	friend class WorkerThread;Q_OBJECT
+	friend class PSWorkerThread;
+	Q_OBJECT
 private:
 	QWidget *m_form;
 	QDir m_last;
-	WorkerThread *m_workerThread;
+	PSWorkerThread *m_workerThread;
 	geotools::util::Callbacks *m_callbacks;
 	geotools::point::PointStatsConfig m_config;
 	FileList m_fileList;
@@ -85,7 +86,7 @@ public slots:
 	void done();
 };
 
-class WorkerThread: public QThread {
+class PSWorkerThread: public QThread {
 private:
 	geotools::util::Bounds m_bounds;
 	PointStatsForm *m_parent;
