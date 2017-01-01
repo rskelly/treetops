@@ -119,7 +119,7 @@ void MosaicForm::fileListSelectionChanged() {
 }
 
 void MosaicForm::destFileClicked() {
-	QString res = QFileDialog::getSaveFileName(this, "Save File", m_last.path(),
+	QString res = QFileDialog::getSaveFileName(m_form, "Save File", m_last.path(),
 			"GeoTiff (*.tif *.tiff)");
 	m_destFile = res.toStdString();
 	m_last.setPath(res);
