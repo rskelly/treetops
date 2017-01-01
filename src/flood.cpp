@@ -357,7 +357,7 @@ public:
 			uint16_t minc, minr, maxc, maxr;
 			uint32_t area;
 			m_dem.floodFill(seed.col(), seed.row(),
-					op, basins, seed.id(), &minc, &minr, &maxc, &maxr, &area);
+					op, basins, seed.id(), false, &minc, &minr, &maxc, &maxr, &area);
 
 			g_debug("Basin: area: " << area);
 
