@@ -56,7 +56,8 @@ elseif(${WIN32})
 
 else()
 	if(${WITH_GUI})
-		set (CMAKE_PREFIX_PATH /usr/lib/x86_64-linux-gnu/cmake/Qt5)
+		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
+		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/home/rob/Qt5.7.0/5.7/gcc_64/lib/cmake/Qt5Widgets/")
 	endif()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
 	option(CGAL_DISABLE_ROUNDING_MATH_CHECK "Disable rounding math check in CGAL. This permits Valgrind to run." ON)
@@ -82,6 +83,11 @@ if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
 endif()
 
+if(OPENMP_FOUND)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+	set (CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+endif()
+
 project (geotools)
 
 # Configure directories
@@ -105,11 +111,16 @@ target_link_libraries (cellstats gmp CGAL boost_system las geotools)
 add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
 target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
 
+if(${WITH_GUI})
+	add_library (ui_util STATIC src/apps/ui_util.cpp)
+	target_link_libraries(ui_util Qt5::Widgets)
+endif()
+
 
 # Build programs #####################################################################################################
 
-#add_executable (flood src/flood.cpp)
-#target_link_libraries (flood ${GDAL_LIBRARY} raster util geotools)
+add_executable (flood src/flood.cpp)
+target_link_libraries (flood ${GDAL_LIBRARY} raster util geotools)
 
 
 add_executable (rasterstats src/rasterstats.cpp)

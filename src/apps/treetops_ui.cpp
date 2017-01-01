@@ -12,9 +12,6 @@
 #include "crs_selector_ui.hpp"
 #include "ui_util.hpp"
 
-#define VECTOR_PATTERN "Vector Files (*.sqlite *.shp)"
-#define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
-
 using namespace geotools::ui;
 using namespace geotools::ui::util;
 using namespace geotools::treetops;
@@ -24,7 +21,7 @@ QSettings _settings("Treetops", "dijital.ca");
 
 // Load the config settings for this app.
 void _loadConfig(TreetopsConfig &config) {
-	QSettings qs("TreetopsConfig", "GeoTools");
+	QSettings qs("TreetopsConfig", "dijital.ca");
 	config.srid = qs.value(QString("srid"), config.srid).toInt();
 	config.buildIndex =
 			qs.value(QString("buildIndex"), config.buildIndex).toBool();
@@ -72,7 +69,7 @@ void _loadConfig(TreetopsConfig &config) {
 
 // Save the config settings for this app.
 void _saveConfig(TreetopsConfig &config) {
-	QSettings qs("TreetopsConfig", "GeoTools");
+	QSettings qs("TreetopsConfig", "dijital.ca");
 	qs.setValue(QString("srid"), config.srid);
 	qs.setValue(QString("buildIndex"), config.buildIndex);
 	qs.setValue(QString("tableCacheSize"), config.tableCacheSize);
