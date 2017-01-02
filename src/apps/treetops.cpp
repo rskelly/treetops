@@ -69,6 +69,9 @@ int runWithGui(int argc, char **argv) {
 				return false;
 			}
 		}
+		void focusChanged(QWidget *n, QWidget *o) {
+			std::cerr << n << ", " << o << "\n";
+		}
 	};
 	TTApplication q(argc, argv);
 	geotools::ui::TreetopsForm f;

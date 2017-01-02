@@ -181,18 +181,17 @@ TTWorkerThread::~TTWorkerThread(){}
 
 // TreetopsForm implementation
 
-TreetopsForm::TreetopsForm(QWidget *parent) :
-	QWidget(parent),
+TreetopsForm::TreetopsForm() :
+	Ui::TreetopsForm(),
 	m_cancel(false),
 	m_form(nullptr),
 	m_callbacks(nullptr),
 	m_workerThread(nullptr) {
-	if(!parent)
-		this->setupUi(this);
 }
 
 TreetopsForm::~TreetopsForm() {
 	_saveConfig(m_config);
+	delete m_form;
 	delete m_callbacks;
 	if (m_workerThread) {
 		m_workerThread->exit(0);
@@ -200,14 +199,16 @@ TreetopsForm::~TreetopsForm() {
 	}
 }
 
-void TreetopsForm::enableGroup(const std::vector<QWidget*> &grp, bool enable) {
-	for(QWidget *w : grp)
-		w->setEnabled(enable);
+void TreetopsForm::show() {
+	if(!m_form) {
+		m_form = new QWidget();
+		this->setupUi(m_form);
+	}
+	m_form->show();
 }
 
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
-
 	m_form = form;
 
 	_loadConfig(m_config);
@@ -226,49 +227,15 @@ void TreetopsForm::setupUi(QWidget *form) {
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
 
-	// Create virtual groups
-	m_smoothGroup.push_back(spnSmoothWindow);
-	m_smoothGroup.push_back(spnSmoothSigma);
-	m_smoothGroup.push_back(txtSmoothOriginalCHM);
-	m_smoothGroup.push_back(btnSmoothOriginalCHM);
-	m_smoothGroup.push_back(txtSmoothSmoothedCHM);
-	m_smoothGroup.push_back(btnSmoothSmoothedCHM);
-	m_topsGroup.push_back(spnTopsMinHeight);
-	m_topsGroup.push_back(spnTopsWindowSize);
-	m_topsGroup.push_back(txtTopsOriginalCHM);
-	m_topsGroup.push_back(btnTopsOriginalCHM);
-	m_topsGroup.push_back(txtTopsSmoothedCHM);
-	m_topsGroup.push_back(btnTopsSmoothedCHM);
-	m_topsGroup.push_back(txtTopsTreetopsDatabase);
-	m_topsGroup.push_back(btnTopsTreetopsDatabase);
-	m_topsGroup.push_back(spnTopsTreetopsSRID);
-	m_topsGroup.push_back(btnTopsTreetopsSRID);
-	m_crownsGroup.push_back(spnCrownsHeightFraction);
-	m_crownsGroup.push_back(spnCrownsRadius);
-	m_crownsGroup.push_back(spnCrownsMinHeight);
-	m_crownsGroup.push_back(txtCrownsSmoothedCHM);
-	m_crownsGroup.push_back(btnCrownsSmoothedCHM);
-	m_crownsGroup.push_back(txtCrownsTreetopsDatabase);
-	m_crownsGroup.push_back(btnCrownsTreetopsDatabase);
-	m_crownsGroup.push_back(txtCrownsCrownsRaster);
-	m_crownsGroup.push_back(btnCrownsCrownsRaster);
-	m_crownsGroup.push_back(txtCrownsCrownsDatabase);
-	m_crownsGroup.push_back(btnCrownsCrownsDatabase);
-
-	// Set enabled if so configured.
-	enableGroup(m_smoothGroup, m_config.doSmoothing);
-	enableGroup(m_topsGroup, m_config.doTops);
-	enableGroup(m_crownsGroup, m_config.doCrowns);
-
 	// Populate fields with saved or default values.
 	// -- smoothing
-	chkEnableSmoothing->setChecked(m_config.doSmoothing);
+	grpSmoothing->setChecked(m_config.doSmoothing);
 	spnSmoothWindow->setValue(m_config.smoothWindowSize);
 	spnSmoothSigma->setValue(m_config.smoothSigma);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	// -- tops
-	chkEnableTops->setChecked(m_config.doTops);
+	grpTops->setChecked(m_config.doTops);
 	spnTopsMinHeight->setValue(m_config.topsMinHeight);
 	spnTopsWindowSize->setValue(m_config.topsWindowSize);
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
@@ -276,7 +243,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	spnTopsTreetopsSRID->setValue(m_config.srid);
 	// -- crowns
-	chkEnableCrowns->setChecked(m_config.doCrowns);
+	grpCrowns->setChecked(m_config.doCrowns);
 	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
 	spnCrownsRadius->setValue(m_config.crownsRadius);
 	spnCrownsMinHeight->setValue(m_config.crownsMinHeight);
@@ -287,9 +254,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// Connect events
 	// -- section toggles
-	connect(chkEnableSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
-	connect(chkEnableTops, SIGNAL(toggled(bool)), this, SLOT(doTopsChanged(bool)));
-	connect(chkEnableCrowns, SIGNAL(toggled(bool)), this, SLOT(doCrownsChanged(bool)));
+	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
+	connect(grpTops, SIGNAL(toggled(bool)), this, SLOT(doTopsChanged(bool)));
+	connect(grpCrowns, SIGNAL(toggled(bool)), this, SLOT(doCrownsChanged(bool)));
 	// -- smoothing
 	connect(spnSmoothWindow, SIGNAL(valueChanged(int)), this, SLOT(smoothWindowSizeChanged(int)));
 	connect(spnSmoothSigma, SIGNAL(valueChanged(double)), this, SLOT(smoothSigmaChanged(double)));
@@ -436,19 +403,19 @@ void TreetopsForm::crownsCrownsDatabaseClicked() {
 
 void TreetopsForm::doSmoothChanged(bool v) {
 	m_config.doSmoothing = v;
-	enableGroup(m_smoothGroup, v);
+	grpSmoothing->layout()->setEnabled(v);
 	checkRun();
 }
 
 void TreetopsForm::doTopsChanged(bool v) {
 	m_config.doTops = v;
-	enableGroup(m_topsGroup, v);
+	grpTops->layout()->setEnabled(v);
 	checkRun();
 }
 
 void TreetopsForm::doCrownsChanged(bool v) {
 	m_config.doCrowns = v;
-	enableGroup(m_crownsGroup, v);
+	grpCrowns->layout()->setEnabled(v);
 	checkRun();
 }
 

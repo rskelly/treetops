@@ -34,7 +34,7 @@ namespace geotools {
 
 		class TTWorkerThread;
 
-		class TreetopsForm: public QWidget, public Ui::TreetopsForm {
+		class TreetopsForm: public QObject, public Ui::TreetopsForm {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
@@ -45,10 +45,6 @@ namespace geotools {
 			QDir m_last;
 			TreetopsConfig m_config;
 
-			std::vector<QWidget*> m_smoothGroup;
-			std::vector<QWidget*> m_topsGroup;
-			std::vector<QWidget*> m_crownsGroup;
-
 			// Check if the program is runnable; set buttons accordingly.
 			void checkRun();
 
@@ -58,13 +54,12 @@ namespace geotools {
 			// Reset the progress bars and status message.
 			void resetProgress();
 
-			// (Dis|En)able a group of components.
-			void enableGroup(const std::vector<QWidget*> &grp, bool enable);
 
 		public:
-			TreetopsForm(QWidget *p = Q_NULLPTR);
+			TreetopsForm();
 			void setupUi(QWidget *parent);
-			~TreetopsForm();
+			void show();
+			virtual ~TreetopsForm();
 
 		public slots:
 			void doSmoothChanged(bool);
