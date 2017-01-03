@@ -17,8 +17,6 @@ using namespace geotools::ui::util;
 using namespace geotools::treetops;
 using namespace geotools::treetops::config;
 
-// Jira testc
-
 QSettings _settings("Treetops", "dijital.ca");
 
 // Load the config settings for this app.
