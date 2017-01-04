@@ -15,7 +15,7 @@ set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 set (GEOS_LIBRARY geos_c)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-long-long -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
 
 if (${APPLE})
 
@@ -29,6 +29,7 @@ if (${APPLE})
 	set (CMAKE_C_COMPILER /usr/local/bin/clang-omp CACHE STRING "C compiler" FORCE)
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
 	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 
 elseif(${WIN32})
 	
@@ -36,7 +37,7 @@ elseif(${WIN32})
 	# 1) download and install vs 2015
 	# 2) use web installer to install qt5
 	# 3) download prebuild boost for vs msvc-14 -- build using bootstrap, b2
-	# 3) download gisinternals lib zip for msvc-12 -- unzip to C:\opt
+	# 3) download gisinternals lib and headers zips for msvc-12 -- unzip to C:\opt
 	# 4) download and install cmake
 	# 5) download and install git
 	# --- 6) checkout liblas from git
@@ -49,19 +50,20 @@ elseif(${WIN32})
 	# Configure boost.
 	set (Boost_COMPILER -vc140)
 	set (Boost_NO_SYSTEM_PATHS  ON)
-	set (BOOST_INCLUDEDIR "C:\\boost_1_63_0")
-	set (BOOST_LIBRARYDIR "C:\\boost_1_63_0\\lib64-msvc-14.0")
-	
+	set (BOOST_INCLUDEDIR "E:\\boost_1_63_0")
+	set (BOOST_LIBRARYDIR "E:\\boost_1_63_0\\lib64-msvc-14.0")
 	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};C:\\Qt\\5.7\\msvc2015_64\\lib\\cmake\\Qt5Widgets")
-	set (LIB_PATH "C:\\opt\\lib")
-	set (INC_PATH "C:\\opt\\include")
-
+	set (LIB_PATH "E:\\opt\\lib")
+	set (INC_PATH "E:\\opt\\include")
+	set (GDAL_INCLUDE_DIR "E:\\opt\\include")
+	set (GDAL_LIBRARY "E:\\opt\\lib\\gdal_i.lib")
 else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/home/rob/Qt5.7.0/5.7/gcc_64/lib/cmake/Qt5Widgets/")
 	endif()
 	option(CGAL_DISABLE_ROUNDING_MATH_CHECK "Disable rounding math check in CGAL. This permits Valgrind to run." ON)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 endif()
 
 enable_language(C)
