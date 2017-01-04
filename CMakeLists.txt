@@ -146,7 +146,7 @@ add_library (treetops SHARED src/treetops.cpp)
 target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools)
 
 if(${WITH_GUI})
-	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp src/apps/crs_selector_ui.cpp)
+	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp src/apps/crs_selector_ui.cpp src/apps/tops_thresholds_ui.cpp)
 	target_link_libraries (treetops-app PUBLIC treetops Qt5::Gui Qt5::Core Qt5::Widgets ui_util)
 else()
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.hpp)

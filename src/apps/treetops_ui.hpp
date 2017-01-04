@@ -72,7 +72,7 @@ namespace geotools {
 			void smoothSmoothedCHMChanged(QString);
 
 			void topsMinHeightChanged(double);
-			void topsWindowSizeChanged(int);
+			void topsThresholdsChanged(QString);
 			void topsOriginalCHMChanged(QString);
 			void topsSmoothedCHMChanged(QString);
 			void topsTreetopsDatabaseChanged(QString);
@@ -95,6 +95,7 @@ namespace geotools {
 			void smoothOriginalCHMClicked();
 			void smoothSmoothedCHMClicked();
 
+			void topsThresholdsClicked();
 			void topsOriginalCHMClicked();
 			void topsSmoothedCHMClicked();
 			void topsTreetopsDatabaseClicked();

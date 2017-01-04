@@ -44,6 +44,8 @@ namespace geotools {
 			// Convenience: open an output file dialog and return the string.
 			std::string getOutputFile(QWidget *form, const std::string &title, QDir &path,
 					const std::string &filter);
+
+			void getThresholds(QWidget *form, std::map<float, uint8_t> &thresholds);
 		}
 
 	}

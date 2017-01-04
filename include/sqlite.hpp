@@ -143,8 +143,8 @@ namespace geotools {
                 g_debug("done setCacheSize " << size);
             }
 
-            void addPoints(std::vector<std::unique_ptr<geotools::util::Point> > &points) {
-                for (const std::unique_ptr<geotools::util::Point> &pt : points)
+            void addPoints(std::vector<geotools::util::Point*> &points) {
+                for (const geotools::util::Point *pt : points)
                     addPoint(pt->x, pt->y, pt->z, pt->fields);
             }
 

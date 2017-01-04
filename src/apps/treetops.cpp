@@ -30,8 +30,9 @@ void usage() {
 			<< "                    LiDAR-derived canopy height model.\n"
 			<< " -tm <float>        The minimum height of pixels to consider for selection as a \n"
 			<< "                    tree top. Default 4.\n"
-			<< " -tw <int>          Window size. Will be bumped up to the next odd value if \n"
-			<< "                    even given. Minimum 3.\n\n"
+			<< " -tt <float int>    Threshold. A space-delimited pair consisting of a float and a positive\n"
+			<< "                    byte representing a maximum height and window size for locating tops.\n"
+			<< "                    Window size will be bumped up to the next odd value; minumum 3.\n"
 			<< " -td <filename>     The treetop vector file. An sqlite file.\n\n"
 
 			<< " -cs <filename>     The input raster for crown delineation; a (smoothed)\n"
@@ -115,8 +116,8 @@ int main(int argc, char **argv) {
 			} else if (arg == "-tm") {
 				config.topsMinHeight = atof(argv[++i]);
 				config.doTops = true;
-			} else if (arg == "-tw") {
-				config.topsWindowSize = atoi(argv[++i]);
+			} else if (arg == "-tt") {
+				config.topsThresholds[atof(argv[++i])] = atoi(argv[++i]);
 				config.doTops = true;
 			} else if (arg == "-td") {
 				config.topsTreetopsDatabase = argv[++i];

@@ -27,6 +27,8 @@
 
 #include <omp.h>
 
+#include <boost/algorithm/string/join.hpp>
+
 #include "geotools.hpp"
 #include "sqlite.hpp"
 #include "util.hpp"
@@ -68,28 +70,24 @@ namespace geotools {
 				}
 			};
 
-			// Returns true if the pixel at the center of the given raster is
-			// the maximum value in the raster.
-			bool isMaxCenter(Grid<float> &raster, int col, int row, int window,
-				double *max) {
-				int cc = col + window / 2;
-				int cr = row + window / 2;
-				float nd = raster.nodata();
-				if (raster.get(cc, cr) == nd)
-					return false;
+			// Returns true if the pixel at the center of the given circular window is
+			// the maximum value in the window.
+			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max) {
 				*max = 0;
 				int mc = 0, mr = 0;
-				for (int r = row; r < row + window; ++r) {
-					for (int c = col; c < col + window; ++c) {
-						float v = raster.get(c, r);
-						if (v != nd && v > *max) {
+				float v;
+				float d = g_sq((float) window / 2);
+				for (int r = row - window / 2; r < row + window / 2; ++r) {
+					for (int c = col - window / 2; c < col + window / 2; ++c) {
+						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
+						if (d0 <= d && (v = raster.get(c, r)) > *max) {
 							*max = v;
 							mc = c;
 							mr = r;
 						}
 					}
 				}
-				return mc == cc && mr == cr;
+				return mc == col && mr == row;
 			}
 
 			// Returns the max value of pixels in the kernel.
@@ -97,9 +95,11 @@ namespace geotools {
 				double *max, uint16_t *mc, uint16_t *mr) {
 				*max = G_DBL_MAX_NEG;
 				float v;
-				for (int r = row; r < row + window; ++r) {
-					for (int c = col; c < col + window; ++c) {
-						if ((v = raster.get(c, r)) > *max) {
+				float d = g_sq((float) window / 2);
+				for (int r = row - window / 2; r < row + window / 2; ++r) {
+					for (int c = col - window / 2; c < col + window / 2; ++c) {
+						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
+						if (d0 <= d && (v = raster.get(c, r)) > *max) {
 							*max = v;
 							*mc = c;
 							*mr = r;
@@ -108,26 +108,28 @@ namespace geotools {
 				}
 			}
 
-			void savePoints(std::map<uint64_t, std::unique_ptr<Top> > &tops, SQLite &db, bool *cancel) {
-				uint64_t batch = db.maxAddPointCount();
-				std::vector<std::unique_ptr<Point> > points;
-				for (const auto &it : tops) {
-
-					const std::unique_ptr<Top> &t = it.second;
-					std::map<std::string, std::string> fields;
-					fields["id"] = std::to_string(t->id);
-					std::unique_ptr<Point> pt(new Point(t->x, t->y, t->uz, fields));
-					points.push_back(std::move(pt));
-
-					if (points.size() % batch == 0 || points.size() >= tops.size()) {
-						if (*cancel)
-							break;
-						db.begin();
-						db.addPoints(points);
-						db.commit();
-						points.clear();
+			// Set all cells in the circular kernel to zero except the center.
+			void zeroKernel(Grid<uint8_t> &raster, int col, int row, int window) {
+				float d = g_sq((float) window / 2);
+				for (int r = row - window / 2; r < row + window / 2; ++r) {
+					for (int c = col - window / 2; c < col + window / 2; ++c) {
+						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
+						if (d0 <= d && c != col && r != row)
+							raster.set(c, r, 0);
 					}
 				}
+			}
+
+			void savePoints(std::list<Top*> &tops, SQLite &db) {
+				std::vector<Point*> points(tops.size());
+				for (const Top *t : tops) {
+					std::map<std::string, std::string> fields;
+					fields["id"] = std::to_string(t->id);
+					points.push_back(new Point(t->x, t->y, t->uz, fields));
+				}
+				db.begin();
+				db.addPoints(points);
+				db.commit();
 			}
 
 		} // util
@@ -149,8 +151,7 @@ TreetopsConfig::TreetopsConfig() :
 	smoothWindowSize(3),
 	smoothSigma(0.8),
 	doTops(false),
-	topsMinHeight(4.0),
-	topsWindowSize(7),
+	topsMinHeight(0.0),
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
@@ -179,8 +180,28 @@ void TreetopsConfig::checkTops() const {
 		g_argerr("Tops: Smoothed CHM filename must not be empty.");
 	if (topsTreetopsDatabase.empty())
 		g_argerr("Tops: Treetops database filename must not be empty.");
-	if (topsWindowSize % 2 == 0 || topsWindowSize < 3)
-		g_argerr("Tops: Treetops window size must be an odd number >= 3. " << topsWindowSize << " given.");
+	if (topsThresholds.empty()) {
+		g_argerr("Tops: At least one threshold must be configured.");
+	} else {
+		double lastHeight;
+		uint8_t lastWindow = 0;
+		for(const auto &it : topsThresholds) {
+			if(it.first < 0.0)
+				g_argerr("Threshold heights below zero are not allowed.");
+			if(it.second % 2 == 0 || it.second < 3)
+				g_argerr("Window size must be odd and >= 3.");
+			if(lastWindow) {
+				if(lastWindow >= it.second)
+					g_argerr("Each window must be larger than the previous one.");
+				if(lastHeight >= it.first)
+					g_argerr("Each height must be larger than the previous one.");
+			}
+			lastWindow = it.second;
+			lastHeight = it.first;
+		}
+	}
+	if(topsMinHeight >= topsThresholds.begin()->first)
+		g_argerr("The minimum height must be lower than the lowest threshold.");
 }
 
 void TreetopsConfig::checkCrowns() const {
@@ -221,6 +242,27 @@ bool TreetopsConfig::canRun() const {
 	return false;
 }
 
+std::string TreetopsConfig::thresholds() const {
+	std::vector<std::string> p(topsThresholds.size() * 2);
+	for(const auto &it : topsThresholds) {
+		p.push_back(std::to_string(it.first));
+		p.push_back(std::to_string(it.second));
+	}
+	return boost::algorithm::join(p, ",");
+}
+
+void TreetopsConfig::parseThresholds(const std::string &str) {
+	std::stringstream ss(str);
+	std::string item;
+	topsThresholds.clear();
+	while(std::getline(ss, item, ',')) {
+		float height = atof(item.c_str());
+		if(!std::getline(ss, item, ','))
+			break;
+		uint8_t window = atoi(item.c_str());
+		topsThresholds[height] = window;
+	}
+}
 
 // Top implementation
 
@@ -292,64 +334,78 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
-	std::atomic<uint64_t> topCount(0);
-	std::atomic<uint64_t> curTop(0);
-	std::atomic<uint64_t> topId(0);
-	std::map<uint64_t, std::unique_ptr<Top> > tops;
+	MemRaster<uint8_t> topsGrid(original.cols(), original.rows());
+	topsGrid.fill(0);
 
-	MemRaster<float> blk(original.cols(), original.rows(), true);
-	blk.setNodata(original.nodata());
-	blk.writeBlock(smoothed);
+	for(const auto &it : config.topsThresholds) {
 
-	for (int32_t row = 0; row < blk.rows() - config.topsWindowSize + 1; ++row) {
-		if (*cancel)
-			break;
-		for (int32_t col = 0; col < blk.cols() - config.topsWindowSize + 1; ++col) {
+		uint8_t window = it.second;
+		double threshold = it.first;
 
-			int32_t r = row + config.topsWindowSize / 2;
-			int32_t c = col + config.topsWindowSize / 2;
-			double max;
+		for (int32_t row = window / 2; row < smoothed.rows() - window / 2; ++row) {
+			if (*cancel)
+				break;
+			for (int32_t col = window / 2; col < smoothed.cols() - window / 2; ++col) {
 
-			if (blk.get(c, r) >= config.topsMinHeight
-					&& isMaxCenter(blk, col, row, config.topsWindowSize, &max)) {
+				double v = smoothed.get(col, row);
+				if(v < config.topsMinHeight || v > threshold)
+					continue;
 
-				// Compute the id based on the cell.
-				uint64_t id = ((uint64_t) c << 32) | r;
-				// Get the original height from the unsmoothed raster.
-				double umax;
-				uint16_t mc, mr;
-				getKernelMax(original, col, row, config.topsWindowSize, &umax, &mc, &mr);
+				double max;
 
-				std::unique_ptr<Top> pt(
-					new Top(++topId, 
-						original.toCentroidX(mc), // center of pixel
-						original.toCentroidY(mr), 
-						max, umax, mc, mr)
-				);
-				tops[id] = std::move(pt);
+				if (isMaxCenter(smoothed, col, row, window, &max)) {
+
+					topsGrid.set(col, row, window);
+					zeroKernel(topsGrid, col, row, window);
+
+				}
 			}
 		}
+	}
 
-		if (m_callbacks)
-			m_callbacks->stepCallback(0.02f + (float) row / original.rows() * 0.48f);
+	std::list<Top*> tops;
+	uint64_t topId = 0;
+
+	for(int32_t row = 0; row < topsGrid.rows(); ++row) {
+		for(int32_t col = 0; col < topsGrid.cols(); ++col) {
+
+			uint8_t window = topsGrid.get(col, row);
+			if(!window)
+				continue;
+
+			// Get the original height from the unsmoothed raster.
+			double smax, omax;
+			uint16_t mc, mr;
+			getKernelMax(smoothed, col, row, window, &smax, &mc, &mr);
+			getKernelMax(original, col, row, window, &omax, &mc, &mr);
+
+			Top * pt = new Top(++topId,
+				original.toCentroidX(mc), // center of pixel
+				original.toCentroidY(mr),
+				omax, smax, mc, mr
+			);
+			tops.push_back(pt);
+		}
 
 		if (tops.size() >= 1000) {
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Inserting points...");
 
-			savePoints(tops, db, cancel);
+			savePoints(tops, db);
 			tops.clear();
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Processing...");
 		}
+
 	}
+
 
 	if (m_callbacks)
 		m_callbacks->statusCallback("Inserting points...");
 
-	savePoints(tops, db, cancel);
+	savePoints(tops, db);
 	tops.clear();
 
 	if (m_callbacks)
@@ -554,4 +610,5 @@ void Treetops:: merge(const TreetopsConfig &config, bool *cancel) {
 
 
 }
+
 

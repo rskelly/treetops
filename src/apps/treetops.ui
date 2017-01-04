@@ -132,7 +132,7 @@
         <item row="1" column="0">
          <widget class="QLabel" name="label_11">
           <property name="text">
-           <string>Original &amp;CHM</string>
+           <string>Or&amp;iginal CHM</string>
           </property>
           <property name="buddy">
            <cstring>txtSmoothOriginalCHM</cstring>
@@ -175,40 +175,7 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QGridLayout" name="topsGrid">
-        <item row="2" column="3">
-         <widget class="QLabel" name="label_17">
-          <property name="text">
-           <string>&amp;Treetops SRID</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsTreetopsSRID</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="5">
-         <widget class="QToolButton" name="btnTopsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="txtTopsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
+        <item row="2" column="2">
          <widget class="QToolButton" name="btnTopsOriginalCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -221,30 +188,17 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>&amp;Min. Top Height</string>
+           <string>&amp;Min. Height</string>
           </property>
           <property name="buddy">
            <cstring>spnTopsMinHeight</cstring>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="txtTopsOriginalCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="4">
-         <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
-        </item>
-        <item row="2" column="2">
+        <item row="3" column="2">
          <widget class="QToolButton" name="btnTopsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -257,7 +211,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1" colspan="2">
+        <item row="1" column="1" colspan="2">
          <widget class="QDoubleSpinBox" name="spnTopsMinHeight">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -273,33 +227,30 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>W&amp;indow Size</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsWindowSize</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4" colspan="2">
-         <widget class="QSpinBox" name="spnTopsWindowSize">
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="txtTopsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
-          <property name="minimum">
-           <number>3</number>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="txtTopsOriginalCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
           </property>
-          <property name="value">
-           <number>7</number>
+          <property name="acceptDrops">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="label_6">
           <property name="text">
            <string>&amp;Treetops Database</string>
@@ -309,17 +260,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Origina&amp;l CHM</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtTopsOriginalCHM</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="4">
+        <item row="3" column="4">
          <widget class="QSpinBox" name="spnTopsTreetopsSRID">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -335,7 +276,17 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="5">
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Origina&amp;l CHM</string>
+          </property>
+          <property name="buddy">
+           <cstring>txtTopsOriginalCHM</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="5">
          <widget class="QToolButton" name="btnTopsTreetopsSRID">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -348,13 +299,53 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="3">
+        <item row="2" column="3">
          <widget class="QLabel" name="label_16">
           <property name="text">
            <string>S&amp;moothed CHM</string>
           </property>
           <property name="buddy">
            <cstring>txtTopsSmoothedCHM</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QLabel" name="label_17">
+          <property name="text">
+           <string>&amp;Treetops SRID</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnTopsTreetopsSRID</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="5">
+         <widget class="QToolButton" name="btnTopsSmoothedCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_18">
+          <property name="text">
+           <string>Thresholds</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="4">
+         <widget class="QLineEdit" name="txtTopsThresholds"/>
+        </item>
+        <item row="0" column="5">
+         <widget class="QToolButton" name="btnTopsThresholds">
+          <property name="text">
+           <string>...</string>
           </property>
          </widget>
         </item>
@@ -732,7 +723,6 @@
   <tabstop>btnSmoothSmoothedCHM</tabstop>
   <tabstop>grpTops</tabstop>
   <tabstop>spnTopsMinHeight</tabstop>
-  <tabstop>spnTopsWindowSize</tabstop>
   <tabstop>txtTopsOriginalCHM</tabstop>
   <tabstop>btnTopsOriginalCHM</tabstop>
   <tabstop>txtTopsSmoothedCHM</tabstop>
