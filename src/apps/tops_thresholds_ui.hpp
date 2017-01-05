@@ -28,6 +28,11 @@ public:
 	uint8_t window() const;
 	bool operator<(const TopsThresholdItem &other) const;
 
+public slots:
+	void itemDeleteClicked();
+	void itemWindowChanged(int);
+	void itemHeightChanged(double);
+
 signals:
 	void itemUpdate(TopsThresholdItem *item);
 	void itemDelete(TopsThresholdItem *item);
@@ -50,6 +55,7 @@ public:
 	std::map<float, uint8_t> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
+	~TopsThresholdsForm();
 
 public slots:
 	void btnAddItemClicked();

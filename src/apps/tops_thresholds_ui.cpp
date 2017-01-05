@@ -9,6 +9,7 @@
 
 TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	QWidget(parent) {
+	setFixedHeight(30);
 	QGridLayout *layout = new QGridLayout();
 	spnHeight = new QDoubleSpinBox();
 	spnHeight->setDecimals(2);
@@ -19,12 +20,26 @@ TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	spnWindow->setMaximum(99);
 	btnDelete = new QToolButton();
 	btnDelete->setText("X");
-	layout->addWidget(spnHeight);
-	layout->addWidget(spnWindow);
-	layout->addWidget(btnDelete);
-	layout->setGeometry(QRect(0, 0, 100, 30));
+	layout->setMargin(0);
+	layout->addWidget(spnHeight, 0, 0);
+	layout->addWidget(spnWindow, 0, 1);
+	layout->addWidget(btnDelete, 0, 2);
 	setLayout(layout);
-	setGeometry(QRect(0, 0, 100, 30));
+	connect(btnDelete, SIGNAL(clicked()), this, SLOT(itemDeleteClicked()));
+	connect(spnHeight, SIGNAL(valueChanged(double)), this, SLOT(itemHeightChanged(double)));
+	connect(spnWindow, SIGNAL(valueChanged(int)), this, SLOT(itemWindowChanged(int)));
+}
+
+void TopsThresholdItem::itemDeleteClicked() {
+	emit itemDelete(this);
+}
+
+void TopsThresholdItem::itemHeightChanged(double) {
+	emit itemUpdate(this);
+}
+
+void TopsThresholdItem::itemWindowChanged(int) {
+	emit itemUpdate(this);
 }
 
 void TopsThresholdItem::set(float height, uint8_t window) {
@@ -49,14 +64,19 @@ TopsThresholdsForm::TopsThresholdsForm() :
 	m_form(nullptr),
 	scrollLayout(nullptr),
 	m_confirm(false) {
+	this->setupUi(new QWidget());
+}
+
+TopsThresholdsForm::~TopsThresholdsForm() {
+	delete m_form;
 }
 
 void TopsThresholdsForm::setupUi(QWidget *form) {
 	Ui::TopsThresholdsForm::setupUi(form);
 	m_form = form;
 	scrollLayout = new QVBoxLayout();
+	scrollLayout->addItem(new QSpacerItem(1,1, QSizePolicy::Expanding, QSizePolicy::Expanding));
 	contents->setLayout(scrollLayout);
-	contents->setGeometry(QRect(0, 0, 200, 200));
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(btnExitClicked()));
 	connect(btnHelp, SIGNAL(clicked()), this, SLOT(btnHelpClicked()));
 	connect(btnCancel, SIGNAL(clicked()), this, SLOT(btnCancelClicked()));
@@ -65,22 +85,26 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 
 void TopsThresholdsForm::setThresholds(const std::map<float, uint8_t> &thresholds) {
 	m_thresholds = thresholds;
-	for(TopsThresholdItem *item : m_items)
-		scrollLayout->removeWidget(item);
-	m_items.clear();
-	for(const auto &it : thresholds) {
-		TopsThresholdItem *item = new TopsThresholdItem(m_form);
-		item->set(it.first, it.second);
-		m_items.push_back(item);
-		scrollLayout->addWidget(item);
-		connect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
-		connect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
-	}
 	sortItems();
 }
 
 void TopsThresholdsForm::sortItems() {
-
+	for(TopsThresholdItem *item : m_items) {
+		scrollLayout->removeWidget(item);
+		disconnect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
+		disconnect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
+		delete item;
+	}
+	m_items.clear();
+	int idx = 0;
+	for(const auto &it : m_thresholds) {
+		TopsThresholdItem *item = new TopsThresholdItem(m_form);
+		item->set(it.first, it.second);
+		m_items.push_back(item);
+		scrollLayout->insertWidget(idx++, item);
+		connect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
+		connect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
+	}
 }
 
 std::map<float, uint8_t> TopsThresholdsForm::thresholds() const {
@@ -90,14 +114,17 @@ std::map<float, uint8_t> TopsThresholdsForm::thresholds() const {
 void TopsThresholdsForm::btnAddItemClicked() {
 	TopsThresholdItem *item = new TopsThresholdItem(m_form);
 	m_items.push_back(item);
-	scrollLayout->addWidget(item);
+	scrollLayout->insertWidget(0, item);
 	connect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
 	connect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
 }
 
 void TopsThresholdsForm::itemDelete(TopsThresholdItem *item) {
 	m_items.remove(item);
+	disconnect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
+	disconnect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
 	scrollLayout->removeWidget(item);
+	delete item;
 }
 
 void TopsThresholdsForm::itemUpdate(TopsThresholdItem *item) {
@@ -105,6 +132,7 @@ void TopsThresholdsForm::itemUpdate(TopsThresholdItem *item) {
 	for(const TopsThresholdItem &it : m_items)
 		m_thresholds[it.height()] = it.window();
 	sortItems();
+	btnExit->setEnabled(true);
 }
 
 void TopsThresholdsForm::btnHelpClicked() {
