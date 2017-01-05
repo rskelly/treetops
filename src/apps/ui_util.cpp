@@ -37,18 +37,18 @@ void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, 
 	err.exec();
 }
 
-std::string geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
-		const std::string &filter) {
-	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(),
-							qstr(filter));
-	return res.toStdString();
+void geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
+		const std::string &filter, std::string &filename) {
+	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
+	if(res)
+		filename = res.toStdString();
 }
 
-std::string geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
-		const std::string &filter) {
-	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(),
-			qstr(filter));
-	return res.toStdString();
+void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
+		const std::string &filter, std::string &filename) {
+	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
+	if(res)
+		filename = res.toStdString();
 }
 
 void geotools::ui::util::getThresholds(QWidget *form, std::map<float, uint8_t> &thresholds) {

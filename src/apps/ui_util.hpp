@@ -38,12 +38,12 @@ namespace geotools {
 				const std::string &detail = "");
 
 			// Convenience: open an input file dialog and return the string.
-			std::string getInputFile(QWidget *form, const std::string &title, QDir &path,
-					const std::string &filter);
+			void getInputFile(QWidget *form, const std::string &title, QDir &path,
+					const std::string &filter, std::string &filename);
 
 			// Convenience: open an output file dialog and return the string.
-			std::string getOutputFile(QWidget *form, const std::string &title, QDir &path,
-					const std::string &filter);
+			void getOutputFile(QWidget *form, const std::string &title, QDir &path,
+					const std::string &filter, std::string &filename);
 
 			void getThresholds(QWidget *form, std::map<float, uint8_t> &thresholds);
 		}
