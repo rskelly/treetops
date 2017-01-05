@@ -53,15 +53,12 @@ namespace geotools {
                 // If true, treetop location will be performed.
                 bool doTops;
 
-                // For pixels equal or below each height (float) use the given
+                // For pixels equal or above each height (float) use the given
                 // window size to detect maxima. Previously-detected maxima will be
                 // obliterated if a new maximum is found whose window encompases
                 // the previous one.
                 std::map<float, uint8_t> topsThresholds;
 
-                // Minimum height of pixels to consider. Must be lower than the lowest
-                // threshold.
-                float topsMinHeight;
 
                 std::string topsOriginalCHM;
                 std::string topsSmoothedCHM;

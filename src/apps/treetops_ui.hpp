@@ -71,7 +71,6 @@ namespace geotools {
 			void smoothOriginalCHMChanged(QString);
 			void smoothSmoothedCHMChanged(QString);
 
-			void topsMinHeightChanged(double);
 			void topsThresholdsChanged(QString);
 			void topsOriginalCHMChanged(QString);
 			void topsSmoothedCHMChanged(QString);

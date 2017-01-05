@@ -122,11 +122,14 @@ namespace geotools {
 
 			void savePoints(std::list<Top*> &tops, SQLite &db) {
 				std::vector<Point*> points(tops.size());
-				for (const Top *t : tops) {
+				int i = 0;
+				for (Top *t : tops) {
 					std::map<std::string, std::string> fields;
 					fields["id"] = std::to_string(t->id);
-					points.push_back(new Point(t->x, t->y, t->uz, fields));
+					points[i++] = new Point(t->x, t->y, t->uz, fields);
+					delete t;
 				}
+				tops.clear();
 				db.begin();
 				db.addPoints(points);
 				db.commit();
@@ -151,7 +154,6 @@ TreetopsConfig::TreetopsConfig() :
 	smoothWindowSize(3),
 	smoothSigma(0.8),
 	doTops(false),
-	topsMinHeight(0.0),
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
@@ -200,8 +202,6 @@ void TreetopsConfig::checkTops() const {
 			lastHeight = it.first;
 		}
 	}
-	if(topsMinHeight >= topsThresholds.begin()->first)
-		g_argerr("The minimum height must be lower than the lowest threshold.");
 }
 
 void TreetopsConfig::checkCrowns() const {
@@ -243,10 +243,11 @@ bool TreetopsConfig::canRun() const {
 }
 
 std::string TreetopsConfig::thresholds() const {
-	std::vector<std::string> p;
+	std::vector<std::string> p(topsThresholds.size() * 2);
+	int i = 0;
 	for(const auto &it : topsThresholds) {
-		p.push_back(std::to_string(it.first));
-		p.push_back(std::to_string(it.second));
+		p[i++] = std::to_string(it.first);
+		p[i++] = std::to_string(it.second);
 	}
 	return boost::algorithm::join(p, ",");
 }
@@ -350,7 +351,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			for (int32_t col = window / 2; col < smoothed.cols() - window / 2; ++col) {
 
 				double v = smoothed.get(col, row);
-				if(v < config.topsMinHeight || v > threshold)
+				if(v < threshold)
 					continue;
 
 				double max;
@@ -389,13 +390,12 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			tops.push_back(pt);
 		}
 
-		if (tops.size() >= 1000) {
+		if (row == topsGrid.rows() - 1 || tops.size() >= 1000) {
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Inserting points...");
 
 			savePoints(tops, db);
-			tops.clear();
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Processing...");
@@ -403,12 +403,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	}
 
-
-	if (m_callbacks)
-		m_callbacks->statusCallback("Inserting points...");
-
-	savePoints(tops, db);
-	tops.clear();
 
 	if (m_callbacks)
 		m_callbacks->stepCallback(0.99f);

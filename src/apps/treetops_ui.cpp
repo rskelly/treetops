@@ -40,8 +40,6 @@ void _loadConfig(TreetopsConfig &config) {
 	config.smoothSmoothedCHM = qs.value(QString("smoothSmoothedCHM"),
 			qstr(config.smoothSmoothedCHM)).toString().toStdString();
 	config.doTops = qs.value(QString("doTops"), config.doTops).toBool();
-	config.topsMinHeight = qs.value(QString("topsMinHeight"),
-			config.topsMinHeight).toDouble();
 	config.parseThresholds(qs.value(QString("topsThresholds"), "").toString().toStdString());
 	config.topsOriginalCHM = qs.value(QString("topsOriginalCHM"),
 			qstr(config.topsOriginalCHM)).toString().toStdString();
@@ -79,7 +77,6 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue(QString("smoothOriginalCHM"), qstr(config.smoothOriginalCHM));
 	qs.setValue(QString("smoothSmoothedCHM"), qstr(config.smoothSmoothedCHM));
 	qs.setValue(QString("doTops"), config.doTops);
-	qs.setValue(QString("topsMinHeight"), config.topsMinHeight);
 	qs.setValue(QString("topsThresholds"), qstr(config.thresholds()));
 	qs.setValue(QString("topsOriginalCHM"), qstr(config.topsOriginalCHM));
 	qs.setValue(QString("topsSmoothedCHM"), qstr(config.topsSmoothedCHM));
@@ -235,7 +232,6 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	// -- tops
 	grpTops->setChecked(m_config.doTops);
-	spnTopsMinHeight->setValue(m_config.topsMinHeight);
 	txtTopsThresholds->setText(qstr(m_config.thresholds()));
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
@@ -264,7 +260,6 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnSmoothOriginalCHM, SIGNAL(clicked()), this, SLOT(smoothOriginalCHMClicked()));
 	connect(btnSmoothSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothSmoothedCHMClicked()));
 	// -- tops
-	connect(spnTopsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(topsMinHeightChanged(double)));
 	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
 	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
 	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(topsOriginalCHMChanged(QString)));
@@ -447,11 +442,6 @@ void TreetopsForm::crownsCrownsRasterChanged(QString file) {
 
 void TreetopsForm::crownsCrownsDatabaseChanged(QString file) {
 	m_config.crownsCrownsDatabase = file.toStdString();
-	checkRun();
-}
-
-void TreetopsForm::topsMinHeightChanged(double height) {
-	m_config.topsMinHeight = height;
 	checkRun();
 }
 
