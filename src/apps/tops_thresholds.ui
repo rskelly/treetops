@@ -87,7 +87,7 @@
      <item>
       <widget class="QPushButton" name="btnCancel">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="mouseTracking">
         <bool>false</bool>
@@ -102,6 +102,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="btnExit">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="mouseTracking">
         <bool>false</bool>
        </property>
@@ -109,7 +112,7 @@
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>Exit</string>
+        <string>Confirm</string>
        </property>
       </widget>
      </item>

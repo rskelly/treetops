@@ -56,24 +56,23 @@ void usage() {
 
 int runWithGui(int argc, char **argv) {
 #ifdef WITH_GUI
+
 	class TTApplication : public QApplication {
 	public:
 		TTApplication(int argc, char **argv) : QApplication(argc, argv) {}
 		bool notify(QObject *receiver, QEvent *e) {
 			try {
-				return receiver->event(e);
+				return QApplication::notify(receiver, e);
 			} catch(const std::exception &ex) {
-				QMessageBox err;//((QWidget *) this);
+				QMessageBox err;
 				err.setText("Error");
 				err.setInformativeText(QString(ex.what()));
 				err.exec();
 				return false;
 			}
 		}
-		void focusChanged(QWidget *n, QWidget *o) {
-			std::cerr << n << ", " << o << "\n";
-		}
 	};
+
 	TTApplication q(argc, argv);
 	geotools::ui::TreetopsForm f;
 	f.show();
@@ -117,7 +116,11 @@ int main(int argc, char **argv) {
 				config.topsMinHeight = atof(argv[++i]);
 				config.doTops = true;
 			} else if (arg == "-tt") {
-				config.topsThresholds[atof(argv[++i])] = atoi(argv[++i]);
+				if(argc < i + 2)
+					g_argerr("Too few parameters for -tt.");
+				float height = atof(argv[++i]);
+				uint8_t window = atoi(argv[++i]);
+				config.topsThresholds[height] = window;
 				config.doTops = true;
 			} else if (arg == "-td") {
 				config.topsTreetopsDatabase = argv[++i];

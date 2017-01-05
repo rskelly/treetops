@@ -56,10 +56,8 @@ void geotools::ui::util::getThresholds(QWidget *form, std::map<float, uint8_t> &
 	tf->setThresholds(thresholds);
 	QDialog *dlg = new QDialog();
 	tf->setupUi(dlg);
-	if(dlg->exec()) {
-		g_runerr("There was an error.");
+	if(dlg->exec() && tf->isConfirm())
 		thresholds = tf->thresholds();
-	}
 }
 
 

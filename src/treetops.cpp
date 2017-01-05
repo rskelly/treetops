@@ -243,7 +243,7 @@ bool TreetopsConfig::canRun() const {
 }
 
 std::string TreetopsConfig::thresholds() const {
-	std::vector<std::string> p(topsThresholds.size() * 2);
+	std::vector<std::string> p;
 	for(const auto &it : topsThresholds) {
 		p.push_back(std::to_string(it.first));
 		p.push_back(std::to_string(it.second));
@@ -253,13 +253,15 @@ std::string TreetopsConfig::thresholds() const {
 
 void TreetopsConfig::parseThresholds(const std::string &str) {
 	std::stringstream ss(str);
-	std::string item;
+	std::string item1, item2;
 	topsThresholds.clear();
-	while(std::getline(ss, item, ',')) {
-		float height = atof(item.c_str());
-		if(!std::getline(ss, item, ','))
+	while(std::getline(ss, item1, ',')) {
+		if(!std::getline(ss, item2, ','))
 			break;
-		uint8_t window = atoi(item.c_str());
+		if(item1.empty() || item2.empty()) continue;
+		float height = atof(item1.c_str());
+		uint8_t window = atoi(item2.c_str());
+		if(window == 0) continue;
 		topsThresholds[height] = window;
 	}
 }

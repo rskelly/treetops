@@ -22,7 +22,9 @@ TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	layout->addWidget(spnHeight);
 	layout->addWidget(spnWindow);
 	layout->addWidget(btnDelete);
+	layout->setGeometry(QRect(0, 0, 100, 30));
 	setLayout(layout);
+	setGeometry(QRect(0, 0, 100, 30));
 }
 
 void TopsThresholdItem::set(float height, uint8_t window) {
@@ -45,14 +47,19 @@ bool TopsThresholdItem::operator<(const TopsThresholdItem &other) const {
 TopsThresholdsForm::TopsThresholdsForm() :
 	Ui::TopsThresholdsForm(),
 	m_form(nullptr),
-	scrollLayout(nullptr) {
+	scrollLayout(nullptr),
+	m_confirm(false) {
 }
 
 void TopsThresholdsForm::setupUi(QWidget *form) {
 	Ui::TopsThresholdsForm::setupUi(form);
 	m_form = form;
 	scrollLayout = new QVBoxLayout();
-	scrollArea->setLayout(scrollLayout);
+	contents->setLayout(scrollLayout);
+	contents->setGeometry(QRect(0, 0, 200, 200));
+	connect(btnExit, SIGNAL(clicked()), this, SLOT(btnExitClicked()));
+	connect(btnHelp, SIGNAL(clicked()), this, SLOT(btnHelpClicked()));
+	connect(btnCancel, SIGNAL(clicked()), this, SLOT(btnCancelClicked()));
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
@@ -62,7 +69,7 @@ void TopsThresholdsForm::setThresholds(const std::map<float, uint8_t> &threshold
 		scrollLayout->removeWidget(item);
 	m_items.clear();
 	for(const auto &it : thresholds) {
-		TopsThresholdItem *item = new TopsThresholdItem(scrollArea);
+		TopsThresholdItem *item = new TopsThresholdItem(m_form);
 		item->set(it.first, it.second);
 		m_items.push_back(item);
 		scrollLayout->addWidget(item);
@@ -81,7 +88,7 @@ std::map<float, uint8_t> TopsThresholdsForm::thresholds() const {
 }
 
 void TopsThresholdsForm::btnAddItemClicked() {
-	TopsThresholdItem *item = new TopsThresholdItem(scrollArea);
+	TopsThresholdItem *item = new TopsThresholdItem(m_form);
 	m_items.push_back(item);
 	scrollLayout->addWidget(item);
 	connect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
@@ -98,5 +105,23 @@ void TopsThresholdsForm::itemUpdate(TopsThresholdItem *item) {
 	for(const TopsThresholdItem &it : m_items)
 		m_thresholds[it.height()] = it.window();
 	sortItems();
+}
+
+void TopsThresholdsForm::btnHelpClicked() {
+
+}
+
+void TopsThresholdsForm::btnCancelClicked() {
+	m_confirm = false;
+	m_form->close();
+}
+
+void TopsThresholdsForm::btnExitClicked() {
+	m_confirm = true;
+	m_form->close();
+}
+
+bool TopsThresholdsForm::isConfirm() {
+	return m_confirm;
 }
 

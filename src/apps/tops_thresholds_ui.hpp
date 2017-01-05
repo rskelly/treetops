@@ -43,14 +43,19 @@ public:
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
 	std::map<float, uint8_t> m_thresholds;
+	bool m_confirm;
 
 	TopsThresholdsForm();
 	void setThresholds(const std::map<float, uint8_t> &thresholds);
 	std::map<float, uint8_t> thresholds() const;
 	void setupUi(QWidget *form);
+	bool isConfirm();
 
 public slots:
 	void btnAddItemClicked();
+	void btnHelpClicked();
+	void btnCancelClicked();
+	void btnExitClicked();
 	void itemDelete(TopsThresholdItem *item);
 	void itemUpdate(TopsThresholdItem *item);
 };
