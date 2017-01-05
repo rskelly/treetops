@@ -64,10 +64,14 @@ namespace geotools {
 						id(id), c(c), r(r), tc(tc), tr(tr), z(z), tz(tz) {
 				}
 
-				Node(const Top &top) :
-						id(top.id), c(top.col), r(top.row), tc(top.col), tr(top.row), z(
-								top.z), tz(top.z) {
+				Node(Point *p) :
+					id(0), c(0), r(0), tc(0), tr(0), z(0), tz(0) {
+					id = atoi(p->fields["id"].c_str());
+					c = tc = atoi(p->fields["sc"].c_str());
+					r = tr = atoi(p->fields["sr"].c_str());
+					z = tz = atof(p->fields["sz"].c_str());
 				}
+
 			};
 
 			// Returns true if the pixel at the center of the given circular window is
@@ -76,9 +80,9 @@ namespace geotools {
 				*max = 0;
 				int mc = 0, mr = 0;
 				float v;
-				float d = g_sq((float) window / 2);
-				for (int r = row - window / 2; r < row + window / 2; ++r) {
-					for (int c = col - window / 2; c < col + window / 2; ++c) {
+				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
+					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
 						if (d0 <= d && (v = raster.get(c, r)) > *max) {
 							*max = v;
@@ -95,9 +99,9 @@ namespace geotools {
 				double *max, uint16_t *mc, uint16_t *mr) {
 				*max = G_DBL_MAX_NEG;
 				float v;
-				float d = g_sq((float) window / 2);
-				for (int r = row - window / 2; r < row + window / 2; ++r) {
-					for (int c = col - window / 2; c < col + window / 2; ++c) {
+				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
+					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
 						if (d0 <= d && (v = raster.get(c, r)) > *max) {
 							*max = v;
@@ -110,9 +114,9 @@ namespace geotools {
 
 			// Set all cells in the circular kernel to zero except the center.
 			void zeroKernel(Grid<uint8_t> &raster, int col, int row, int window) {
-				float d = g_sq((float) window / 2);
-				for (int r = row - window / 2; r < row + window / 2; ++r) {
-					for (int c = col - window / 2; c < col + window / 2; ++c) {
+				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
+					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
 						if (d0 <= d && c != col && r != row)
 							raster.set(c, r, 0);
@@ -126,7 +130,15 @@ namespace geotools {
 				for (Top *t : tops) {
 					std::map<std::string, std::string> fields;
 					fields["id"] = std::to_string(t->id);
-					points[i++] = new Point(t->x, t->y, t->uz, fields);
+					fields["ox"] = std::to_string(t->ox);
+					fields["oy"] = std::to_string(t->oy);
+					fields["oz"] = std::to_string(t->oz);
+					fields["sx"] = std::to_string(t->sx);
+					fields["sy"] = std::to_string(t->sy);
+					fields["sz"] = std::to_string(t->sz);
+					fields["sc"] = std::to_string(t->sc);
+					fields["sr"] = std::to_string(t->sr);
+					points[i++] = new Point(t->sx, t->sy, t->oz, fields);
 					delete t;
 				}
 				tops.clear();
@@ -269,12 +281,12 @@ void TreetopsConfig::parseThresholds(const std::string &str) {
 
 // Top implementation
 
-Top::Top(uint64_t id, double x, double y, double z, double uz, int col, int row) :
-		id(id), x(x), y(y), z(z), uz(uz), col(col), row(row) {
+Top::Top(uint64_t id, double ox, double oy, double oz, double sx, double sy, double sz, int32_t sc, int32_t sr) :
+	id(id), ox(ox), oy(oy), oz(oz), sx(sx), sy(sy), sz(sz), sc(sc), sr(sr) {
 }
 
 Top::Top() :
-		id(0), x(0), y(0), z(0), uz(0), col(0), row(0) {
+	id(0), ox(0), oy(0), oz(0), sx(0), sy(0), sz(0), sc(0), sr(0) {
 }
 
 
@@ -310,10 +322,15 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 
+	if(m_callbacks)
+		m_callbacks->statusCallback("Loading rasters...");
+
 	// Initialize input rasters.
-	g_debug(" -- tops: opening rasters");
 	Raster<float> original(config.topsOriginalCHM);
 	Raster<float> smoothed(config.topsSmoothedCHM);
+	MemRaster<float> smooth(smoothed.cols(), smoothed.rows());
+	smooth.setNodata(smoothed.nodata());
+	smooth.writeBlock(smoothed);
 
 	if (*cancel)
 		return;
@@ -324,6 +341,14 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	std::map<std::string, int> fields;
 	fields["id"] = 1;
+	fields["sx"] = 2;
+	fields["sy"] = 2;
+	fields["sz"] = 2;
+	fields["sc"] = 1;
+	fields["sr"] = 1;
+	fields["ox"] = 2;
+	fields["oy"] = 2;
+	fields["oz"] = 2;
 	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
 	db.makeFast();
 	db.dropGeomIndex();
@@ -340,55 +365,74 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	MemRaster<uint8_t> topsGrid(original.cols(), original.rows());
 	topsGrid.fill(0);
 
+	uint64_t total = config.topsThresholds.size() * topsGrid.rows();
+	uint64_t status = 0;
+
 	for(const auto &it : config.topsThresholds) {
 
 		uint8_t window = it.second;
 		double threshold = it.first;
 
 		for (int32_t row = window / 2; row < smoothed.rows() - window / 2; ++row) {
-			if (*cancel)
-				break;
+			if (*cancel) break;
 			for (int32_t col = window / 2; col < smoothed.cols() - window / 2; ++col) {
 
-				double v = smoothed.get(col, row);
+				double v = smooth.get(col, row);
 				if(v < threshold)
 					continue;
 
 				double max;
 
-				if (isMaxCenter(smoothed, col, row, window, &max)) {
+				if (isMaxCenter(smooth, col, row, window, &max)) {
 
 					topsGrid.set(col, row, window);
 					zeroKernel(topsGrid, col, row, window);
 
 				}
 			}
+			if (m_callbacks)
+				m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
+
 		}
 	}
 
+	//Raster<float> tmp("/tmp/tmp.tif", 1, original);
+	//tmp.writeBlock(topsGrid);
+
 	std::list<Top*> tops;
 	uint64_t topId = 0;
+	total = topsGrid.rows();
+	status = 0;
 
 	for(int32_t row = 0; row < topsGrid.rows(); ++row) {
+		if(*cancel) break;
 		for(int32_t col = 0; col < topsGrid.cols(); ++col) {
 
 			uint8_t window = topsGrid.get(col, row);
 			if(!window)
 				continue;
 
+			// TODO: Can't use peak within window, because it may be on the slope of another crown
 			// Get the original height from the unsmoothed raster.
-			double smax, omax;
-			uint16_t mc, mr;
-			getKernelMax(smoothed, col, row, window, &smax, &mc, &mr);
-			getKernelMax(original, col, row, window, &omax, &mc, &mr);
+			//double smax, omax;
+			//uint16_t smc, smr, omc, omr;
+			//getKernelMax(original, col, row, window, &omax, &omc, &omr);
+			//getKernelMax(smoothed, col, row, window, &smax, &smc, &smr);
 
 			Top * pt = new Top(++topId,
-				original.toCentroidX(mc), // center of pixel
-				original.toCentroidY(mr),
-				smax, omax, mc, mr
+				original.toCentroidX(col), // omc; center of pixel
+				original.toCentroidY(row), // omr
+				original.get(col, row), // omax,
+				original.toCentroidX(col), // smc; center of pixel
+				original.toCentroidY(row), // smr
+				smooth.get(col, row), // smax,
+				col, row // smc, smr
 			);
 			tops.push_back(pt);
 		}
+
+		if (m_callbacks)
+			m_callbacks->stepCallback(0.5f + (float) ++status / total * 0.48f);
 
 		if (row == topsGrid.rows() - 1 || tops.size() >= 1000) {
 
@@ -500,7 +544,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			Bounds bounds(inrast.toX(0), inrast.toY(row0 - bufRows),
 					inrast.toX(inrast.cols()),
 					inrast.toY(row0 + rowStep + bufRows));
-			std::vector<std::unique_ptr<Point> > tops;
+			std::vector<Point*> tops;
 
 			#pragma omp critical(__crowns_getpoints)
 			db.getPoints(tops, bounds);
@@ -509,15 +553,12 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			inrast.readBlock(0, row0 == 0 ? row0 : row0 - bufRows, buf, 0, row0 == 0 ? bufRows : 0);
 
 			// Convert the Tops to Nodes.
-			std::queue<std::unique_ptr<Node> > q;
-			for (const std::unique_ptr<Point> &t : tops) {
+			std::queue<Node*> q;
+			for (Point *p : tops) {
 				if (*cancel)
 					break;
-				int col = inrast.toCol(t->x);
-				int row = inrast.toRow(t->y);
-				uint64_t id = atoi(t->fields["id"].c_str());
-				std::unique_ptr<Node> nd(new Node(id, col, row, t->z, col, row, t->z));
-				q.push(std::move(nd));
+				q.push(new Node(p));
+				delete p;
 			}
 
 			if (m_callbacks) {
@@ -527,10 +568,10 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 			// Run through the queue.
 			while (!*cancel && q.size()) {
-				std::unique_ptr<Node> n = std::move(q.front());
+				Node *n = q.front();
 				q.pop();
 
-				blk.set(n->c, n->r - row0 + bufRows, (uint32_t) n->id);
+				blk.set(n->c, n->r, (uint32_t) n->id);
 
 				for(size_t i = 0; i < 8; ++i) {
 					int c = n->c + offsets[i][0];
@@ -552,11 +593,11 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
 						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 					) {
-						std::unique_ptr<Node> nd(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-						q.push(std::move(nd));
+						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
 						visited[idx] = true;
 					}
 				}
+				delete n;
 			}
 
 			if (row0 > 0 && (row0 + bufRows) >= inrast.rows())

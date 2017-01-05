@@ -162,7 +162,7 @@ namespace geotools {
 
             static int getPointsCallback(void *resultPtr, int cols, char **values, char **colnames) {
                 using namespace geotools::util;
-                std::vector<std::unique_ptr<Point> > *result = (std::vector<std::unique_ptr<Point> > *) resultPtr;
+                std::vector<Point*> *result = (std::vector<Point*> *) resultPtr;
                 Point *pt = new Point();
                 for (int i = 0; i < cols; ++i) {
                     std::string colname(colnames[i]);
@@ -176,12 +176,11 @@ namespace geotools {
                         pt->fields[colname] = std::string(values[i]);
                     }
                 }
-                std::unique_ptr<Point> upt(pt);
-                result->push_back(std::move(upt));
+                result->push_back(pt);
                 return 0;
             }
 
-            void getPoints(std::vector<std::unique_ptr<geotools::util::Point> > &points,
+            void getPoints(std::vector<geotools::util::Point*> &points,
                     const geotools::util::Bounds &bounds) {
 
                 std::stringstream ss;

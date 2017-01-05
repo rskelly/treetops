@@ -116,14 +116,10 @@ namespace geotools {
             class Top {
             public:
                 uint64_t id;
-                double x;
-                double y;
-                double z;
-                double uz; // The unsmoothed z value.
-                int col;
-                int row;
-
-                Top(uint64_t id, double x, double y, double z, double uz, int col, int row);
+                double ox, oy, oz; // Original x, y, z value
+                double sx, sy, sz; // Smoothed x, y, z value.
+                int32_t sc, sr;
+                Top(uint64_t id, double ox, double oy, double oz, double sx, double sy, double sz, int32_t sc, int32_t sr);
 
                 Top();
             };
