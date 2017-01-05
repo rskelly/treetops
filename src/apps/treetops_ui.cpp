@@ -329,36 +329,28 @@ void TreetopsForm::updateView() {
 void TreetopsForm::smoothOriginalCHMClicked() {
 	getInputFile(m_form, "CHM for Smoothing", m_last, RASTER_PATTERN, m_config.smoothOriginalCHM);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
+	m_config.topsOriginalCHM = m_config.smoothOriginalCHM;
+	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	checkRun();
-	if (m_config.topsOriginalCHM.empty()) {
-		m_config.topsOriginalCHM = m_config.smoothOriginalCHM;
-		txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
-	}
 	updateView();
 }
 
 void TreetopsForm::smoothSmoothedCHMClicked() {
 	getOutputFile(m_form, "Smoothed CHM", m_last, RASTER_PATTERN, m_config.smoothSmoothedCHM);
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
+	m_config.topsSmoothedCHM = m_config.smoothSmoothedCHM;
+	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
+	m_config.crownsSmoothedCHM = m_config.smoothSmoothedCHM;
+	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	checkRun();
-	if (m_config.topsSmoothedCHM.empty()) {
-		m_config.topsSmoothedCHM = m_config.smoothSmoothedCHM;
-		txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
-	}
-	if (m_config.crownsSmoothedCHM.empty()) {
-		m_config.crownsSmoothedCHM = m_config.smoothSmoothedCHM;
-		txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
-	}
 }
 
 void TreetopsForm::topsSmoothedCHMClicked() {
 	getInputFile(m_form, "Smoothed CHM for Treetops", m_last, RASTER_PATTERN, m_config.topsSmoothedCHM);
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
+	m_config.crownsSmoothedCHM = m_config.topsSmoothedCHM;
+	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	checkRun();
-	if (m_config.crownsSmoothedCHM.empty()) {
-		m_config.crownsSmoothedCHM = m_config.topsSmoothedCHM;
-		txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
-	}
 }
 
 void TreetopsForm::topsOriginalCHMClicked() {
@@ -370,11 +362,9 @@ void TreetopsForm::topsOriginalCHMClicked() {
 void TreetopsForm::topsTreetopsDatabaseClicked() {
 	getOutputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN, m_config.topsTreetopsDatabase);
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
+	m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
+	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	checkRun();
-	if (m_config.crownsTreetopsDatabase.empty()) {
-		m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
-		txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
-	}
 }
 
 void TreetopsForm::topsThresholdsClicked() {
