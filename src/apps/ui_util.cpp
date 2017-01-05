@@ -40,14 +40,14 @@ void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, 
 void geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
-	if(res)
+	if(!res.isEmpty())
 		filename = res.toStdString();
 }
 
 void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
-	if(res)
+	if(!res.isEmpty())
 		filename = res.toStdString();
 }
 
