@@ -385,7 +385,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			Top * pt = new Top(++topId,
 				original.toCentroidX(mc), // center of pixel
 				original.toCentroidY(mr),
-				omax, smax, mc, mr
+				smax, omax, mc, mr
 			);
 			tops.push_back(pt);
 		}
