@@ -59,7 +59,7 @@ int runWithGui(int argc, char **argv) {
 
 	class TTApplication : public QApplication {
 	public:
-		TTApplication(int argc, char **argv) : QApplication(argc, argv) {}
+		TTApplication(int &argc, char **argv) : QApplication(argc, argv) {}
 		bool notify(QObject *receiver, QEvent *e) {
 			try {
 				return QApplication::notify(receiver, e);
