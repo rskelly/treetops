@@ -41,16 +41,16 @@ void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, 
 // Convenience: open an input file dialog and return the string.
 std::string geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter) {
-	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(),
-							qstr(filter));
+	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
+	path.setPath(res);
 	return res.toStdString();
 }
 
 // Convenience: open an output file dialog and return the string.
 std::string geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter) {
-	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(),
-			qstr(filter));
+	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
+	path.setPath(res);
 	return res.toStdString();
 }
 

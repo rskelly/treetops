@@ -330,10 +330,10 @@ void TreetopsForm::smoothOriginalCHMClicked() {
 	m_config.smoothOriginalCHM = getInputFile(m_form, "CHM for Smoothing", m_last, RASTER_PATTERN);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
 	checkRun();
-	if (m_config.topsOriginalCHM.empty()) {
+	//if (m_config.topsOriginalCHM.empty()) {
 		m_config.topsOriginalCHM = m_config.smoothOriginalCHM;
 		txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
-	}
+	//}
 	updateView();
 }
 
@@ -341,24 +341,24 @@ void TreetopsForm::smoothSmoothedCHMClicked() {
 	m_config.smoothSmoothedCHM = getOutputFile(m_form, "Smoothed CHM", m_last, RASTER_PATTERN);
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	checkRun();
-	if (m_config.topsSmoothedCHM.empty()) {
+	//if (m_config.topsSmoothedCHM.empty()) {
 		m_config.topsSmoothedCHM = m_config.smoothSmoothedCHM;
 		txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
-	}
-	if (m_config.crownsSmoothedCHM.empty()) {
+	//}
+	//if (m_config.crownsSmoothedCHM.empty()) {
 		m_config.crownsSmoothedCHM = m_config.smoothSmoothedCHM;
 		txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
-	}
+	//}
 }
 
 void TreetopsForm::topsSmoothedCHMClicked() {
 	m_config.topsSmoothedCHM = getInputFile(m_form, "Smoothed CHM for Treetops", m_last, RASTER_PATTERN);
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	checkRun();
-	if (m_config.crownsSmoothedCHM.empty()) {
+	//if (m_config.crownsSmoothedCHM.empty()) {
 		m_config.crownsSmoothedCHM = m_config.topsSmoothedCHM;
 		txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
-	}
+	//}
 }
 
 void TreetopsForm::topsOriginalCHMClicked() {
@@ -371,10 +371,10 @@ void TreetopsForm::topsTreetopsDatabaseClicked() {
 	m_config.topsTreetopsDatabase = getOutputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN);
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	checkRun();
-	if (m_config.crownsTreetopsDatabase.empty()) {
+	//if (m_config.crownsTreetopsDatabase.empty()) {
 		m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
 		txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
-	}
+	//}
 }
 
 void TreetopsForm::crownsSmoothedCHMClicked() {

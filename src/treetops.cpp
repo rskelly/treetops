@@ -116,7 +116,9 @@ namespace geotools {
 					const std::unique_ptr<Top> &t = it.second;
 					std::map<std::string, std::string> fields;
 					fields["id"] = std::to_string(t->id);
-					std::unique_ptr<Point> pt(new Point(t->x, t->y, t->uz, fields));
+					fields["col"] = std::to_string(t->scol);
+					fields["row"] = std::to_string(t->srow);
+					std::unique_ptr<Point> pt(new Point(t->sx, t->sy, t->z, fields));
 					points.push_back(std::move(pt));
 
 					if (points.size() % batch == 0 || points.size() >= tops.size()) {
@@ -224,12 +226,12 @@ bool TreetopsConfig::canRun() const {
 
 // Top implementation
 
-Top::Top(uint64_t id, double x, double y, double z, double uz, int col, int row) :
-		id(id), x(x), y(y), z(z), uz(uz), col(col), row(row) {
+Top::Top(uint64_t id, double x, double y, double z, double sx, double sy, double sz, int col, int row, int scol, int srow) :
+		id(id), x(x), y(y), z(z), sx(sx), sy(sy), sz(sz), col(col), row(row), scol(scol), srow(srow) {
 }
 
 Top::Top() :
-		id(0), x(0), y(0), z(0), uz(0), col(0), row(0) {
+		id(0), x(0), y(0), z(0), sx(0), sy(0), sz(0), col(0), row(0), scol(0), srow(0) {
 }
 
 
@@ -266,7 +268,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		return;
 
 	// Initialize input rasters.
-	g_debug(" -- tops: opening rasters");
 	Raster<float> original(config.topsOriginalCHM);
 	Raster<float> smoothed(config.topsSmoothedCHM);
 
@@ -279,6 +280,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	std::map<std::string, int> fields;
 	fields["id"] = 1;
+	fields["col"] = 1;
+	fields["row"] = 1;
 	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
 	db.makeFast();
 	db.dropGeomIndex();
@@ -287,24 +290,29 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 
-	if (m_callbacks) {
-		m_callbacks->stepCallback(0.02f);
-		m_callbacks->statusCallback("Processing...");
-	}
-
 	std::atomic<uint64_t> topCount(0);
 	std::atomic<uint64_t> curTop(0);
 	std::atomic<uint64_t> topId(0);
 	std::map<uint64_t, std::unique_ptr<Top> > tops;
 
+	if (m_callbacks) {
+		m_callbacks->stepCallback(0.02f);
+		m_callbacks->statusCallback("Reading...");
+	}
+
 	MemRaster<float> blk(original.cols(), original.rows(), true);
 	blk.setNodata(original.nodata());
 	blk.writeBlock(smoothed);
 
-	for (int32_t row = 0; row < blk.rows() - config.topsWindowSize + 1; ++row) {
+	if (m_callbacks) {
+		m_callbacks->stepCallback(0.03f);
+		m_callbacks->statusCallback("Processing...");
+	}
+
+	for (int32_t row = 0; row < blk.rows() - config.topsWindowSize; ++row) {
 		if (*cancel)
 			break;
-		for (int32_t col = 0; col < blk.cols() - config.topsWindowSize + 1; ++col) {
+		for (int32_t col = 0; col < blk.cols() - config.topsWindowSize; ++col) {
 
 			int32_t r = row + config.topsWindowSize / 2;
 			int32_t c = col + config.topsWindowSize / 2;
@@ -324,14 +332,18 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					new Top(++topId, 
 						original.toCentroidX(mc), // center of pixel
 						original.toCentroidY(mr), 
-						max, umax, mc, mr)
+						umax,
+						original.toCentroidX(col + config.topsWindowSize / 2),
+						original.toCentroidY(row + config.topsWindowSize / 2),
+						max, 
+						mc, mr, col, row)
 				);
 				tops[id] = std::move(pt);
 			}
 		}
 
 		if (m_callbacks)
-			m_callbacks->stepCallback(0.02f + (float) row / original.rows() * 0.48f);
+			m_callbacks->stepCallback(0.03f + (float) row / original.rows() * 0.47f);
 
 		if (tops.size() >= 1000) {
 
@@ -417,7 +429,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	}
 
 	// Build the list of offsets for D8 or D4 search.
-	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+	//int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+	int offsets[][2] = {{ -1, 0 },{ 0, -1 },{ 0, 1 },{ 1, 0 }};
 
 	// The number of extra rows above and below the buffer.
 	int32_t bufRows = (int) std::ceil(g_abs(config.crownsRadius / inrast.resolutionY()));
@@ -461,8 +474,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			for (const std::unique_ptr<Point> &t : tops) {
 				if (*cancel)
 					break;
-				int col = inrast.toCol(t->x);
-				int row = inrast.toRow(t->y);
+				int col = atoi(t->fields["col"].c_str());// inrast.toCol(t->x);
+				int row = atoi(t->fields["row"].c_str());// inrast.toRow(t->y);
 				uint64_t id = atoi(t->fields["id"].c_str());
 				std::unique_ptr<Node> nd(new Node(id, col, row, t->z, col, row, t->z));
 				q.push(std::move(nd));

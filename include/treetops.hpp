@@ -111,14 +111,12 @@ namespace geotools {
             class Top {
             public:
                 uint64_t id;
-                double x;
-                double y;
-                double z;
-                double uz; // The unsmoothed z value.
-                int col;
-                int row;
+                double x, y, z;
+                double sx, sy, sz; // The smoothed z value.
+                int col, row;
+				int scol, srow; // Smoothed peak
 
-                Top(uint64_t id, double x, double y, double z, double uz, int col, int row);
+                Top(uint64_t id, double x, double y, double z, double sx, double sy, double sz, int col, int row, int scol, int srow);
 
                 Top();
             };
