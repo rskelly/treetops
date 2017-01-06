@@ -302,10 +302,15 @@ namespace geotools {
                 sqlite3_close(m_db);
             }
 
+            int srid() {
+                return m_srid;
+            }
+
             void handleError(const std::string &msg, char *err = 0);
             void init(bool replace);
 
         };
+
 
         void SQLite::handleError(const std::string &msg, char *err) {
             if (!err)
