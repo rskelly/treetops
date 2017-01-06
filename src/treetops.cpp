@@ -359,6 +359,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
+	// TODO: If maintaining the window sizes isn't important, can use a bool (bit) vector here.
 	MemRaster<uint8_t> topsGrid(original.cols(), original.rows(), true);
 	topsGrid.fill(0);
 
@@ -427,8 +428,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
-	tmp.writeBlock(topsGrid);
+	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
+	//tmp.writeBlock(topsGrid);
 
 	total = topsGrid.rows();
 	status = 0;
@@ -523,26 +524,21 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Preparing rasters...");
 
 	Raster<float> inrast(config.crownsSmoothedCHM);
+	double nodata = inrast.nodata();
+
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
 	outrast.setNodata(0);
-	outrast.fill(0);
-
-	MemRaster<float> smooth(inrast.cols(), inrast.rows(), 1);
-	smooth.setNodata(inrast.nodata());
-	smooth.writeBlock(inrast);
 
 	MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
 	blk.fill(0);
 
-	double nodata = inrast.nodata();
+	if (*cancel)
+		return;
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.02f);
 		m_callbacks->statusCallback("Preparing database...");
 	}
-
-	if (*cancel)
-		return;
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
 
@@ -559,95 +555,110 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	//size_t offsetCount = 4;
 	//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
 
-	// To keep track of visited cells.
-	std::vector<bool> visited((uint64_t) inrast.size());
-
 	uint64_t geomCount = db.getGeomCount();
-	int count = 100000;
-	int offset = 0;
+	std::atomic<uint64_t> status(0);
+	uint32_t bufSize = 128;
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
 
-	if (m_callbacks)
-		m_callbacks->statusCallback("Processing crowns...");
+	#pragma omp parallel
+	{
 
-	while(true) {
+		// To keep track of visited cells.
+		MemRaster<float> buf(inrast.cols(), bufSize + radius * 2 + 1);
+		MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
 
-		std::vector<Point*> tops;
-		db.getPoints(tops, count, offset);
-		offset += count;
-		if(tops.empty())
-			break;
+		#pragma omp for
+		for(uint32_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+			if (*cancel) continue;
 
-		// Convert the Tops to Nodes.
-		std::queue<Node*> q;
-		for (Point *p : tops) {
-			if (*cancel)
-				break;
-			q.push(new Node(p));
-			delete p;
-		}
+			if (m_callbacks)
+				m_callbacks->statusCallback("Loading tops...");
 
-		if (m_callbacks)
-			m_callbacks->stepCallback(0.03f + ((float) (offset + count) / geomCount) * 0.97f);
+			int b = i * bufSize;
 
-		// Run through the queue.
-		while (!*cancel && q.size()) {
-			Node *n = q.front();
-			q.pop();
+			Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
+				inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
 
-			blk.set(n->c, n->r, (uint32_t) n->id);
+			std::vector<Point*> tops;
+			#pragma omp critical(__crowns_db)
+			db.getPoints(tops, bounds);
+			if(tops.empty())
+				continue;
 
-			for(size_t i = 0; i < offsetCount; ++i) {
-				int c = n->c + offsets[i][0];
-				int r = n->r + offsets[i][1];
+			status += tops.size();
 
-				if (r < 0 || c < 0 || r >= inrast.rows() || c >= inrast.cols())
-					continue;
+			// Convert the Tops to Nodes.
+			std::queue<Node*> q;
+			for (Point *p : tops) {
+				if (*cancel)
+					break;
+				q.push(new Node(p));
+				delete p;
+			}
 
-				uint32_t idx = (uint64_t) r * inrast.cols() + c;
-				if (visited[idx])
-					continue;
+			if (m_callbacks)
+				m_callbacks->statusCallback("Loading raster...");
 
-				double v = smooth.get(idx);
-				if (v != nodata           												// is not nodata
-					&& v < n->z		      												// is less than the neighbouring pixel
-					&& v >= config.crownsMinHeight 										// is greater than the min height
-					&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
-					&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
-				) {
-					q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-					blk.set(c, r, n->id);
-					visited[idx] = true;
+			uint16_t readOffset = b > 0 ? b - radius : 0;
+			uint16_t writeOffset = b > 0 ? 0 : radius;
+			buf.fill(inrast.nodata());
+			#pragma omp critical(__crowns_in)
+			inrast.readBlock(0, readOffset, buf, 0, writeOffset);
+
+			blk.fill(0);
+			std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Delineating crowns...");
+
+			// Run through the queue.
+			while (!*cancel && q.size()) {
+				Node *n = q.front();
+				q.pop();
+
+				blk.set(n->c, n->r - b + radius, (uint32_t) n->id);
+
+				for(size_t i = 0; i < offsetCount; ++i) {
+					int c = n->c + offsets[i][0];
+					int r = n->r + offsets[i][1];
+
+					if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= buf.rows() || c >= buf.cols())
+						continue;
+
+					uint32_t idx = (uint64_t) (r - b + radius) * inrast.cols() + c;
+					if (visited[idx])
+						continue;
+
+					double v = buf.get(idx);
+					if (v != nodata           												// is not nodata
+						&& v < n->z		      												// is less than the neighbouring pixel
+						&& v >= config.crownsMinHeight 										// is greater than the min height
+						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
+						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+					) {
+						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+						blk.set(idx, n->id);
+						visited[idx] = true;
+					}
 				}
+				delete n;
 			}
-			delete n;
-		}
 
-		if (*cancel)
-			continue;
-	}
+			if(m_callbacks)
+				m_callbacks->statusCallback("Writing output...");
+			#pragma omp critical(__crowns_out)
+			outrast.writeBlock(0, b, blk, 0, radius, inrast.cols(), bufSize);
 
-	// Filter out isolated pixels if D8 is used. See DTOOLS-22
-	if(offsetCount == 9) {
+			if(m_callbacks)
+				m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
 
-		if(m_callbacks)
-			m_callbacks->statusCallback("Filtering degenerate polygons...");
-
-		for(int32_t row = 1; row < blk.rows() - 1; ++row) {
-			for(int32_t col = 1; col < blk.cols() - 1; ++col) {
-				uint32_t v = blk.get(col, row);
-				if(blk.get(col, row - 1) != v
-						&& blk.get(col - 1, row) != v
-						&& blk.get(col + 1, row) != v
-						&& blk.get(col, row + 1))
-					blk.set(col, row, 0);
-			}
 		}
 	}
+
+	// TODO: Filter out isolated pixels if D8 is used. See DTOOLS-22
 
 	if(m_callbacks)
-		m_callbacks->statusCallback("Writing output...");
-
-	outrast.writeBlock(blk);
+		m_callbacks->stepCallback(1.0f);
 
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)

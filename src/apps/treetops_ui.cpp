@@ -148,7 +148,7 @@ void TTWorkerThread::run() {
 			cb->overallCallback((float) ++step / steps);
 		}
 
-		cb->statusCallback("Done...");
+		cb->statusCallback("Done.");
 		cb->overallCallback(1.0f);
 
 	} catch (const std::exception &e) {
