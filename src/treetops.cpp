@@ -522,8 +522,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
-	outrast.setNodata(0, 1);
-	outrast.fill(0, 1);
+	outrast.setNodata(0);
+	outrast.fill(0);
 
 	MemRaster<float> smooth(inrast.cols(), inrast.rows(), 1);
 	smooth.setNodata(inrast.nodata());
@@ -561,7 +561,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	std::vector<bool> visited((uint64_t) inrast.size());
 
 	uint64_t geomCount = db.getGeomCount();
-	int count = 1000;
+	int count = 100000;
 	int offset = 0;
 
 	if (m_callbacks)
@@ -570,7 +570,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	while(true) {
 
 		std::vector<Point*> tops;
-		db.getPoints(tops, count, offset += 1000);
+		db.getPoints(tops, count, offset);
+		offset += count;
 		if(tops.empty())
 			break;
 

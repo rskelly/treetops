@@ -216,7 +216,7 @@ namespace geotools {
                 ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
                 for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
                     ss << ", " << it->first;
-                ss << " FROM data ORDER BY id LIMIT " << count << " OFFSET " << offset;
+                ss << " FROM data ORDER BY id DESC LIMIT " << count << " OFFSET " << offset;
 
                 std::string q = ss.str();
                 char *err;
@@ -239,7 +239,7 @@ namespace geotools {
                     ss << ", " << it->first;
                 ss << " FROM data ORDER BY ST_Distance(geom, GeomFromText(POINTZ("
                 		<< target.x << " " << target.y << " " << target.z
-						<< "), " << "SRID(geom))LIMIT " << count;
+						<< "), " << "SRID(geom)) LIMIT " << count;
 
                 std::string q = ss.str();
                 char *err;
