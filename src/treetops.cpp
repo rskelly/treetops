@@ -365,61 +365,63 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	uint64_t total = config.topsThresholds.size() * topsGrid.rows();
 	std::atomic<uint64_t> status(0);
 
-	auto it = config.topsThresholds.begin();
+	uint16_t bufSize = 1024;
 
-	for(size_t i = 0; i < config.topsThresholds.size(); ++i) {
+	// Iterate over the thresholds from lowest height to highest.
+	for(const auto &it : config.topsThresholds) {
 
-		uint8_t window = it->second;
-		double threshold = it->first;
+		uint8_t window = it.second;
+		double threshold = it.first;
 
-		it++;
+		#pragma omp parallel
+		{
 
-		MemRaster<float> smooth(smoothed.cols(), 1024 + window, true);
-		smooth.setNodata(smoothed.nodata());
+			MemRaster<float> smooth(smoothed.cols(), bufSize + window, true);
+			smooth.setNodata(smoothed.nodata());
 
-		#pragma omp parallel for
-		for(uint16_t j = 0; j < smoothed.rows() / 1024 + 1; ++j) {
+			#pragma omp for
+			for(uint16_t j = 0; j < smoothed.rows() / bufSize + 1; ++j) {
+				if (*cancel) continue;
 
-			int32_t b = j * 1024;
+				int32_t b = j * bufSize;
 
-			if(m_callbacks)
-				m_callbacks->statusCallback("Reading...");
+				if(m_callbacks)
+					m_callbacks->statusCallback("Reading...");
 
-			uint16_t readOffset = b > 0 ? b - window / 2 : b;
-			uint16_t writeOffset = b > 0 ? 0 : window / 2;
-			#pragma omp critical(__tops_read)
-			smoothed.readBlock(0, readOffset, smooth, 0, writeOffset);
+				uint16_t readOffset = b > 0 ? b - window / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
+				uint16_t writeOffset = b > 0 ? 0 : window / 2;     // If this is the first row, write to (size / 2), otherwise 0.
+				smooth.fill(smoothed.nodata());
+				#pragma omp critical(__tops_read)
+				smoothed.readBlock(0, readOffset, smooth, 0, writeOffset);
 
-			std::list<std::tuple<int32_t, int32_t, uint8_t> > tops;
+				std::list<std::tuple<int32_t, int32_t, uint8_t> > tops;
 
-			if(m_callbacks)
-				m_callbacks->statusCallback("Processing...");
+				if(m_callbacks)
+					m_callbacks->statusCallback("Processing...");
 
-			for (int32_t row = window / 2; row < g_min(1024, smoothed.rows() - b) - window / 2; ++row) {
-				if (*cancel) break;
-				for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
+				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.rows() - b) - window / 2; ++row) {
+					for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
 
-					double v = smooth.get(col, row);
-					if(v < threshold)
-						continue;
+						double v = smooth.get(col, row);
+						if(v < threshold) continue;
 
-					double max;
-
-					if (isMaxCenter(smooth, col, row, window, &max))
-						tops.push_back(std::make_tuple(b + col, b + row - window / 2, window));
+						double max;
+						if (isMaxCenter(smooth, col, row, window, &max))
+							tops.push_back(std::make_tuple(col, b + row, window));
+					}
+					if (m_callbacks)
+						m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
 				}
-				if (m_callbacks)
-					m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
-			}
 
-			if(m_callbacks)
-				m_callbacks->statusCallback("Writing...");
+				if(m_callbacks)
+					m_callbacks->statusCallback("Writing...");
 
-			#pragma omp critical(__tops_write)
-			{
-				for (const auto &top : tops) {
-					topsGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
-					zeroKernel(topsGrid, std::get<0>(top), std::get<1>(top), std::get<2>(top));
+				#pragma omp critical(__tops_write)
+				{
+					for (const auto &top : tops) {
+						topsGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
+						zeroKernel(topsGrid, std::get<0>(top), std::get<1>(top), std::get<2>(top));
+					}
 				}
 			}
 		}
