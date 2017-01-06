@@ -407,7 +407,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 						double max;
 						if (isMaxCenter(smooth, col, row, window, &max))
-							tops.push_back(std::make_tuple(col, b + row, window));
+							tops.push_back(std::make_tuple(col, b + row - window / 2, window));
 					}
 					if (m_callbacks)
 						m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
