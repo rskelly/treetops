@@ -1630,7 +1630,7 @@ int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg
 }
 
 template<class T>
-void Raster<T>::polygonize(const std::string &filename, uint16_t band, Callbacks *callbacks, bool *cancel) {
+void Raster<T>::polygonize(const std::string &filename, uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
@@ -1643,7 +1643,9 @@ void Raster<T>::polygonize(const std::string &filename, uint16_t band, Callbacks
 	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
 	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
 	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
-	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, opts);
+	OGRSpatialReference sr;
+	sr.importFromEPSG(srid);
+	OGRLayer *layer = ds->CreateLayer("boundary", &sr, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 	if (callbacks) {

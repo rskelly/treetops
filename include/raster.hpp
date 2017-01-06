@@ -855,7 +855,7 @@ namespace geotools {
             // Flush the current block to the dataset.
             void flush();
 
-            void polygonize(const std::string &filename, uint16_t band = 1, 
+            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1, 
 				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
 
             ~Raster();
