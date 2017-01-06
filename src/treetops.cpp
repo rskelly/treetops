@@ -473,13 +473,13 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			if (tops.size() >= 5000) {
 				if (m_callbacks)
 					m_callbacks->statusCallback("Inserting points...");
-				#pragma omp critical
+				#pragma omp critical(__save_points)
 				savePoints(tops, db);
 			}
 		}
 		if (m_callbacks)
 			m_callbacks->statusCallback("Inserting points...");
-		#pragma omp critical
+		#pragma omp critical(__save_points)
 		savePoints(tops, db);
 	}
 

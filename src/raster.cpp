@@ -319,28 +319,30 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 			buf.fill((T) nd);
 			smooth.fill((T) nd);
 
-			uint16_t readOffset = b > 0 ? b - size / 2 : 0;
-			uint16_t writeOffset = b > 0 ? 0 : size / 2;
+			uint16_t readOffset = b > 0 ? b - size / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
+			uint16_t writeOffset = b > 0 ? 0 : size / 2;     // If this is the first row, write to (size / 2), otherwise 0.
 			#pragma omp critical(__smooth_read)
 			readBlock(0, readOffset, buf, 0, writeOffset);
 
 			if(status)
 				status->statusCallback("Processing...");
 
+			// Process the entire block, even the buffer parts.
 			for (int32_t r = 0; r < buf.rows() - size; ++r) {
-				if (*cancel) continue;
 				for (int32_t c = 0; c < buf.cols() - size; ++c) {
 					double v, t = 0.0;
 					bool foundNodata = false;
-					for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
-						for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
+					for (int32_t gr = 0; gr < size; ++gr) {
+						for (int32_t gc = 0; gc < size; ++gc) {
 							v = (double) buf.get(c + gc, r + gr);
 							if (v == nd) {
 								foundNodata = true;
+								break;
 							} else {
 								t += weights.get(gr * size + gc) * v;
 							}
 						}
+						if(foundNodata) break;
 					}
 					if (!foundNodata)
 						smooth.set(c + size / 2, r + size / 2, (T) t);
@@ -353,10 +355,8 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 				status->statusCallback("Writing...");
 			}
 
-			writeOffset = b > 0 ? b - size / 2 : b;
-			readOffset = size / 2;
 			#pragma omp critical(__smooth_write)
-			smoothed.writeBlock(0, b, smooth, 0, size / 2);
+			smoothed.writeBlock(0, b, smooth, 0, size / 2, cols(), g_min(bufSize, rows() - b - size)); // Always write to b and read from (size / 2)
 		}
 	}
 
