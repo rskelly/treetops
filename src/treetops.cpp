@@ -115,8 +115,8 @@ namespace geotools {
 			// Set all cells in the circular kernel to zero except the center.
 			void zeroKernel(Grid<uint8_t> &raster, int col, int row, int window) {
 				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
-				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
-					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
+				for (int r = g_max(0, row - window / 2); r < g_min(raster.rows(), row + window / 2 + 1); ++r) {
+					for (int c = g_max(0, col - window / 2); c < g_min(raster.cols(), col + window / 2 + 1); ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
 						if (d0 <= d && c != col && r != row)
 							raster.set(c, r, 0);
@@ -328,9 +328,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	// Initialize input rasters.
 	Raster<float> original(config.topsOriginalCHM);
 	Raster<float> smoothed(config.topsSmoothedCHM);
-	MemRaster<float> smooth(smoothed.cols(), smoothed.rows());
-	smooth.setNodata(smoothed.nodata());
-	smooth.writeBlock(smoothed);
 
 	if (*cancel)
 		return;
@@ -362,91 +359,129 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
-	MemRaster<uint8_t> topsGrid(original.cols(), original.rows());
+	MemRaster<uint8_t> topsGrid(original.cols(), original.rows(), true);
 	topsGrid.fill(0);
 
 	uint64_t total = config.topsThresholds.size() * topsGrid.rows();
-	uint64_t status = 0;
+	std::atomic<uint64_t> status(0);
 
-	for(const auto &it : config.topsThresholds) {
+	auto it = config.topsThresholds.begin();
 
-		uint8_t window = it.second;
-		double threshold = it.first;
+	for(size_t i = 0; i < config.topsThresholds.size(); ++i) {
 
-		for (int32_t row = window / 2; row < smoothed.rows() - window / 2; ++row) {
-			if (*cancel) break;
-			for (int32_t col = window / 2; col < smoothed.cols() - window / 2; ++col) {
+		uint8_t window = it->second;
+		double threshold = it->first;
 
-				double v = smooth.get(col, row);
-				if(v < threshold)
-					continue;
+		it++;
 
-				double max;
+		MemRaster<float> smooth(smoothed.cols(), 1024 + window, true);
+		smooth.setNodata(smoothed.nodata());
 
-				if (isMaxCenter(smooth, col, row, window, &max)) {
+		#pragma omp parallel for
+		for(uint16_t j = 0; j < smoothed.rows() / 1024 + 1; ++j) {
 
-					topsGrid.set(col, row, window);
-					zeroKernel(topsGrid, col, row, window);
+			int32_t b = j * 1024;
 
+			if(m_callbacks)
+				m_callbacks->statusCallback("Reading...");
+
+			uint16_t readOffset = b > 0 ? b - window / 2 : b;
+			uint16_t writeOffset = b > 0 ? 0 : window / 2;
+			#pragma omp critical(__tops_read)
+			smoothed.readBlock(0, readOffset, smooth, 0, writeOffset);
+
+			std::list<std::tuple<int32_t, int32_t, uint8_t> > tops;
+
+			if(m_callbacks)
+				m_callbacks->statusCallback("Processing...");
+
+			for (int32_t row = window / 2; row < g_min(1024, smoothed.rows() - b) - window / 2; ++row) {
+				if (*cancel) break;
+				for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
+
+					double v = smooth.get(col, row);
+					if(v < threshold)
+						continue;
+
+					double max;
+
+					if (isMaxCenter(smooth, col, row, window, &max))
+						tops.push_back(std::make_tuple(b + col, b + row - window / 2, window));
+				}
+				if (m_callbacks)
+					m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
+			}
+
+			if(m_callbacks)
+				m_callbacks->statusCallback("Writing...");
+
+			#pragma omp critical(__tops_write)
+			{
+				for (const auto &top : tops) {
+					topsGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
+					zeroKernel(topsGrid, std::get<0>(top), std::get<1>(top), std::get<2>(top));
 				}
 			}
-			if (m_callbacks)
-				m_callbacks->stepCallback(0.02f + (float) ++status / total * 0.48f);
-
 		}
 	}
 
-	//Raster<float> tmp("/tmp/tmp.tif", 1, original);
-	//tmp.writeBlock(topsGrid);
+	Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
+	tmp.writeBlock(topsGrid);
 
-	std::list<Top*> tops;
-	uint64_t topId = 0;
 	total = topsGrid.rows();
 	status = 0;
 
-	for(int32_t row = 0; row < topsGrid.rows(); ++row) {
-		if(*cancel) break;
-		for(int32_t col = 0; col < topsGrid.cols(); ++col) {
+	std::atomic<uint64_t> topId(0);
 
-			uint8_t window = topsGrid.get(col, row);
-			if(!window)
-				continue;
+	#pragma omp parallel
+	{
 
-			// TODO: Can't use peak within window, because it may be on the slope of another crown
-			// Get the original height from the unsmoothed raster.
-			//double smax, omax;
-			//uint16_t smc, smr, omc, omr;
-			//getKernelMax(original, col, row, window, &omax, &omc, &omr);
-			//getKernelMax(smoothed, col, row, window, &smax, &smc, &smr);
+		std::list<Top*> tops;
 
-			Top * pt = new Top(++topId,
-				original.toCentroidX(col), // omc; center of pixel
-				original.toCentroidY(row), // omr
-				original.get(col, row), // omax,
-				original.toCentroidX(col), // smc; center of pixel
-				original.toCentroidY(row), // smr
-				smooth.get(col, row), // smax,
-				col, row // smc, smr
-			);
-			tops.push_back(pt);
-		}
-
-		if (m_callbacks)
-			m_callbacks->stepCallback(0.5f + (float) ++status / total * 0.48f);
-
-		if (row == topsGrid.rows() - 1 || tops.size() >= 1000) {
-
-			if (m_callbacks)
-				m_callbacks->statusCallback("Inserting points...");
-
-			savePoints(tops, db);
-
+		#pragma omp for
+		for(int32_t row = 0; row < topsGrid.rows(); ++row) {
+			if(*cancel) continue;
 			if (m_callbacks)
 				m_callbacks->statusCallback("Processing...");
+			for(int32_t col = 0; col < topsGrid.cols(); ++col) {
+
+				uint8_t window = topsGrid.get(col, row);
+				if(!window) continue;
+
+				// TODO: Can't use peak within window, because it may be on the slope of another crown
+				// Get the original height from the unsmoothed raster.
+				//double smax, omax;
+				//uint16_t smc, smr, omc, omr;
+				//getKernelMax(original, col, row, window, &omax, &omc, &omr);
+				//getKernelMax(smoothed, col, row, window, &smax, &smc, &smr);
+
+				Top * pt = new Top(++topId,
+					original.toCentroidX(col), // omc; center of pixel
+					original.toCentroidY(row), // omr
+					original.get(col, row), // omax,
+					original.toCentroidX(col), // smc; center of pixel
+					original.toCentroidY(row), // smr
+					smoothed.get(col, row), // smax,
+					col, row // smc, smr
+				);
+				tops.push_back(pt);
+			}
+
+			if (m_callbacks)
+				m_callbacks->stepCallback(0.5f + (float) ++status / total * 0.48f);
+
+			if (tops.size() >= 5000) {
+				if (m_callbacks)
+					m_callbacks->statusCallback("Inserting points...");
+				#pragma omp critical
+				savePoints(tops, db);
+			}
 		}
-
+		if (m_callbacks)
+			m_callbacks->statusCallback("Inserting points...");
+		#pragma omp critical
+		savePoints(tops, db);
 	}
-
 
 	if (m_callbacks)
 		m_callbacks->stepCallback(0.99f);

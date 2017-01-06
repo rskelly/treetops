@@ -1,6 +1,7 @@
 #include <queue>
 #include <string>
 #include <fstream>
+#include <atomic>
 
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -288,65 +289,75 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 	MemRaster<double> weights(size, size);
 	gaussianWeights(weights.grid(), size, sigma);
 
-	uint16_t bufSize = g_max(size, 1024);
-
-	MemRaster<T> buf(cols(), bufSize + size, false);
-	buf.setNodata((T) nd);
-	buf.fill((T) nd);
-
-	MemRaster<T> smooth(cols(), bufSize + size, false);
-	smooth.setNodata((T) nd);
-	smooth.fill((T) nd);
+	std::atomic<uint16_t> curRow(0);
 
 	if (status)
 		status->stepCallback(0.02f);
 
-	uint16_t curRow = 0;
-	for (int32_t b = 0; b < rows() - size; b += bufSize) {
-		if (*cancel) continue;
+	#pragma omp parallel
+	{
 
-		if(status)
-			status->statusCallback("Reading...");
+		uint16_t bufSize = g_max(size, 1024);
 
+		MemRaster<T> buf(cols(), bufSize + size, false);
+		buf.setNodata((T) nd);
 		buf.fill((T) nd);
+
+		MemRaster<T> smooth(cols(), bufSize + size, false);
+		smooth.setNodata((T) nd);
 		smooth.fill((T) nd);
 
-		uint16_t readOffset = b > 0 ? b - size / 2 : 0;
-		uint16_t writeOffset = b > 0 ? 0 : size / 2;
-		readBlock(0, readOffset, buf, 0, writeOffset);
-
-		if(status)
-			status->statusCallback("Processing...");
-
-		for (int32_t r = 0; r < buf.rows() - size; ++r) {
+		#pragma omp for
+		for (int32_t i = 0; i < (rows() - size) / bufSize + 1; ++i) {
 			if (*cancel) continue;
-			for (int32_t c = 0; c < buf.cols() - size; ++c) {
-				double v, t = 0.0;
-				bool foundNodata = false;
-				for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
-					for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
-						v = (double) buf.get(c + gc, r + gr);
-						if (v == nd) {
-							foundNodata = true;
-						} else {
-							t += weights.get(gr * size + gc) * v;
+
+			uint16_t b = i * bufSize;
+
+			if(status)
+				status->statusCallback("Reading...");
+
+			buf.fill((T) nd);
+			smooth.fill((T) nd);
+
+			uint16_t readOffset = b > 0 ? b - size / 2 : 0;
+			uint16_t writeOffset = b > 0 ? 0 : size / 2;
+			#pragma omp critical(__smooth_read)
+			readBlock(0, readOffset, buf, 0, writeOffset);
+
+			if(status)
+				status->statusCallback("Processing...");
+
+			for (int32_t r = 0; r < buf.rows() - size; ++r) {
+				if (*cancel) continue;
+				for (int32_t c = 0; c < buf.cols() - size; ++c) {
+					double v, t = 0.0;
+					bool foundNodata = false;
+					for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
+						for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
+							v = (double) buf.get(c + gc, r + gr);
+							if (v == nd) {
+								foundNodata = true;
+							} else {
+								t += weights.get(gr * size + gc) * v;
+							}
 						}
 					}
+					if (!foundNodata)
+						smooth.set(c + size / 2, r + size / 2, (T) t);
 				}
-				if (!foundNodata)
-					smooth.set(c + size / 2, r + size / 2, (T) t);
 			}
-		}
 
-		if (status) {
-			curRow += bufSize;
-			status->stepCallback(0.2f + (float) b / rows() * 0.96f);
-			status->statusCallback("Writing...");
-		}
+			if (status) {
+				curRow += bufSize;
+				status->stepCallback(0.2f + (float) curRow / rows() * 0.96f);
+				status->statusCallback("Writing...");
+			}
 
-		writeOffset = b > 0 ? b - size / 2 : b;
-		readOffset = size / 2;
-		smoothed.writeBlock(0, b, smooth, 0, size / 2);
+			writeOffset = b > 0 ? b - size / 2 : b;
+			readOffset = size / 2;
+			#pragma omp critical(__smooth_write)
+			smoothed.writeBlock(0, b, smooth, 0, size / 2);
+		}
 	}
 
 	if (status) {
