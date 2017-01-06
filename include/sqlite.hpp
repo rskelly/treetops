@@ -208,6 +208,27 @@ namespace geotools {
                 rollback();
             }
 
+            void getPoints(std::vector<geotools::util::Point*> &points,
+                    int count, int offset = 0) {
+
+                std::stringstream ss;
+                ss << std::setprecision(12);
+                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
+                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
+                    ss << ", " << it->first;
+                ss << " FROM data ORDER BY id LIMIT " << count << " OFFSET " << offset;
+
+                std::string q = ss.str();
+                char *err;
+                begin();
+                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
+                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
+                    rollback();
+                    handleError("Failed to execute query.", err);
+                }
+                rollback();
+            }
+
             void getNearestPoints(const geotools::util::Point &target, int count,
             		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
 
@@ -237,15 +258,17 @@ namespace geotools {
                 return 0;
             }
 
-            void getGeomCount(uint64_t *count) {
+            uint64_t getGeomCount() {
+            	uint64_t count;
                 char *err;
                 begin();
                 if (SQLITE_OK != sqlite3_exec(m_db, "SELECT COUNT(*) FROM data",
-                        SQLite::countCallback, count, &err)) {
+                        SQLite::countCallback, &count, &err)) {
                     rollback();
                     handleError("Failed to retrieve record count: ", err);
                 }
                 rollback();
+                return count;
             }
 
             void begin() {
