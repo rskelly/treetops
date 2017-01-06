@@ -122,11 +122,9 @@ void TTWorkerThread::run() {
 		Treetops t;
 		t.setCallbacks(m_parent->m_callbacks);
 		const TreetopsConfig &config = m_parent->m_config;
-		const TreetopsCallbacks *cb =
-			(TreetopsCallbacks *)m_parent->m_callbacks;
+		const TreetopsCallbacks *cb = (TreetopsCallbacks *) m_parent->m_callbacks;
 
-		int steps = (((int)config.doSmoothing) + ((int)config.doTops)
-			+ ((int)config.doCrowns)) * 2;
+		int steps = (((int)config.doSmoothing) + ((int)config.doTops) + ((int)config.doCrowns)) * 2;
 		int step = 0;
 
 		if (cb)
@@ -134,22 +132,23 @@ void TTWorkerThread::run() {
 
 		if (config.doSmoothing) {
 			cb->overallCallback((float) ++step / steps);
-			t.smooth(config);
+			t.smooth(config, &(m_parent->m_cancel));
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doTops) {
 			cb->overallCallback((float) ++step / steps);
-			t.treetops(config);
+			t.treetops(config, &(m_parent->m_cancel));
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doCrowns) {
 			cb->overallCallback((float) ++step / steps);
-			t.treecrowns(config);
+			t.treecrowns(config, &(m_parent->m_cancel));
 			cb->overallCallback((float) ++step / steps);
 		}
 
+		cb->statusCallback("Done...");
 		cb->overallCallback(1.0f);
 
 	} catch (const std::exception &e) {
@@ -186,6 +185,7 @@ TreetopsForm::TreetopsForm() :
 }
 
 TreetopsForm::~TreetopsForm() {
+	_settings.setValue("last_dir", QVariant(m_last.path()));
 	_saveConfig(m_config);
 	delete m_form;
 	delete m_callbacks;
@@ -206,17 +206,8 @@ void TreetopsForm::show() {
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
 	m_form = form;
-
+	m_last.setPath(_settings.value(QString("last_dir"), QDir::home().path()).toString());
 	_loadConfig(m_config);
-
-	// If the settings has a record for the last used directory, use it.
-	if (_settings.contains(QString("last_dir"))) {
-		m_last.setPath(_settings.value(QString("last_dir")).toString());
-		if(!m_last.exists())
-			m_last = QDir::home();
-	} else {
-		m_last = QDir::home();
-	}
 
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();

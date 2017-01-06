@@ -481,8 +481,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 
-	uint32_t batchSize = 10000;
-
 	// Initialize the rasters.
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing rasters...");
@@ -491,6 +489,13 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
 	outrast.setNodata(0, 1);
 	outrast.fill(0, 1);
+
+	MemRaster<float> smooth(inrast.cols(), inrast.rows(), 1);
+	smooth.setNodata(inrast.nodata());
+	smooth.writeBlock(inrast);
+
+	MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
+	blk.fill(0);
 
 	double nodata = inrast.nodata();
 
@@ -503,9 +508,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		return;
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
-	uint64_t geomCount;
+
 	SQLite db(config.crownsTreetopsDatabase);
-	db.getGeomCount(&geomCount);
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.03f);
@@ -513,107 +517,99 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	}
 
 	// Build the list of offsets for D8 or D4 search.
+	size_t offsetCount = 8;
 	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+	//size_t offsetCount = 4;
+	//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
 
-	// The number of extra rows above and below the buffer.
-	int32_t bufRows = (int) std::ceil(g_abs(config.crownsRadius / inrast.resolutionY()));
-	// The height of the row, not including disposable buffer. Use bufRows as lower bound to
-	// avoid read error later (keeps min row index to >=0)
-	int32_t rowStep = g_max(bufRows,
-			(int) g_abs(std::ceil((double) batchSize / geomCount * inrast.rows()) / inrast.resolutionY()));
-	// The total height of the buffer
-	int32_t rowHeight = rowStep + bufRows * 2;
-	std::atomic<uint32_t> curRow(0);
+	// To keep track of visited cells.
+	std::vector<bool> visited((uint64_t) inrast.size());
 
-	#pragma omp parallel
-	{
-		// To keep track of visited cells.
-		std::vector<bool> visited((uint64_t) inrast.cols() * rowHeight);
-		MemRaster<float> buf(inrast.cols(), rowHeight);
-		MemRaster<uint32_t> blk(inrast.cols(), rowHeight);
-		buf.fill(inrast.nodata());
-		blk.fill(0);
+	uint64_t geomCount = db.getGeomCount();
+	int count = 1000;
+	int offset = 0;
 
-		#pragma omp for
-		for (int32_t row0 = 0; row0 < inrast.rows(); row0 += rowStep) {
+	if (m_callbacks)
+		m_callbacks->statusCallback("Processing crowns...");
+
+	while(true) {
+
+		std::vector<Point*> tops;
+		db.getPoints(tops, count, offset += 1000);
+		if(tops.empty())
+			break;
+
+		// Convert the Tops to Nodes.
+		std::queue<Node*> q;
+		for (Point *p : tops) {
 			if (*cancel)
-				continue;
-			curRow += rowStep;
+				break;
+			q.push(new Node(p));
+			delete p;
+		}
 
-			// Load the tree tops for the strip.
-			Bounds bounds(inrast.toX(0), inrast.toY(row0 - bufRows),
-					inrast.toX(inrast.cols()),
-					inrast.toY(row0 + rowStep + bufRows));
-			std::vector<Point*> tops;
+		if (m_callbacks)
+			m_callbacks->stepCallback(0.03f + ((float) (offset + count) / geomCount) * 0.97f);
 
-			#pragma omp critical(__crowns_getpoints)
-			db.getPoints(tops, bounds);
+		// Run through the queue.
+		while (!*cancel && q.size()) {
+			Node *n = q.front();
+			q.pop();
 
-			#pragma omp critical(__crowns_readbuf)
-			inrast.readBlock(0, row0 == 0 ? row0 : row0 - bufRows, buf, 0, row0 == 0 ? bufRows : 0);
+			blk.set(n->c, n->r, (uint32_t) n->id);
 
-			// Convert the Tops to Nodes.
-			std::queue<Node*> q;
-			for (Point *p : tops) {
-				if (*cancel)
-					break;
-				q.push(new Node(p));
-				delete p;
-			}
+			for(size_t i = 0; i < offsetCount; ++i) {
+				int c = n->c + offsets[i][0];
+				int r = n->r + offsets[i][1];
 
-			if (m_callbacks) {
-				m_callbacks->stepCallback(0.03f + ((float) curRow / inrast.rows()) * 0.97f);
-				m_callbacks->statusCallback("Processing crowns...");
-			}
+				if (r < 0 || c < 0 || r >= inrast.rows() || c >= inrast.cols())
+					continue;
 
-			// Run through the queue.
-			while (!*cancel && q.size()) {
-				Node *n = q.front();
-				q.pop();
+				uint32_t idx = (uint64_t) r * inrast.cols() + c;
+				if (visited[idx])
+					continue;
 
-				blk.set(n->c, n->r, (uint32_t) n->id);
-
-				for(size_t i = 0; i < 8; ++i) {
-					int c = n->c + offsets[i][0];
-					int r = n->r + offsets[i][1];
-
-					if (r < 0 || c < 0 || r >= inrast.rows() || c >= inrast.cols())
-						continue;
-					if (r - row0 + bufRows < 0 || r - row0 + bufRows >= buf.rows())
-						continue;
-
-					uint32_t idx = (uint64_t) (r - row0 + bufRows) * inrast.cols() + c;
-					if (visited[idx])
-						continue;
-
-					double v = buf.get(idx);
-					if (v != nodata           												// is not nodata
-						&& v < n->z		      												// is less than the neighbouring pixel
-						&& v >= config.crownsMinHeight 										// is greater than the min height
-						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
-						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
-					) {
-						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-						visited[idx] = true;
-					}
+				double v = smooth.get(idx);
+				if (v != nodata           												// is not nodata
+					&& v < n->z		      												// is less than the neighbouring pixel
+					&& v >= config.crownsMinHeight 										// is greater than the min height
+					&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
+					&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+				) {
+					q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+					blk.set(c, r, n->id);
+					visited[idx] = true;
 				}
-				delete n;
 			}
+			delete n;
+		}
 
-			if (row0 > 0 && (row0 + bufRows) >= inrast.rows())
-				continue;
+		if (*cancel)
+			continue;
+	}
 
-			if (*cancel)
-				continue;
+	// Filter out isolated pixels if D8 is used. See DTOOLS-22
+	if(offsetCount == 9) {
 
-			if(m_callbacks)
-				m_callbacks->statusCallback("Writing output...");
+		if(m_callbacks)
+			m_callbacks->statusCallback("Filtering degenerate polygons...");
 
-			#pragma omp critical(__b)
-			outrast.writeBlock(0, row0, blk, 0, bufRows);
-
+		for(int32_t row = 1; row < blk.rows() - 1; ++row) {
+			for(int32_t col = 1; col < blk.cols() - 1; ++col) {
+				uint32_t v = blk.get(col, row);
+				if(blk.get(col, row - 1) != v
+						&& blk.get(col - 1, row) != v
+						&& blk.get(col + 1, row) != v
+						&& blk.get(col, row + 1))
+					blk.set(col, row, 0);
+			}
 		}
 	}
+
+	if(m_callbacks)
+		m_callbacks->statusCallback("Writing output...");
+
+	outrast.writeBlock(blk);
 
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)
