@@ -617,6 +617,7 @@ uint64_t MappedFile::size() {
 MappedFile::~MappedFile() {
 	if (m_remove)
 		file_mapping::remove(m_filename.c_str());
+	Util::rm(m_filename);
 	delete m_region;
 	delete m_mapping;
 }
