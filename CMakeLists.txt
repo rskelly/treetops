@@ -24,7 +24,7 @@ if (${APPLE})
 	endif()
 
 	# For GDAL2
-	set (GDAL_LIBRARY /usr/local/opt/gdal2/lib)
+	set (GDAL_LIBRARY /usr/local/opt/gdal2/lib/libgdal.dylib)
 	set (GDAL_INCLUDE_DIR /usr/local/opt/gdal2/include)
 	set (CMAKE_C_COMPILER /usr/local/bin/clang-omp CACHE STRING "C compiler" FORCE)
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
