@@ -132,7 +132,7 @@
         <item row="1" column="0">
          <widget class="QLabel" name="label_11">
           <property name="text">
-           <string>Original &amp;CHM</string>
+           <string>Or&amp;iginal CHM</string>
           </property>
           <property name="buddy">
            <cstring>txtSmoothOriginalCHM</cstring>
@@ -175,18 +175,24 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QGridLayout" name="topsGrid">
-        <item row="2" column="3">
-         <widget class="QLabel" name="label_17">
-          <property name="text">
-           <string>&amp;Treetops SRID</string>
+        <item row="0" column="1" colspan="4">
+         <widget class="QLineEdit" name="txtTopsThresholds"/>
+        </item>
+        <item row="1" column="2">
+         <widget class="QToolButton" name="btnTopsOriginalCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
           </property>
-          <property name="buddy">
-           <cstring>spnTopsTreetopsSRID</cstring>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="5">
-         <widget class="QToolButton" name="btnTopsSmoothedCHM">
+        <item row="2" column="2">
+         <widget class="QToolButton" name="btnTopsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
           </property>
@@ -208,29 +214,6 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="2">
-         <widget class="QToolButton" name="btnTopsOriginalCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>&amp;Min. Top Height</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsMinHeight</cstring>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="1">
          <widget class="QLineEdit" name="txtTopsOriginalCHM">
           <property name="mouseTracking">
@@ -244,58 +227,19 @@
         <item row="1" column="4">
          <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
         </item>
-        <item row="2" column="2">
-         <widget class="QToolButton" name="btnTopsTreetopsDatabase">
+        <item row="2" column="4">
+         <widget class="QSpinBox" name="spnTopsTreetopsSRID">
           <property name="mouseTracking">
            <bool>false</bool>
           </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1" colspan="2">
-         <widget class="QDoubleSpinBox" name="spnTopsMinHeight">
-          <property name="mouseTracking">
-           <bool>false</bool>
+          <property name="focusPolicy">
+           <enum>Qt::WheelFocus</enum>
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
           <property name="maximum">
-           <double>300.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>4.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>W&amp;indow Size</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsWindowSize</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4" colspan="2">
-         <widget class="QSpinBox" name="spnTopsWindowSize">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="minimum">
-           <number>3</number>
-          </property>
-          <property name="value">
-           <number>7</number>
+           <number>999999</number>
           </property>
          </widget>
         </item>
@@ -319,22 +263,6 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="4">
-         <widget class="QSpinBox" name="spnTopsTreetopsSRID">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::WheelFocus</enum>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>999999</number>
-          </property>
-         </widget>
-        </item>
         <item row="2" column="5">
          <widget class="QToolButton" name="btnTopsTreetopsSRID">
           <property name="mouseTracking">
@@ -355,6 +283,46 @@
           </property>
           <property name="buddy">
            <cstring>txtTopsSmoothedCHM</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QLabel" name="label_17">
+          <property name="text">
+           <string>&amp;Treetops SRID</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnTopsTreetopsSRID</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="5">
+         <widget class="QToolButton" name="btnTopsSmoothedCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_18">
+          <property name="text">
+           <string>Thresholds</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="5">
+         <widget class="QToolButton" name="btnTopsThresholds">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
           </property>
          </widget>
         </item>
@@ -731,8 +699,6 @@
   <tabstop>txtSmoothSmoothedCHM</tabstop>
   <tabstop>btnSmoothSmoothedCHM</tabstop>
   <tabstop>grpTops</tabstop>
-  <tabstop>spnTopsMinHeight</tabstop>
-  <tabstop>spnTopsWindowSize</tabstop>
   <tabstop>txtTopsOriginalCHM</tabstop>
   <tabstop>btnTopsOriginalCHM</tabstop>
   <tabstop>txtTopsSmoothedCHM</tabstop>

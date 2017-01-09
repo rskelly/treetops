@@ -28,10 +28,9 @@ void usage() {
 			<< "                    LiDAR-derived canopy height model.\n"
 			<< " -ts <filename>     The input raster for treetop detection; a (smoothed)\n"
 			<< "                    LiDAR-derived canopy height model.\n"
-			<< " -tm <float>        The minimum height of pixels to consider for selection as a \n"
-			<< "                    tree top. Default 4.\n"
-			<< " -tw <int>          Window size. Will be bumped up to the next odd value if \n"
-			<< "                    even given. Minimum 3.\n\n"
+			<< " -tt <float int>    Threshold. A space-delimited pair consisting of a float and a positive\n"
+			<< "                    byte representing a maximum height and window size for locating tops.\n"
+			<< "                    Window size will be bumped up to the next odd value; minumum 3.\n"
 			<< " -td <filename>     The treetop vector file. An sqlite file.\n\n"
 
 			<< " -cs <filename>     The input raster for crown delineation; a (smoothed)\n"
@@ -55,24 +54,23 @@ void usage() {
 
 int runWithGui(int argc, char **argv) {
 #ifdef WITH_GUI
+
 	class TTApplication : public QApplication {
 	public:
-		TTApplication(int argc, char **argv) : QApplication(argc, argv) {}
+		TTApplication(int &argc, char **argv) : QApplication(argc, argv) {}
 		bool notify(QObject *receiver, QEvent *e) {
 			try {
-				return receiver->event(e);
+				return QApplication::notify(receiver, e);
 			} catch(const std::exception &ex) {
-				QMessageBox err;//((QWidget *) this);
+				QMessageBox err;
 				err.setText("Error");
 				err.setInformativeText(QString(ex.what()));
 				err.exec();
 				return false;
 			}
 		}
-		void focusChanged(QWidget *n, QWidget *o) {
-			std::cerr << n << ", " << o << "\n";
-		}
 	};
+
 	TTApplication q(argc, argv);
 	geotools::ui::TreetopsForm f;
 	f.show();
@@ -112,11 +110,12 @@ int main(int argc, char **argv) {
 			} else if (arg == "-ts") {
 				config.topsSmoothedCHM = argv[++i];
 				config.doTops = true;
-			} else if (arg == "-tm") {
-				config.topsMinHeight = atof(argv[++i]);
-				config.doTops = true;
-			} else if (arg == "-tw") {
-				config.topsWindowSize = atoi(argv[++i]);
+			} else if (arg == "-tt") {
+				if(argc < i + 2)
+					g_argerr("Too few parameters for -tt.");
+				float height = atof(argv[++i]);
+				uint8_t window = atoi(argv[++i]);
+				config.topsThresholds[height] = window;
 				config.doTops = true;
 			} else if (arg == "-td") {
 				config.topsTreetopsDatabase = argv[++i];

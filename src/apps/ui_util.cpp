@@ -6,22 +6,21 @@
  */
 
 #include "ui_util.hpp"
+#include "tops_thresholds_ui.hpp"
+#include "geotools.hpp"
 
 using namespace geotools::ui::util;
 
-// Convenience: returns a QString from a std string.
 QString geotools::ui::util::qstr(const std::string &str) {
 	return QString(str.c_str());
 }
 
-// Convenience: returns a QString from an int.
 QString geotools::ui::util::qstr(int val) {
 	QString s;
 	s.setNum(val);
 	return s;
 }
 
-// Hack to strip the boost::... part of an error message
 std::string geotools::ui::util::stripBoost(const std::string &msg) {
 	if (msg.substr(0, 7) == "boost::")
 		return msg.substr(msg.find(" ", 0));
@@ -38,20 +37,33 @@ void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, 
 	err.exec();
 }
 
-// Convenience: open an input file dialog and return the string.
-std::string geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
-		const std::string &filter) {
+void geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
+		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
-	path.setPath(res);
-	return res.toStdString();
+	if(!res.isEmpty()) {
+		path.setPath(res);
+		filename = res.toStdString();
+	}
 }
 
-// Convenience: open an output file dialog and return the string.
-std::string geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
-		const std::string &filter) {
+void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
+		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
-	path.setPath(res);
-	return res.toStdString();
+	if(!res.isEmpty()) {
+		path.setPath(res);
+		filename = res.toStdString();
+	}
+}
+
+void geotools::ui::util::getThresholds(QWidget *form, std::map<float, uint8_t> &thresholds) {
+	TopsThresholdsForm tf;
+	QDialog dlg;
+	tf.setupUi(&dlg);
+	tf.setThresholds(thresholds);
+	if(dlg.exec()) {
+		if(tf.isConfirm())
+			thresholds = tf.thresholds();
+	}
 }
 
 

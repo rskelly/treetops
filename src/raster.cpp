@@ -1,6 +1,7 @@
 #include <queue>
 #include <string>
 #include <fstream>
+#include <atomic>
 
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -9,6 +10,7 @@
 #include <gdal_alg.h>
 #include <ogr_feature.h>
 #include <ogrsf_frmts.h>
+#include <cpl_string.h>
 
 #include "geotools.hpp"
 #include "util.hpp"
@@ -268,10 +270,9 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 	if (!cancel)
 		cancel = &_cancel;
 
-	g_debug("Smoothing grid...");
 	if (status) {
 		status->stepCallback(0.01f);
-		status->statusCallback("Preparing to smooth...");
+		status->statusCallback("Preparing...");
 	}
 
 	if (sigma <= 0)
@@ -284,60 +285,87 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 	}
 
 	double nd = (double) nodata();
-	uint32_t completed = 0;
-
-	if(status)
-		status->statusCallback("Loading...");
-
-	MemRaster<T> source(cols(), rows(), true);
-	source.setNodata((T)nodata());
-	source.writeBlock(*this);
-
-	MemRaster<T> smooth(cols(), rows(), true);
-	smooth.fill((T) nodata());
 
 	MemRaster<double> weights(size, size);
 	gaussianWeights(weights.grid(), size, sigma);
 
-	if (status)
-		status->statusCallback("Reading...");
+	std::atomic<uint16_t> curRow(0);
 
-	for (int32_t row = 0; row < rows() - size; ++row) {
-		if (*cancel)
-			continue;
-		for (int32_t col = 0; col < cols() - size; ++col) {
-			double v, t = 0.0;
-			bool foundNodata = false;
-			for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
-				for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
-					v = (double) source.get(col + gc, row + gr);
-					if (v == nd) {
-						foundNodata = true;
-					} else {
-						t += weights.get(gr * size + gc) * v;
+	if (status)
+		status->stepCallback(0.02f);
+
+	#pragma omp parallel
+	{
+
+		uint16_t bufSize = g_max(size, 1024);
+
+		MemRaster<T> buf(cols(), bufSize + size, false);
+		buf.setNodata((T) nd);
+		buf.fill((T) nd);
+
+		MemRaster<T> smooth(cols(), bufSize + size, false);
+		smooth.setNodata((T) nd);
+		smooth.fill((T) nd);
+
+		#pragma omp for
+		for (int32_t i = 0; i < (rows() - size) / bufSize + 1; ++i) {
+			if (*cancel) continue;
+
+			uint16_t b = i * bufSize;
+
+			if(status)
+				status->statusCallback("Reading...");
+
+			buf.fill((T) nd);
+			smooth.fill((T) nd);
+
+			uint16_t readOffset = b > 0 ? b - size / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
+			uint16_t writeOffset = b > 0 ? 0 : size / 2;     // If this is the first row, write to (size / 2), otherwise 0.
+			#pragma omp critical(__smooth_read)
+			readBlock(0, readOffset, buf, 0, writeOffset);
+
+			if(status)
+				status->statusCallback("Processing...");
+
+			// Process the entire block, even the buffer parts.
+			for (int32_t r = 0; r < buf.rows() - size; ++r) {
+				for (int32_t c = 0; c < buf.cols() - size; ++c) {
+					double v, t = 0.0;
+					bool foundNodata = false;
+					for (int32_t gr = 0; gr < size; ++gr) {
+						for (int32_t gc = 0; gc < size; ++gc) {
+							v = (double) buf.get(c + gc, r + gr);
+							if (v == nd) {
+								foundNodata = true;
+								break;
+							} else {
+								t += weights.get(gr * size + gc) * v;
+							}
+						}
+						if(foundNodata) break;
 					}
+					if (!foundNodata)
+						smooth.set(c + size / 2, r + size / 2, (T) t);
 				}
 			}
-			if (!foundNodata)
-				smooth.set(col + size / 2, row + size / 2, (T)t);
+
+			if (status) {
+				curRow += bufSize;
+				status->stepCallback(0.2f + (float) curRow / rows() * 0.97f);
+				status->statusCallback("Writing...");
+			}
+
+			#pragma omp critical(__smooth_write)
+			smoothed.writeBlock(0, b, smooth, 0, size / 2, cols(), g_min(bufSize, rows() - b - size)); // Always write to b and read from (size / 2)
 		}
-		if (status)
-			status->stepCallback((float) ++completed / rows() * 0.98f);
 	}
 	if (*cancel)
 		return;
-	if(status) {
-		status->stepCallback((float) 0.99);
-		status->statusCallback("Writing...");
-	}
-	// The blur buffer is always written size/2 down, so read from there.
-	smoothed.writeBlock(smooth);
 
 	if (status) {
 		status->stepCallback(1.0);
-		status->statusCallback("Done.");
+		status->statusCallback("Closing...");
 	}
-
 }
 
 template<class T>
@@ -417,15 +445,13 @@ template<class T>
 void MemRaster<T>::init(uint16_t cols, uint16_t rows, bool mapped) {
 
 	m_grid = nullptr;
-	m_cols = -1;
-	m_rows = -1;
+	m_cols = 0;
+	m_rows = 0;
 	m_item_dealloc = nullptr;
 	m_nodata = 0;
 	m_mmapped = false;
 	m_size = 0;
 
-	if (cols <= 0 || rows <= 0)
-		g_argerr("Invalid row or column count.");
 	if (cols != m_cols || rows != m_rows) {
 		freeMem();
 		m_cols = cols;
@@ -449,7 +475,7 @@ void MemRaster<T>::init(uint16_t cols, uint16_t rows, bool mapped) {
 template<class T>
 void MemRaster<T>::fill(const T value) {
 	checkInit();
-	for (uint32_t i = 0; i < size(); ++i)
+	for(uint64_t i = 0; i < size(); ++i)
 		m_grid[i] = value;
 }
 
@@ -543,24 +569,28 @@ void MemRaster<T>::readBlock(int32_t col, int32_t row, Grid<T> &block,
 		int32_t xcols, int32_t xrows) {
 	if (&block == this)
 		g_argerr("Recursive call to readBlock.");
-	if (dstCol < 0 || dstRow < 0 || dstCol >= block.cols()
-			|| dstRow >= block.rows())
-		g_argerr(
-				"Invalid destination column or row: row: " << dstRow
-						<< "; col: " << dstCol << "; block: " << block.rows()
-						<< "," << block.rows());
-	int16_t cols = g_min(m_cols - col, block.cols() - dstCol);
-	int16_t rows = g_min(m_rows - row, block.rows() - dstRow);
-	if (block.hasGrid()) {
-		// Copy rows of he source l
-		for (int32_t r = 0; r < rows; ++r) {
-			std::memcpy((block.grid() + (dstRow + r) * block.cols() + dstCol),
-					(m_grid + (row + r) * m_cols + col), cols * sizeof(T));
-		}
+	if (dstCol < 0 || dstRow < 0 || dstCol >= block.cols() || dstRow >= block.rows())
+		g_argerr("Invalid destination column or row: row: " << dstRow
+			<< "; col: " << dstCol << "; block: " << block.rows() << "," << block.rows());
+	if(col == 0 && row == 0 && block.cols() == cols() && block.rows() == rows() && block.hasGrid() && hasGrid()) {
+		// If these are equivalent blocks and they have a grid, copy the memory.
+		std::memcpy(block.grid(), grid(), size());
 	} else {
-		for (int32_t r = 0; r < rows; ++r) {
-			for (int32_t c = 0; c < cols; ++c)
-				block.set(c + dstCol, r + dstRow, get(c + col, r + row));
+		uint16_t cols = g_min(m_cols - col, block.cols() - dstCol);
+		uint16_t rows = g_min(m_rows - row, block.rows() - dstRow);
+		if (block.hasGrid()) {
+			for (int32_t r = 0; r < rows; ++r) {
+				std::memcpy(
+					(block.grid() + (dstRow + r) * block.cols() + dstCol),
+					(m_grid + (row + r) * m_cols + col),
+					cols * sizeof(T)
+				);
+			}
+		} else {
+			for (int32_t r = 0; r < rows; ++r) {
+				for (int32_t c = 0; c < cols; ++c)
+					block.set(c + dstCol, r + dstRow, get(c + col, r + row));
+			}
 		}
 	}
 }
@@ -571,27 +601,32 @@ void MemRaster<T>::writeBlock(int32_t col, int32_t row, Grid<T> &block,
 		int32_t xcols, int32_t xrows) {
 	if (&block == this)
 		g_argerr("Recursive call to writeBlock.");
-	if (srcCol < 0 || srcRow < 0 || srcCol >= block.cols()
-			|| srcRow >= block.rows())
-		g_argerr(
-				"Invalid source column or row: row: " << srcRow << "; col: " 
-					<< srcCol << "; block: " << block.rows() << ","	<< block.rows());
-	int16_t cols = g_min(m_cols - col, block.cols() - srcCol);
-	int16_t rows = g_min(m_rows - row, block.rows() - srcRow);
-	if (xcols > 0)
-		cols = g_min(xcols, cols);
-	if (xrows > 0)
-		rows = g_min(xrows, rows);
-	if (block.hasGrid()) {
-		for (int32_t r = 0; r < rows; ++r) {
-			std::memcpy((m_grid + (r + row) * m_cols + col),
-					(block.grid() + (r + srcRow) * block.cols() + srcCol),
-					cols * sizeof(T));
-		}
+	if (srcCol < 0 || srcRow < 0 || srcCol >= block.cols() || srcRow >= block.rows())
+		g_argerr("Invalid source column or row: row: " << srcRow << "; col: "
+				<< srcCol << "; block: " << block.rows() << ","	<< block.rows());
+	if(col == 0 && row == 0 && block.cols() == cols() && block.rows() == rows() && block.hasGrid() && hasGrid()) {
+		// If these are equivalent blocks and they have a grid, copy the memory.
+		std::memcpy(grid(), block.grid(), size());
 	} else {
-		for (int32_t r = 0; r < rows; ++r) {
-			for (int32_t c = 0; c < cols; ++c)
-				set(c + col, r + row, block.get(c + srcCol, r + srcRow));
+		uint16_t cols = g_min(m_cols - col, block.cols() - srcCol);
+		uint16_t rows = g_min(m_rows - row, block.rows() - srcRow);
+		if (xcols > 0)
+			cols = g_min(xcols, cols);
+		if (xrows > 0)
+			rows = g_min(xrows, rows);
+		if (block.hasGrid()) {
+			for (int32_t r = 0; r < rows; ++r) {
+				std::memcpy(
+						(m_grid + (r + row) * m_cols + col),
+						(block.grid() + (r + srcRow) * block.cols() + srcCol),
+						cols * sizeof(T)
+				);
+			}
+		} else {
+			for (int32_t r = 0; r < rows; ++r) {
+				for (int32_t c = 0; c < cols; ++c)
+					set(c + col, r + row, block.get(c + srcCol, r + srcRow));
+			}
 		}
 	}
 }
@@ -1001,9 +1036,12 @@ void Raster<T>::init(const std::string &filename, uint16_t bands, double minx,
 	int32_t height = (int) std::ceil((maxy - miny) / g_abs(resolutionY));
 
 	// Create GDAL dataset.
+	char **opts = NULL;
+	opts = CSLSetNameValue(opts, "COMPRESS", "LZW");
+	opts = CSLSetNameValue(opts, "BIGTIFF", "YES");
 	GDALAllRegister();
 	m_ds = GetGDALDriverManager()->GetDriverByName("GTiff")->Create(
-			filename.c_str(), width, height, bands, m_type, NULL);
+			filename.c_str(), width, height, bands, m_type, opts);
 	if (m_ds == nullptr)
 		g_runerr("Failed to create file.");
 
@@ -1139,8 +1177,8 @@ void Raster<T>::readBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
 	if (&grd == this)
 		g_runerr("Recursive call to readBlock.");
 	m_cache.flush();
-	int16_t cols = g_min(m_cols - col, grd.cols() - dstCol);
-	int16_t rows = g_min(m_rows - row, grd.rows() - dstRow);
+	uint16_t cols = g_min(m_cols - col, grd.cols() - dstCol);
+	uint16_t rows = g_min(m_rows - row, grd.rows() - dstRow);
 	if (xcols > 0)
 		cols = g_min(xcols, cols);
 	if (xrows > 0)
@@ -1195,8 +1233,8 @@ void Raster<T>::writeBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd
 	if (&grd == this)
 		g_runerr("Recursive call to writeBlock.");
 	m_cache.flush();
-	int16_t cols = g_min(m_cols - col, grd.cols() - srcCol);
-	int16_t rows = g_min(m_rows - row, grd.rows() - srcRow);
+	uint16_t cols = g_min(m_cols - col, grd.cols() - srcCol);
+	uint16_t rows = g_min(m_rows - row, grd.rows() - srcRow);
 	if (xcols > 0)
 		cols = g_min(xcols, cols);
 	if (xrows > 0)
@@ -1594,7 +1632,7 @@ int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg
 }
 
 template<class T>
-void Raster<T>::polygonize(const std::string &filename, uint16_t band, Callbacks *callbacks, bool *cancel) {
+void Raster<T>::polygonize(const std::string &filename, uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
@@ -1607,7 +1645,9 @@ void Raster<T>::polygonize(const std::string &filename, uint16_t band, Callbacks
 	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
 	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
 	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
-	OGRLayer *layer = ds->CreateLayer("boundary", NULL, wkbMultiPolygon, opts);
+	OGRSpatialReference sr;
+	sr.importFromEPSG(srid);
+	OGRLayer *layer = ds->CreateLayer("boundary", &sr, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 	if (callbacks) {
@@ -1628,7 +1668,7 @@ void Raster<T>::flush() {
 template<class T>
 Raster<T>::~Raster() {
 	m_cache.close();
-	if (m_ds) // Probably not necessary.
+	if(m_ds)
 		GDALClose(m_ds);
 }
 
@@ -1680,6 +1720,6 @@ template class geotools::raster::MemRaster<int16_t>;
 template class geotools::raster::MemRaster<int8_t>;
 template class geotools::raster::MemRaster<char>;
 
-template class geotools::raster::MemRaster<std::vector<double>*>;
-
 template class geotools::raster::TargetOperator<float>;
+
+template class geotools::raster::FillOperator<float>;

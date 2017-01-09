@@ -143,8 +143,8 @@ namespace geotools {
                 g_debug("done setCacheSize " << size);
             }
 
-            void addPoints(std::vector<std::unique_ptr<geotools::util::Point> > &points) {
-                for (const std::unique_ptr<geotools::util::Point> &pt : points)
+            void addPoints(std::vector<geotools::util::Point*> &points) {
+                for (const geotools::util::Point *pt : points)
                     addPoint(pt->x, pt->y, pt->z, pt->fields);
             }
 
@@ -162,7 +162,7 @@ namespace geotools {
 
             static int getPointsCallback(void *resultPtr, int cols, char **values, char **colnames) {
                 using namespace geotools::util;
-                std::vector<std::unique_ptr<Point> > *result = (std::vector<std::unique_ptr<Point> > *) resultPtr;
+                std::vector<Point*> *result = (std::vector<Point*> *) resultPtr;
                 Point *pt = new Point();
                 for (int i = 0; i < cols; ++i) {
                     std::string colname(colnames[i]);
@@ -176,12 +176,11 @@ namespace geotools {
                         pt->fields[colname] = std::string(values[i]);
                     }
                 }
-                std::unique_ptr<Point> upt(pt);
-                result->push_back(std::move(upt));
+                result->push_back(pt);
                 return 0;
             }
 
-            void getPoints(std::vector<std::unique_ptr<geotools::util::Point> > &points,
+            void getPoints(std::vector<geotools::util::Point*> &points,
                     const geotools::util::Bounds &bounds) {
 
                 std::stringstream ss;
@@ -209,6 +208,27 @@ namespace geotools {
                 rollback();
             }
 
+            void getPoints(std::vector<geotools::util::Point*> &points,
+                    int count, int offset = 0) {
+
+                std::stringstream ss;
+                ss << std::setprecision(12);
+                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
+                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
+                    ss << ", " << it->first;
+                ss << " FROM data ORDER BY id LIMIT " << count << " OFFSET " << offset;
+
+                std::string q = ss.str();
+                char *err;
+                begin();
+                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
+                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
+                    rollback();
+                    handleError("Failed to execute query.", err);
+                }
+                rollback();
+            }
+
             void getNearestPoints(const geotools::util::Point &target, int count,
             		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
 
@@ -219,7 +239,7 @@ namespace geotools {
                     ss << ", " << it->first;
                 ss << " FROM data ORDER BY ST_Distance(geom, GeomFromText(POINTZ("
                 		<< target.x << " " << target.y << " " << target.z
-						<< "), " << "SRID(geom))LIMIT " << count;
+						<< "), " << "SRID(geom)) LIMIT " << count;
 
                 std::string q = ss.str();
                 char *err;
@@ -238,15 +258,17 @@ namespace geotools {
                 return 0;
             }
 
-            void getGeomCount(uint64_t *count) {
+            uint64_t getGeomCount() {
+            	uint64_t count;
                 char *err;
                 begin();
                 if (SQLITE_OK != sqlite3_exec(m_db, "SELECT COUNT(*) FROM data",
-                        SQLite::countCallback, count, &err)) {
+                        SQLite::countCallback, &count, &err)) {
                     rollback();
                     handleError("Failed to retrieve record count: ", err);
                 }
                 rollback();
+                return count;
             }
 
             void begin() {
@@ -280,10 +302,15 @@ namespace geotools {
                 sqlite3_close(m_db);
             }
 
+            int srid() {
+                return m_srid;
+            }
+
             void handleError(const std::string &msg, char *err = 0);
             void init(bool replace);
 
         };
+
 
         void SQLite::handleError(const std::string &msg, char *err) {
             if (!err)
