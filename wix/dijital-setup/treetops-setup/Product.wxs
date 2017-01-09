@@ -4,6 +4,9 @@
 <?define CompanyName = "dijital.ca"?>
 <?define AppName = "treetops"?>
 <?define AppExecutable = "treetops-app.exe"?>
+<?define OptDir = "E:\opt"?>
+<?define BoostDir = "E:\boost_1_63_0\lib64-msvc-14.0"?>
+<?define QtDir = "C:\Qt\5.7\msvc2015_64"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <Product Id="E2F73549-DB3C-4310-8CC5-E0219D54C15C" Name="$(var.AppName)"
@@ -60,78 +63,86 @@
       </Component>
 
       <Component Id="Dep1" Guid="BF24905B-AF3C-433F-96A8-3E8A83FFB176">
-        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_date_time-vc140-mt-1_63.dll" />
+        <File Source="$(var.BoostDir)\boost_date_time-vc140-mt-1_63.dll" />
       </Component>
       <Component Id="Dep2" Guid="764A418F-4D84-4607-9B2E-6BFD0A2AE0C3">
-        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_system-vc140-mt-1_63.dll" />
+        <File Source="$(var.BoostDir)\boost_system-vc140-mt-1_63.dll" />
       </Component>
       <Component Id="Dep3" Guid="F7C5B6CB-4116-46DB-81B9-771E0E04432D">
-        <File Source="C:\boost_1_63_0\lib64-msvc-14.0\boost_filesystem-vc140-mt-1_63.dll" />
+        <File Source="$(var.BoostDir)\boost_filesystem-vc140-mt-1_63.dll" />
       </Component>
       <Component Id="Dep4" Guid="0E6CE6B5-7B1D-498A-8F94-118AD1B3B95F">
-        <File Source="C:\opt\bin\expat.dll" />
+        <File Source="$(var.OptDir)\bin\expat.dll" />
       </Component>
       <Component Id="Dep5" Guid="A954573A-4205-4BD8-9FF0-F3816BD8008C">
-        <File Source="C:\opt\bin\freexl.dll" />
+        <File Source="$(var.OptDir)\bin\freexl.dll" />
       </Component>
       <Component Id="Dep6" Guid="17BA70B7-4A5B-4272-A81A-1629ECD9C510">
-        <File Source="C:\opt\bin\gdal201.dll" />
+        <File Source="$(var.OptDir)\bin\gdal201.dll" />
       </Component>
       <Component Id="Dep7" Guid="DF004BFA-84F1-474D-897B-12B69EB1AD4D">
-        <File Source="C:\opt\bin\geos.dll" />
+        <File Source="$(var.OptDir)\bin\geos.dll" />
       </Component>
       <Component Id="Dep8" Guid="6BAB57A6-552E-4023-9166-A456D0BCBF1A">
-        <File Source="C:\opt\bin\geos_c.dll" />
+        <File Source="$(var.OptDir)\bin\geos_c.dll" />
       </Component>
       <Component Id="Dep9" Guid="53DF5F26-4D21-447E-89B2-98B00C8BE26F">
-        <File Source="C:\opt\bin\iconv.dll" />
+        <File Source="$(var.OptDir)\bin\iconv.dll" />
       </Component>
       <Component Id="Dep10" Guid="ECDF7FED-8AE5-41F1-A7BC-08F3FF45081D">
-        <File Source="C:\opt\bin\libcurl.dll" />
+        <File Source="$(var.OptDir)\bin\libcurl.dll" />
       </Component>
       <Component Id="Dep11" Guid="859F99D2-EE7A-4C2A-948A-98D1690305DD">
-        <File Source="C:\opt\bin\libeay32.dll" />
+        <File Source="$(var.OptDir)\bin\libeay32.dll" />
       </Component>
       <Component Id="Dep12" Guid="527C2F03-6AB5-4376-BA4C-FE8EC3898FA5">
-        <File Source="C:\opt\bin\libmysql.dll" />
+        <File Source="$(var.OptDir)\bin\libmysql.dll" />
       </Component>
       <Component Id="Dep13" Guid="232DCE5A-E4EA-4B5E-A625-9CECF718B9CA">
-        <File Source="C:\opt\bin\libpq.dll" />
+        <File Source="$(var.OptDir)\bin\libpq.dll" />
       </Component>
       <Component Id="Dep14" Guid="7C3D6590-74C8-488A-A340-19EAA8BB4432">
-        <File Source="C:\opt\bin\libxml2.dll" />
+        <File Source="$(var.OptDir)\bin\libxml2.dll" />
       </Component>
       <Component Id="Dep15" Guid="5EC46216-751B-43B7-A863-F5612E0CCDCA">
-        <File Source="C:\opt\bin\openjp2.dll" />
+        <File Source="$(var.OptDir)\bin\openjp2.dll" />
       </Component>
       <Component Id="Dep16" Guid="FDD5CBCD-C9EF-423D-827F-A9892954D6DF">
-        <File Source="C:\opt\bin\proj.dll" />
+        <File Source="$(var.OptDir)\bin\proj.dll" />
       </Component>
       <Component Id="Dep17" Guid="5644074F-BA29-4E42-B9FC-4B4E0E81BB72">
-        <File Source="C:\opt\bin\spatialite.dll" />
+        <File Source="$(var.OptDir)\bin\spatialite.dll" />
       </Component>
       <Component Id="Dep18" Guid="17EF806E-7DF0-4BA9-8B67-665944E1DC4B">
-        <File Source="C:\opt\bin\sqlite3.dll" />
+        <File Source="$(var.OptDir)\bin\sqlite3.dll" />
       </Component>
       <Component Id="Dep19" Guid="A1252537-0F4B-4693-8AE1-D3A67DDEE1CC">
-        <File Source="C:\opt\bin\ssleay32.dll" />
+        <File Source="$(var.OptDir)\bin\ssleay32.dll" />
       </Component>
       <Component Id="Dep20" Guid="22CA6EC3-7B59-4E4B-BC21-A06172790CAD">
-        <File Source="C:\opt\bin\xerces-c_3_1.dll" />
+        <File Source="$(var.OptDir)\bin\xerces-c_3_1.dll" />
       </Component>
       <Component Id="Dep21" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E7">
-        <File Source="C:\opt\bin\zlib1.dll" />
+        <File Source="$(var.OptDir)\bin\zlib1.dll" />
       </Component>
       <Component Id="Dep22" Guid="1C83F510-AFA5-4402-B8A6-31790A326397">
-        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Core.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Core.dll" />
       </Component>
       <Component Id="Dep23" Guid="E3B4B58D-90C9-4486-9FA2-627D6CD82DA8">
-        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Widgets.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Widgets.dll" />
       </Component>
       <Component Id="Dep24" Guid="0D951344-4F6B-4390-B553-2ED4FBABED6A">
-        <File Source="C:\Qt\5.7\msvc2015_64\bin\Qt5Gui.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Gui.dll" />
       </Component>
-      <!-- // TODO: Load proj database files/etc. Optionally -->
+      <Component Id="Dep25" Guid="9ACD5045-39CD-4563-AE52-718684552EB9">
+        <File Source="$(var.QtDir)\plugins\platforms" />
+      </Component>
+      <Component Id="Dep26" Guid="2964A2A4-578B-4EB6-BC34-573C888760B2">
+        <File Source="$(var.OptDir)\bin\proj" />
+      </Component>
+      <Component Id="Dep27" Guid="EB7E80EE-702E-4978-A8AD-857EA33F577B">
+        <File Source="$(var.OptDir)\bin\gdal-data" />
+      </Component>
     </ComponentGroup>
   </Fragment>
 </Wix>

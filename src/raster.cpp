@@ -283,77 +283,55 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 		size++;
 	}
 
-	// Guess at a good number of rows for each strip. Say 64MB each
-	int32_t bufRows = g_max((int) 1, g_min(rows(), (int) ((64 * 1024 * 1024) / sizeof(T) / cols())));
-	g_debug(" - buffer rows: " << bufRows);
-
 	double nd = (double) nodata();
 	uint32_t completed = 0;
 
 	if(status)
-		status->statusCallback("Smoothing...");
+		status->statusCallback("Loading...");
 
-	#pragma omp parallel for
-	for (int16_t row = 0; row < rows(); row += bufRows - size) {
+	MemRaster<T> source(cols(), rows(), true);
+	source.setNodata((T)nodata());
+	source.writeBlock(*this);
+
+	MemRaster<T> smooth(cols(), rows(), true);
+	smooth.fill((T) nodata());
+
+	MemRaster<double> weights(size, size);
+	gaussianWeights(weights.grid(), size, sigma);
+
+	if (status)
+		status->statusCallback("Reading...");
+
+	for (int32_t row = 0; row < rows() - size; ++row) {
 		if (*cancel)
 			continue;
-		MemRaster<double> weights(size, size);
-		gaussianWeights(weights.grid(), size, sigma);
-		MemRaster<T> strip(cols(), g_min(bufRows, rows() - row - 1));
-		MemRaster<T> smooth(cols(), g_min(bufRows, rows() - row - 1));
-		MemRaster<T> buf(size, size);
-		strip.setNodata((T) nd);
-		strip.fill((const T) nd);
-		smooth.setNodata((T) nd);
-		smooth.fill((T) nd);
-		if (*cancel)
-			continue;
-		#pragma omp critical(a)
-		{
-			// On the first loop, read from the first row and write to size/2 down
-			// On the other loops, read from row-size/2, and write to 0 down.
-			readBlock(0, row == 0 ? row : row - size / 2, strip, 0,
-					row == 0 ? size / 2 : 0);
-		}
-		for (int32_t r = 0; r < strip.rows() - size; ++r) {
-			if (*cancel)
-				continue;
-			for (int32_t c = 0; c < strip.cols() - size; ++c) {
-				if (*cancel)
-					continue;
-				double v, t = 0.0;
-				bool foundNodata = false;
-				strip.readBlock(c, r, buf);
-				for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
-					for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
-						v = (double) buf.get(gc, gr);
-						if (v == nd) {
-							foundNodata = true;
-						} else {
-							t += weights.get(gr * size + gc) * v;
-						}
+		for (int32_t col = 0; col < cols() - size; ++col) {
+			double v, t = 0.0;
+			bool foundNodata = false;
+			for (int32_t gr = 0; !foundNodata && gr < size; ++gr) {
+				for (int32_t gc = 0; !foundNodata && gc < size; ++gc) {
+					v = (double) source.get(col + gc, row + gr);
+					if (v == nd) {
+						foundNodata = true;
+					} else {
+						t += weights.get(gr * size + gc) * v;
 					}
 				}
-				if (!foundNodata)
-					smooth.set(c + size / 2, r + size / 2, (T) t);
 			}
-			#pragma omp atomic
-			++completed;
-			if (status)
-				status->stepCallback((float) completed / rows() * 0.98f);
+			if (!foundNodata)
+				smooth.set(col + size / 2, row + size / 2, (T)t);
 		}
-		if (*cancel)
-			continue;
-		if(status) {
-			status->stepCallback((float) 0.99);
-			status->statusCallback("Writing...");
-		}
-		#pragma omp critical(b)
-		{
-			// The blur buffer is always written size/2 down, so read from there.
-			smoothed.writeBlock(0, row, smooth, 0, size / 2);
-		}
+		if (status)
+			status->stepCallback((float) ++completed / rows() * 0.98f);
 	}
+	if (*cancel)
+		return;
+	if(status) {
+		status->stepCallback((float) 0.99);
+		status->statusCallback("Writing...");
+	}
+	// The blur buffer is always written size/2 down, so read from there.
+	smoothed.writeBlock(smooth);
 
 	if (status) {
 		status->stepCallback(1.0);
