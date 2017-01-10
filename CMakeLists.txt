@@ -15,7 +15,7 @@ set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 set (GEOS_LIBRARY geos_c)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -frounding-math  -D_GLIBCXX_PARALLEL")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
 
 if (${APPLE})
 

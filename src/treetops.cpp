@@ -67,9 +67,9 @@ namespace geotools {
 				Node(Point *p) :
 					id(0), c(0), r(0), tc(0), tr(0), z(0), tz(0) {
 					id = atoi(p->fields["id"].c_str());
-					c = tc = atoi(p->fields["sc"].c_str());
-					r = tr = atoi(p->fields["sr"].c_str());
-					z = tz = atof(p->fields["sz"].c_str());
+					c = tc = atoi(p->fields["smoothedCol"].c_str());
+					r = tr = atoi(p->fields["smoothedRow"].c_str());
+					z = tz = atof(p->fields["smoothedZ"].c_str());
 				}
 
 			};
@@ -130,14 +130,15 @@ namespace geotools {
 				for (Top *t : tops) {
 					std::map<std::string, std::string> fields;
 					fields["id"] = std::to_string(t->id);
-					fields["ox"] = std::to_string(t->ox);
-					fields["oy"] = std::to_string(t->oy);
-					fields["oz"] = std::to_string(t->oz);
-					fields["sx"] = std::to_string(t->sx);
-					fields["sy"] = std::to_string(t->sy);
-					fields["sz"] = std::to_string(t->sz);
-					fields["sc"] = std::to_string(t->sc);
-					fields["sr"] = std::to_string(t->sr);
+					fields["parentID"] = std::to_string(t->parentID);
+					fields["originalX"] = std::to_string(t->ox);
+					fields["originalY"] = std::to_string(t->oy);
+					fields["originalZ"] = std::to_string(t->oz);
+					fields["smoothedX"] = std::to_string(t->sx);
+					fields["smoothedY"] = std::to_string(t->sy);
+					fields["smoothedZ"] = std::to_string(t->sz);
+					fields["smoothedCol"] = std::to_string(t->sc);
+					fields["smoothedRow"] = std::to_string(t->sr);
 					points[i++] = new Point(t->sx, t->sy, t->oz, fields);
 					delete t;
 				}
@@ -281,12 +282,12 @@ void TreetopsConfig::parseThresholds(const std::string &str) {
 
 // Top implementation
 
-Top::Top(uint64_t id, double ox, double oy, double oz, double sx, double sy, double sz, int32_t sc, int32_t sr) :
-	id(id), ox(ox), oy(oy), oz(oz), sx(sx), sy(sy), sz(sz), sc(sc), sr(sr) {
+Top::Top(uint64_t id, uint64_t parentID, double ox, double oy, double oz, double sx, double sy, double sz, int32_t sc, int32_t sr) :
+	id(id), parentID(parentID), ox(ox), oy(oy), oz(oz), sx(sx), sy(sy), sz(sz), sc(sc), sr(sr) {
 }
 
 Top::Top() :
-	id(0), ox(0), oy(0), oz(0), sx(0), sy(0), sz(0), sc(0), sr(0) {
+	id(0), parentID(0), ox(0), oy(0), oz(0), sx(0), sy(0), sz(0), sc(0), sr(0) {
 }
 
 
@@ -338,14 +339,15 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	std::map<std::string, int> fields;
 	fields["id"] = 1;
-	fields["sx"] = 2;
-	fields["sy"] = 2;
-	fields["sz"] = 2;
-	fields["sc"] = 1;
-	fields["sr"] = 1;
-	fields["ox"] = 2;
-	fields["oy"] = 2;
-	fields["oz"] = 2;
+	fields["parentID"] = 1;
+	fields["smoothedX"] = 2;
+	fields["smoothedY"] = 2;
+	fields["smoothedZ"] = 2;
+	fields["smoothedCol"] = 1;
+	fields["smoothedRow"] = 1;
+	fields["originalX"] = 2;
+	fields["originalY"] = 2;
+	fields["originalZ"] = 2;
 	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
 	db.makeFast();
 	db.dropGeomIndex();
@@ -359,11 +361,15 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
-	// TODO: If maintaining the window sizes isn't important, can use a bool (bit) vector here.
-	MemRaster<uint8_t> topsGrid(original.cols(), original.rows(), true);
-	topsGrid.fill(0);
+	MemRaster<uint8_t> topsWindowGrid(original.cols(), original.rows(), true);
+	topsWindowGrid.fill(0);
 
-	uint64_t total = config.topsThresholds.size() * topsGrid.rows();
+	MemRaster<uint64_t> topsIDGrid(original.cols(), original.rows(), true);
+	topsIDGrid.fill(0);
+
+	uint64_t topId = 0;
+
+	uint64_t total = config.topsThresholds.size() * topsWindowGrid.rows();
 	std::atomic<uint64_t> status(0);
 
 	uint16_t bufSize = 1024;
@@ -400,6 +406,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				if(m_callbacks)
 					m_callbacks->statusCallback("Processing...");
 
+				// Iterate over the raster, applying the kernel to find the maxium at the centre.
 				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.rows() - b) - window / 2; ++row) {
 					for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
 
@@ -417,12 +424,36 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				if(m_callbacks)
 					m_callbacks->statusCallback("Writing...");
 
+				// Write the tops to the tops raster.
 				#pragma omp critical(__tops_write)
 				{
 					for (const auto &top : tops) {
-						topsGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
-						zeroKernel(topsGrid, std::get<0>(top), std::get<1>(top), std::get<2>(top));
+						topsWindowGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
+						topsIDGrid.set(std::get<0>(top), std::get<1>(top), ++topId);
 					}
+				}
+			}
+		}
+	}
+
+	MemRaster<uint64_t> topsParentGrid(original.cols(), original.rows(), true);
+	topsParentGrid.fill(0);
+
+	uint8_t minWindow = config.topsThresholds.begin()->second;
+
+	for(uint16_t row = 0; row < original.rows(); ++row) {
+		for(uint16_t col = 0; col < original.cols(); ++col) {
+
+			uint8_t window = topsWindowGrid.get(col, row);
+			if(window <= minWindow) continue;
+
+			for(int32_t r = g_max(0, row - window / 2); r < g_min(original.rows(), row + window / 2 + 1); ++r) {
+				for(int32_t c = g_max(0, col - window / 2); c < g_min(original.cols(), col + window / 2 + 1); ++c) {
+					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) continue;
+
+					uint8_t window0 = topsWindowGrid.get(c, r);
+					if(window0 < window && !topsParentGrid.get(c, r))
+						topsParentGrid.set(c, r, topsIDGrid.get(col, row)); //  Save the ID of the parent.
 				}
 			}
 		}
@@ -431,10 +462,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
 	//tmp.writeBlock(topsGrid);
 
-	total = topsGrid.rows();
+	total = topsIDGrid.rows();
 	status = 0;
-
-	std::atomic<uint64_t> topId(0);
 
 	#pragma omp parallel
 	{
@@ -442,30 +471,24 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		std::list<Top*> tops;
 
 		#pragma omp for
-		for(int32_t row = 0; row < topsGrid.rows(); ++row) {
+		for(int32_t row = 0; row < topsIDGrid.rows(); ++row) {
 			if(*cancel) continue;
 			if (m_callbacks)
 				m_callbacks->statusCallback("Processing...");
-			for(int32_t col = 0; col < topsGrid.cols(); ++col) {
+			for(int32_t col = 0; col < topsIDGrid.cols(); ++col) {
 
-				uint8_t window = topsGrid.get(col, row);
+				uint8_t window = topsWindowGrid.get(col, row);
 				if(!window) continue;
 
-				// TODO: Can't use peak within window, because it may be on the slope of another crown
-				// Get the original height from the unsmoothed raster.
-				//double smax, omax;
-				//uint16_t smc, smr, omc, omr;
-				//getKernelMax(original, col, row, window, &omax, &omc, &omr);
-				//getKernelMax(smoothed, col, row, window, &smax, &smc, &smr);
-
-				Top * pt = new Top(++topId,
-					original.toCentroidX(col), // omc; center of pixel
-					original.toCentroidY(row), // omr
-					original.get(col, row), // omax,
-					original.toCentroidX(col), // smc; center of pixel
-					original.toCentroidY(row), // smr
-					smoothed.get(col, row), // smax,
-					col, row // smc, smr
+				Top * pt = new Top(topsIDGrid.get(col, row),
+					topsParentGrid.get(col, row),
+					0, // original.toCentroidX(col),
+					0, // original.toCentroidY(row),
+					0, // original.get(col, row),
+					original.toCentroidX(col),
+					original.toCentroidY(row),
+					smoothed.get(col, row),
+					col, row
 				);
 				tops.push_back(pt);
 			}
