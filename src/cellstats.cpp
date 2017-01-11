@@ -155,41 +155,38 @@ double CellDensity::area() {
 
 void CellDensity::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
-		result[0] = filt.size() / m_cellArea;
+		result[0] = values.size() / m_cellArea;
 	}
 }
 
 void CellMean::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double sum = 0.0;
-		for (const LASPoint *v : filt)
+		for (const LASPoint *v : values)
 			sum += v->z;
-		result[0] = sum / filt.size();
+		result[0] = sum / values.size();
 	}
 }
 
 void CellCount::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	result[0] = filtered(x, y, values).size();
+	result[0] = values.size();
 }
 
 void CellMedian::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		int i = 0;
-		std::vector<double> v(filt.size());
-		for (const LASPoint *pt : filt)
+		std::vector<double> v(values.size());
+		for (const LASPoint *pt : values)
 			v[i++] = pt->z;
 		std::sort(v.begin(), v.end());
 		unsigned int size = v.size();
@@ -203,12 +200,11 @@ void CellMedian::compute(double x, double y, const std::list<LASPoint*> &values,
 
 void CellMin::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double min = G_DBL_MAX_POS;
-		for (const LASPoint *v : filt) {
+		for (const LASPoint *v : values) {
 			if (v->z < min)
 				min = v->z;
 		}
@@ -218,12 +214,11 @@ void CellMin::compute(double x, double y, const std::list<LASPoint*> &values,
 
 void CellMax::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double max = G_DBL_MAX_NEG;
-		for (const LASPoint *v : filt) {
+		for (const LASPoint *v : values) {
 			if (v->z > max)
 				max = v->z;
 		}
@@ -233,103 +228,96 @@ void CellMax::compute(double x, double y, const std::list<LASPoint*> &values,
 
 void CellSampleVariance::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double mean;
-		m_mean.compute(x, y, filt, &mean);
+		m_mean.compute(x, y, values, &mean);
 		double sum = 0;
-		for (const LASPoint *v : filt)
+		for (const LASPoint *v : values)
 			sum += g_sq(g_abs(v->z - mean));
-		result[0] = sum / (filt.size() - 1);
+		result[0] = sum / (values.size() - 1);
 	}
 }
 
 void CellPopulationVariance::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double mean;
-		m_mean.compute(x, y, filt, &mean);
+		m_mean.compute(x, y, values, &mean);
 		double sum = 0;
-		for (const LASPoint *v : filt)
+		for (const LASPoint *v : values)
 			sum += g_sq(g_abs(v->z - mean));
-		result[0] = sum / filt.size();
+		result[0] = sum / values.size();
 	}
 }
 
 void CellSampleStdDev::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double var;
-		m_variance.compute(x, y, filt, &var);
+		m_variance.compute(x, y, values, &var);
 		result[0] = std::sqrt(var);
 	}
 }
 
 void CellPopulationStdDev::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double var;
-		m_variance.compute(x, y, filt, &var);
+		m_variance.compute(x, y, values, &var);
 		result[0] = std::sqrt(var);
 	}
 }
 
 void CellSkewness::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		// Fisher-Pearson
 		double mean, sd;
-		m_mean.compute(x, y, filt, &mean);
+		m_mean.compute(x, y, values, &mean);
 		double sum = 0.0;
-		unsigned int count = filt.size();
-		for (const LASPoint *v : filt)
+		unsigned int count = values.size();
+		for (const LASPoint *v : values)
 			sum += std::pow(v->z - mean, 3.0) / count;
-		m_stdDev.compute(x, y, filt, &sd);
+		m_stdDev.compute(x, y, values, &sd);
 		result[0] = sum / std::pow(sd, 3.0);
 	}
 }
 
 void CellKurtosis::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double mean, sd;
-		m_mean.compute(x, y, filt, &mean);
+		m_mean.compute(x, y, values, &mean);
 		double sum = 0.0;
 		unsigned int count = values.size();
-		for (const LASPoint *v : filt)
+		for (const LASPoint *v : values)
 			sum += std::pow(v->z - mean, 4.0) / count;
-		m_stdDev.compute(x, y, filt, &sd);
+		m_stdDev.compute(x, y, values, &sd);
 		result[0] = sum / std::pow(sd, 4.0) - 3.0;
 	}
 }
 
 void CellCoV::compute(double x, double y, const std::list<LASPoint*> &values,
 		double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		double mean;
 		double sd;
-		m_mean.compute(x, y, filt, &mean);
-		m_stdDev.compute(x, y, filt, &sd);
+		m_mean.compute(x, y, values, &mean);
+		m_stdDev.compute(x, y, values, &sd);
 		result[0] = mean <= 0.0 ? -9999.0 : sd / mean;
 	}
 }
@@ -411,12 +399,11 @@ CellRugosity::CellRugosity(double cellArea, double avgDensity) :
  */
 void CellRugosity::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		std::list<Point_3> pts;
-		for (const LASPoint *v : filt)
+		for (const LASPoint *v : values)
 			pts.push_back(Point_3(v->x, v->y, v->z));
 
 		// Delaunay 3D surface area.
@@ -439,7 +426,7 @@ void CellRugosity::compute(double x, double y,
 		double parea = polyArea(hull, plane, centroid);
 		double df =
 				m_avgDensity > 0.0 ?
-						densityFactor(filt, m_density, m_avgDensity, x, y) :
+						densityFactor(values, m_density, m_avgDensity, x, y) :
 						1.0;
 		result[0] = (tarea / parea) * df;
 	}
@@ -576,31 +563,30 @@ int CellGapFraction::bands() const {
 
 void CellGapFraction::compute(double x, double y,
 		const std::list<LASPoint*> &values, double *result) {
-	std::list<LASPoint*> filt = filtered(x, y, values);
-	if (!filt.size()) {
+	if (!values.size()) {
 		result[0] = -9999.0;
 	} else {
 		switch (m_type) {
 		case GAP_BLA:
-			fcLidarBLa(filt, result);
+			fcLidarBLa(values, result);
 			break;
 		case GAP_BLB:
-			fcLidarBLb(filt, result);
+			fcLidarBLb(values, result);
 			break;
 		case GAP_IR:
-			fcLidarIR(filt, result);
+			fcLidarIR(values, result);
 			break;
 		case GAP_RR:
-			fcLidarRR(filt, result);
+			fcLidarRR(values, result);
 			break;
 		case GAP_FR:
-			fcLidarFR(filt, result);
+			fcLidarFR(values, result);
 			break;
 		case GAP_CCF:
-			ccf(filt, result, m_threshold);
+			ccf(values, result, m_threshold);
 			break;
 		case GAP_GAP:
-			gap(filt, result, m_threshold);
+			gap(values, result, m_threshold);
 			break;
 		default:
 			g_argerr("Unknown Gap Fraction method: " << m_type);

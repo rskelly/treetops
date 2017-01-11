@@ -37,11 +37,26 @@ void usage() {
 
 int runWithUI(int argc, char **argv) {
 #ifdef WITH_GUI
-	QApplication q(argc, argv);
-	QWidget *w = new QWidget();
+
+	class TTApplication : public QApplication {
+	public:
+		TTApplication(int &argc, char **argv) : QApplication(argc, argv) {}
+		bool notify(QObject *receiver, QEvent *e) {
+			try {
+				return QApplication::notify(receiver, e);
+			} catch(const std::exception &ex) {
+				QMessageBox err;
+				err.setText("Error");
+				err.setInformativeText(QString(ex.what()));
+				err.exec();
+				return false;
+			}
+		}
+	};
+
+	TTApplication q(argc, argv);
 	geotools::ui::PointStatsForm f;
-	f.setupUi(w);
-	w->show();
+	f.show();
 	return q.exec();
 #else
 	std::cerr << "GUI not enabled." << std::endl;

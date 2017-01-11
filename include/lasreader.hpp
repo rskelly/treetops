@@ -24,6 +24,18 @@ namespace geotools {
 
 	namespace las {
 
+		class LASFilter {
+		private:
+			double m_radius;			  // If zero, whole cell is used. Otherwise must be squared.
+			uint8_t m_classes[255];       // Class ID is index into the array.
+
+		public:
+			LASFilter();
+			void setClasses(const std::set<uint8_t> &classes);
+			void setRadius(double radius);
+			bool keep(const LASPoint &pt) const;
+		};
+
 		class LASReaderCallback {
 		public:
 			virtual void status(float) const = 0;
@@ -62,6 +74,9 @@ namespace geotools {
 
 			std::unique_ptr<Buffer> m_buf;
 			std::queue<LASPoint> m_pts;
+
+			const LASFilter *m_filter;
+
 			// Prepares the reader for streaming points
 			// by loading the header, etc.
 			void init();
@@ -74,6 +89,9 @@ namespace geotools {
 			LASReader(const std::string &file);
 
 			~LASReader();
+
+			// Set the filter.
+			void setFilter(const LASFilter *filter);
 
 			// Reset the reader to enable reading from the start.
 			void reset();
@@ -108,12 +126,17 @@ namespace geotools {
 			std::vector<uint32_t> m_finalizer;
 			std::vector<Bounds> m_blockBounds;
 
+			const LASFilter *m_filter;
+
 			void init(const std::vector<std::string> &files);
 
 		public:
 			LASMultiReader(const std::vector<std::string> &files, double resolutionX, double resolutionY, bool *cancel = nullptr);
 
 			~LASMultiReader();
+
+			// Set the filter.
+			void setFilter(const LASFilter *filter);
 
 			// Initializes the finalization grid.
 			// Pass a functor to capture status updates from 0 to 1.

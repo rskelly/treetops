@@ -56,6 +56,7 @@ public:
 	PointStatsForm(QWidget *p = Q_NULLPTR);
 	void setupUi(QWidget *Form);
 	~PointStatsForm();
+	void show();
 
 public slots:
 	void destFileClicked();

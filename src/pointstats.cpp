@@ -364,7 +364,14 @@ namespace geotools {
             }
             if(callbacks)
                 callbacks->statusCallback("Initializing point reader...");
+
             ps.setBounds(m_bounds);
+
+            // Initialize the filter group.
+            LASFilter filter;
+            filter.setClasses(config.classes);
+            ps.setFilter(&filter);
+
             InitCallback initStatus(callbacks);
             ps.buildFinalizer(&initStatus);
             m_cellCount = ps.cellCount();
@@ -377,15 +384,6 @@ namespace geotools {
                 callbacks->statusCallback("Configuring computers...");
             }
 
-            // Initialize the filter group.
-            CellStatsFilter *filter = nullptr;
-            if (config.hasClasses())
-            	filter = new ClassFilter(config.classes);
-            if(config.areaMode == AREA_RADIUS) {
-            	CellStatsFilter *f = new RadiusFilter(config.areaSize);
-            	filter = f->chain(filter);
-            }
-
             // Create a computer, grid and mutex for each statistic.
             for (size_t i = 0; i < config.types.size(); ++i) {
                 if(*cancel) return;
@@ -393,8 +391,6 @@ namespace geotools {
                 g_debug(" -- configuring computer " << (int) config.types[i]);
                 std::unique_ptr<CellStats> cs(getComputer(config.types[i], config));
                 int bands = cs->bands();
-                if (filter)
-                    cs->setFilter(filter);
                 m_computers.push_back(std::move(cs));
 
                 // Create raster grid for each stat.

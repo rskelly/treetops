@@ -9,6 +9,31 @@ using namespace geotools::las;
 using namespace geotools::util;
 using namespace geotools::raster;
 
+LASFilter::LASFilter() :
+		m_radius(0) {
+}
+
+void LASFilter::setClasses(const std::set<uint8_t> &classes) {
+	if(classes.empty()) {
+		for(int i = 0; i < 255; ++i)
+			m_classes[i] = 1;
+	} else {
+		for(int i = 0; i < 255; ++i)
+			m_classes[i] = 0;
+		for(const uint8_t cls : classes)
+			m_classes[cls] = 1;
+	}
+}
+
+void LASFilter::setRadius(double radius) {
+	m_radius = g_sq(radius);
+}
+
+bool LASFilter::keep(const LASPoint &pt) const{
+	if(!m_classes[pt.cls]) return false;
+	return true;
+}
+
 LASReaderCallback::~LASReaderCallback() {}
 
 void _read(void *buf, size_t l1, size_t l2, std::FILE *f) {
@@ -71,15 +96,22 @@ void LASReader::init() {
 
 LASReader::LASReader(const std::string &file) :
 	m_f(nullptr),
-	m_file(file) {
+	m_file(file),
+	m_filter(nullptr) {
 	init();
 }
 
 LASReader::~LASReader() {
 	if (m_f)
 		std::fclose(m_f);
+	if(m_filter)
+		delete m_filter;
 	if (m_buf.get())
 		delete m_buf.release();
+}
+
+void LASReader::setFilter(const LASFilter *filter) {
+	m_filter = new LASFilter(*filter);
 }
 
 void LASReader::reset() {
@@ -105,19 +137,23 @@ bool LASReader::loadBatch() {
 }
 
 bool LASReader::next(LASPoint &pt) {
-	if (m_curPoint >= m_pointCount)
-		return false;
-	if (m_curPoint % BATCH_SIZE == 0 && !loadBatch())
-		return false;
-	char *buf = ((char *) m_buf->buf) + (m_curPoint % BATCH_SIZE) * m_pointLength;
-	pt.readLAS(buf, m_pointFormat);
-	++m_curPoint;
-	return true;
+	while(true) {
+		if (m_curPoint >= m_pointCount)
+			return false;
+		if (m_curPoint % BATCH_SIZE == 0 && !loadBatch())
+			return false;
+		char *buf = ((char *) m_buf->buf) + (m_curPoint % BATCH_SIZE) * m_pointLength;
+		pt.readLAS(buf, m_pointFormat);
+		++m_curPoint;
+		if(m_filter && !m_filter->keep(pt))
+			continue;
+		return true;
+	}
 }
 
-    Bounds LASReader::bounds() const {
-        return Bounds(m_xMin, m_yMin, m_xMax, m_yMax, m_zMin, m_zMax);
-    }
+Bounds LASReader::bounds() const {
+	return Bounds(m_xMin, m_yMin, m_xMax, m_yMax, m_zMin, m_zMax);
+}
 
 uint64_t LASReader::pointCount() const {
 	return m_pointCount;
@@ -148,7 +184,8 @@ LASMultiReader::LASMultiReader(const std::vector<std::string> &files,
 	m_cellCount(0),
 	m_pointCount(0),
 	m_resolutionX(resolutionX), m_resolutionY(resolutionY),
-	m_reader(nullptr) {
+	m_reader(nullptr),
+	m_filter(nullptr) {
 
 	if(m_cancel == nullptr)
 		m_cancel = &__lr__cancel;
@@ -159,6 +196,12 @@ LASMultiReader::LASMultiReader(const std::vector<std::string> &files,
 LASMultiReader::~LASMultiReader() {
 	if(m_reader)
 		delete m_reader;
+	if(m_filter)
+		delete m_filter;
+}
+
+void LASMultiReader::setFilter(const LASFilter *filter) {
+	m_filter = new LASFilter(*filter);
 }
 
 void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {
@@ -233,6 +276,7 @@ bool LASMultiReader::next(LASPoint &pt, bool *final, uint64_t *finalIdx, bool *f
 		if(m_reader)
 			delete m_reader;
 		m_reader = new LASReader(m_files[m_idx++]);
+		m_reader->setFilter(m_filter);
 		if(!m_reader->next(pt))
 			return false;
 		// If the file has been switched, set the indicator to true

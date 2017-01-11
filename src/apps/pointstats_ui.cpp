@@ -159,6 +159,14 @@ PointStatsForm::~PointStatsForm() {
 	_saveConfig(m_config);
 }
 
+void PointStatsForm::show() {
+	if(!m_form) {
+		m_form = new QWidget();
+		this->setupUi(m_form);
+	}
+	m_form->show();
+}
+
 void PointStatsForm::setupUi(QWidget *form) {
 
 	Ui::PointStatsForm::setupUi(form);
@@ -256,7 +264,7 @@ void PointStatsForm::setupUi(QWidget *form) {
 		lstClasses->addItem(item);
 	}
 
-	m_fileList.init(this, btnAddFiles, btnRemoveAllFiles,
+	m_fileList.init(m_form, btnAddFiles, btnRemoveAllFiles,
 			btnRemoveSelectedFiles, lstFiles, m_last, m_filter);
 	m_fileList.setFiles(m_config.sourceFiles);
 
