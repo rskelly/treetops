@@ -42,7 +42,8 @@ void _loadConfig(PointStatsConfig &config) {
 	config.quantileFilterTo = qs.value("quantileFilterTo",
 			dummy.quantileFilterTo).toInt();
 	config.quantiles = qs.value("quantiles", dummy.quantiles).toInt();
-	config.resolution = qs.value("resolution", dummy.resolution).toDouble();
+	config.resolutionX = qs.value("resolutionX", dummy.resolutionX).toDouble();
+	config.resolutionY = qs.value("resolutionY", dummy.resolutionY).toDouble();
 	config.originX = qs.value("originX", dummy.originX).toDouble();
 	config.originY = qs.value("originY", dummy.originY).toDouble();
 	config.snapMode = qs.value("snapMode", dummy.snapMode).toInt();
@@ -78,7 +79,8 @@ void _saveConfig(PointStatsConfig &config) {
 	qs.setValue("quantileFilterFrom", config.quantileFilterFrom);
 	qs.setValue("quantileFilterTo", config.quantileFilterTo);
 	qs.setValue("quantiles", config.quantiles);
-	qs.setValue("resolution", config.resolution);
+	qs.setValue("resolutionX", config.resolutionX);
+	qs.setValue("resolutionY", config.resolutionY);
 	qs.setValue("originX", config.originX);
 	qs.setValue("originY", config.originY);
 	qs.setValue("snapMode", config.snapMode);
@@ -186,7 +188,8 @@ void PointStatsForm::setupUi(QWidget *form) {
 
 	_loadConfig(m_config);
 
-	spnResolution->setValue(m_config.resolution);
+	spnResolutionX->setValue(m_config.resolutionX);
+	spnResolutionY->setValue(m_config.resolutionY);
 	spnMaxAngle->setValue(m_config.angleLimit);
 	spnThreads->setValue(m_config.threads);
 	spnThreads->setMaximum(g_max(1, omp_get_num_procs()));
@@ -276,7 +279,8 @@ void PointStatsForm::setupUi(QWidget *form) {
 	connect(cboType, SIGNAL(currentIndexChanged(int)), this, SLOT(typeSelected(int)));
 	connect(cboSnapMode, SIGNAL(currentIndexChanged(int)), this, SLOT(snapModeChanged(int)));
 	connect(cboAreaMode, SIGNAL(currentIndexChanged(int)), this, SLOT(areaModeChanged(int)));
-	connect(spnResolution, SIGNAL(valueChanged(double)), this, SLOT(resolutionChanged(double)));
+	connect(spnResolutionX, SIGNAL(valueChanged(double)), this, SLOT(resolutionXChanged(double)));
+	connect(spnResolutionY, SIGNAL(valueChanged(double)), this, SLOT(resolutionYChanged(double)));
 	connect(spnAreaSize, SIGNAL(valueChanged(double)), this, SLOT(areaSizeChanged(double)));
 	connect(cboAttribute, SIGNAL(currentIndexChanged(int)), this, SLOT(attributeSelected(int)));
 	connect(cboGapFunction, SIGNAL(currentIndexChanged(int)), this, SLOT(gapFunctionSelected(int)));
@@ -409,9 +413,15 @@ void PointStatsForm::gapThresholdChanged(double t) {
 	g_debug(" -- gap threshold " << m_config.gapThreshold);
 	checkRun();
 }
-void PointStatsForm::resolutionChanged(double res) {
-	m_config.resolution = res;
-	g_debug(" -- resolution " << m_config.resolution);
+void PointStatsForm::resolutionXChanged(double res) {
+	m_config.resolutionX = res;
+	g_debug(" -- resolutionX " << m_config.resolutionX);
+	checkRun();
+}
+
+void PointStatsForm::resolutionYChanged(double res) {
+	m_config.resolutionY = res;
+	g_debug(" -- resolutionY " << m_config.resolutionY);
 	checkRun();
 }
 

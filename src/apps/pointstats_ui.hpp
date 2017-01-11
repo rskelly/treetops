@@ -71,7 +71,8 @@ public slots:
 	void quantileChanged(int);
 	void quantilesChanged(int);
 	void attributeSelected(int);
-	void resolutionChanged(double);
+	void resolutionXChanged(double);
+	void resolutionYChanged(double);
 	void gapFunctionSelected(int);
 	void originXChanged(double);
 	void originYChanged(double);

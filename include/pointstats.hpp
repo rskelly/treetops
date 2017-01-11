@@ -79,7 +79,8 @@ namespace geotools {
             // one standard deviation = 1, and the mean is zero.
             bool normalize;
             // The output resolution. Cells are square.
-            double resolution;
+            double resolutionX;
+            double resolutionY;
             // The alignment origin.
             double originX;
             double originY;

@@ -317,8 +317,12 @@ void CellCoV::compute(double x, double y, const std::list<LASPoint*> &values,
 		double mean;
 		double sd;
 		m_mean.compute(x, y, values, &mean);
-		m_stdDev.compute(x, y, values, &sd);
-		result[0] = mean <= 0.0 ? -9999.0 : sd / mean;
+		if(mean == 0.0) {
+			result[0] = -9999.0;
+		} else {
+			m_stdDev.compute(x, y, values, &sd);
+			result[0] = sd / mean;
+		}
 	}
 }
 

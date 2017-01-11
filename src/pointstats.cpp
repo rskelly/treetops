@@ -115,7 +115,8 @@ namespace geotools {
         PointStatsConfig::PointStatsConfig() : 
             snapMode(SNAP_NONE),
             normalize(false),
-            resolution(10.0),
+            resolutionX(10.0),
+            resolutionY(-10.0),
             originX(0.0),
             originY(0.0),
             gapFractionType(GAP_GAP),
@@ -199,8 +200,8 @@ namespace geotools {
         }
 
         void PointStats::checkConfig(const PointStatsConfig &config) {
-            if (config.resolution <= 0.0)
-                g_argerr("Resolution must be > 0: " << config.resolution);
+            if (g_abs(config.resolutionX) == 0.0 || config.resolutionY == 0.0)
+                g_argerr("Resolution must be != 0: " << config.resolutionX << ", " << config.resolutionY);
             if (!config.sourceFiles.size())
                 g_argerr("At least one input file is required.");
             if (!config.dstFiles.size())
@@ -218,7 +219,7 @@ namespace geotools {
             if(config.areaMode != AREA_CELL && config.areaSize <= 0) 
                 g_argerr("If area mode is not cell, a size must be given.");
           
-            g_debug("Resolution: " << config.resolution);
+            g_debug("Resolution: " << config.resolutionX << ", " << config.resolutionY);
             g_debug("Files: " << config.sourceFiles.size());
             g_debug("Destinations: " << config.dstFiles.size());
             g_debug("Attribute: " << config.attribute);
@@ -237,8 +238,8 @@ namespace geotools {
                 case TYPE_VARIANCE:   	return new CellSampleVariance();
                 case TYPE_PSTDDEV: 		return new CellPopulationStdDev();
                 case TYPE_PVARIANCE: 	return new CellPopulationVariance();
-                case TYPE_DENSITY: 		return new CellDensity(g_sq(config.resolution));
-                case TYPE_RUGOSITY: 	return new CellRugosity(g_sq(config.resolution), 0.0);
+                case TYPE_DENSITY: 		return new CellDensity(g_sq(config.resolutionX));
+                case TYPE_RUGOSITY: 	return new CellRugosity(g_sq(config.resolutionX), 0.0);
                 case TYPE_MAX: 			return new CellMax();
                 case TYPE_MIN: 			return new CellMin();
                 case TYPE_KURTOSIS: 	return new CellKurtosis();
@@ -272,7 +273,7 @@ namespace geotools {
             std::list<LASPoint*> pts;
             while (true) {
                 while(m_bq.empty() && m_running && !*m_cancel)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 if(!m_running || *m_cancel)
                     break;
                 {
@@ -294,8 +295,9 @@ namespace geotools {
 
                 // Process the points.
                 if (!pts.empty()) {
-                	double x = m_bounds.toX((int) (idx % m_cols), m_resolutionX) + m_resolutionX / 2.0;
-                	double y = m_bounds.toY((int) (idx / m_cols), m_resolutionY) + m_resolutionY / 2.0;
+                    // Get the cell's centre.
+                	double x = m_bounds.toX(idx % m_cols, m_resolutionX) + m_resolutionX / 2.0;
+                	double y = m_bounds.toY(idx / m_cols, m_resolutionY) + m_resolutionY / 2.0;
                     for (size_t i = 0; i < m_computers.size(); ++i) {
                         int bands = m_computers[i]->bands();
                         Buffer buf(sizeof(double) * bands);
@@ -337,8 +339,8 @@ namespace geotools {
             // In no cancel flag is given, use the dummy.
             m_cancel = cancel == nullptr ? &_cancel : cancel;
             m_callbacks = callbacks;
-            m_resolutionX = config.resolution;
-            m_resolutionY = -config.resolution;
+            m_resolutionX = config.resolutionX;
+            m_resolutionY = config.resolutionY;
 
             if(callbacks) {
                 callbacks->overallCallback(0.01f);
@@ -367,11 +369,15 @@ namespace geotools {
 
             ps.setBounds(m_bounds);
 
-            // Initialize the filter group.
+            // Initialize the filter.
             LASFilter filter;
             filter.setClasses(config.classes);
-            ps.setFilter(&filter);
+            if(config.areaMode == AREA_RADIUS) {
+                filter.setRadius(config.areaSize);
+                filter.setGrid(config.resolutionX, config.resolutionY, config.originX, config.originY);
+            }
 
+            ps.setFilter(&filter);
             InitCallback initStatus(callbacks);
             ps.buildFinalizer(&initStatus);
             m_cellCount = ps.cellCount();
@@ -446,7 +452,7 @@ namespace geotools {
                 }
                 if(m_bq.size() > 5000) {
                     while(m_bq.size() > 100  && !*m_cancel)
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
 

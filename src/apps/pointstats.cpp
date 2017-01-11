@@ -13,26 +13,26 @@ using namespace geotools::point;
 void usage() {
 	std::cerr << "Usage: pointstats <options> <file [file [file]]>\n"
 			<< " -o <output file>\n"
-			<< " -t <type>                   Output median, mean, max, min, variance (sample), pvariance (population),\n"
-			<< "                             count, density, stddev (sample), pstddev (population). Default mean.\n"
-			<< "                             Use a Comma-delimited list to do more than one. Requires a Comma-delimited\n"
-			<< "                             list of filenames.\n"
-			<< " -g <type>                   Gap Fraction type. These are IR, FR, RR, BLa and BLb, CCF and GAP.\n"
-			<< "                             the first five are adapted from Hopkins and Chasmer, 2009: Testing LiDAR Models "
-			<< "                             of Fractional Cover. The last two require a threshold value (-gt).\n"
-			<< " -gt <threshold>             A double representing the threshold height for gap fraction.\n"
-			<< " -r <resolution>             Resolution (default 2).\n"
-			<< " -s <srid>                   The EPSG ID of the CRS.\n"
-			<< " -c <classes>                Comma-delimited (e.g. '2,0' (ground and unclassified)).\n"
-			<< " -a <attribute>              Use height, intensity (default height).\n"
-			<< " -b <minx miny maxx maxy>    Extract points from the given box and create a raster of this size.\n"
+			<< " -t <type>                      Output median, mean, max, min, variance (sample), pvariance (population),\n"
+			<< "                                count, density, stddev (sample), pstddev (population). Default mean.\n"
+			<< "                                Use a Comma-delimited list to do more than one. Requires a Comma-delimited\n"
+			<< "                                list of filenames.\n"
+			<< " -g <type>                      Gap Fraction type. These are IR, FR, RR, BLa and BLb, CCF and GAP.\n"
+			<< "                                the first five are adapted from Hopkins and Chasmer, 2009: Testing LiDAR Models "
+			<< "                                of Fractional Cover. The last two require a threshold value (-gt).\n"
+			<< " -gt <threshold>                A double representing the threshold height for gap fraction.\n"
+			<< " -r <resolutionX, resolutionY>  Resolution (default 2, -2).\n"
+			<< " -s <srid>                      The EPSG ID of the CRS.\n"
+			<< " -c <classes>                   Comma-delimited (e.g. '2,0' (ground and unclassified)).\n"
+			<< " -a <attribute>                 Use height, intensity (default height).\n"
+			<< " -b <minx miny maxx maxy>       Extract points from the given box and create a raster of this size.\n"
 			//		<< " -p                          Snap to the resolution.\n"
-			<< " -n                          Normalize the output so that one std. dev is represented as +-1.\n"
-			<< " -v                          Verbose output.\n"
-			<< " -h                          Print this message.\n"
-			<< " --threads                   The number of threads to use for computing output.\n"
-			<< " --angle-limit               Points located outside of this angle (devation from nadir) are excluded.\n"
-			<< " -gui                        Run the graphical user interface.\n";
+			<< " -n                             Normalize the output so that one std. dev is represented as +-1.\n"
+			<< " -v                             Verbose output.\n"
+			<< " -h                             Print this message.\n"
+			<< " --threads                      The number of threads to use for computing output.\n"
+			<< " --angle-limit                  Points located outside of this angle (devation from nadir) are excluded.\n"
+			<< " -gui                           Run the graphical user interface.\n";
 }
 
 int runWithUI(int argc, char **argv) {
@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
 			} else if (s == "-n") {
 				config.normalize = true;
 			} else if (s == "-r") {
-				config.resolution = atof(argv[++i]);
+				config.resolutionX = atof(argv[++i]);
+				config.resolutionY = atof(argv[++i]);
 			} else if (s == "-c") {
 				Util::intSplit(config.classes, argv[++i]);
 			} else if (s == "-a") {

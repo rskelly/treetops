@@ -28,11 +28,14 @@ namespace geotools {
 		private:
 			double m_radius;			  // If zero, whole cell is used. Otherwise must be squared.
 			uint8_t m_classes[255];       // Class ID is index into the array.
+			double m_resX, m_resY;
+			double m_originX, m_originY;
 
 		public:
 			LASFilter();
 			void setClasses(const std::set<uint8_t> &classes);
 			void setRadius(double radius);
+			void setGrid(double resX, double resY, double originX = 0, double originY = 0);
 			bool keep(const LASPoint &pt) const;
 		};
 
@@ -93,8 +96,13 @@ namespace geotools {
 			// Set the filter.
 			void setFilter(const LASFilter *filter);
 
+			std::string filename() const;
+
 			// Reset the reader to enable reading from the start.
 			void reset();
+
+			// Returns true if the bounds are good and there are points, etc.
+			bool isValid() const;
 
 			// Populate the point with data for the next point in the file.
 			// Return true if there is another point, false otherwise.

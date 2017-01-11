@@ -2,15 +2,20 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <cassert>
 
 #include "lasreader.hpp"
+
+//#define NDEBUG
 
 using namespace geotools::las;
 using namespace geotools::util;
 using namespace geotools::raster;
 
 LASFilter::LASFilter() :
-		m_radius(0) {
+		m_radius(0),
+		m_resX(0), m_resY(0),
+		m_originX(0), m_originY(0) {
 }
 
 void LASFilter::setClasses(const std::set<uint8_t> &classes) {
@@ -25,12 +30,28 @@ void LASFilter::setClasses(const std::set<uint8_t> &classes) {
 	}
 }
 
+void LASFilter::setGrid(double resX, double resY, double originX, double originY) {
+	m_resX = resX;
+	m_resY = resY;
+	m_originX = originX;
+	m_originY = originY;
+}
+
 void LASFilter::setRadius(double radius) {
 	m_radius = g_sq(radius);
 }
 
 bool LASFilter::keep(const LASPoint &pt) const{
 	if(!m_classes[pt.cls]) return false;
+	if(m_radius) {
+		assert(m_resX != 0 && m_resY != 0);
+		int col = (int) ((pt.x - m_originX) / m_resX);
+		int row = (int) ((pt.y - m_originY) / m_resY);
+		double gx = col * m_resX + m_resX * 0.5;
+		double gy = row * m_resY + m_resY * 0.5;
+		double dist = g_sq(gx - pt.x) + g_sq(gy - pt.y);
+		if(dist > m_radius) return false;
+	}
 	return true;
 }
 
@@ -114,6 +135,10 @@ void LASReader::setFilter(const LASFilter *filter) {
 	m_filter = new LASFilter(*filter);
 }
 
+std::string LASReader::filename() const {
+	return m_file;
+}
+
 void LASReader::reset() {
 	m_curPoint = 0;
 	std::fseek(m_f, m_offset, SEEK_SET);
@@ -131,8 +156,15 @@ bool LASReader::loadBatch() {
 		_read((void *) m_buf->buf, m_batchSize * m_pointLength, 1, m_f);
 	} catch(const std::exception &ex) {
 		g_debug(" -- " << ex.what());
-		g_runerr("Failed to read batch. LAS file may be shorter than indicated by header.");
+		g_runerr("Failed to read batch. LAS file may be shorter than indicated by header: " << ex.what());
 	}
+	return true;
+}
+
+bool LASReader::isValid() const {
+	Bounds b = bounds();
+	if(!(b.width() > 0 && b.height() > 0)) return false;
+	if(!m_pointCount) return false;
 	return true;
 }
 
@@ -167,8 +199,11 @@ void LASMultiReader::init(const std::vector<std::string> &files) {
 	for(const std::string &file : files) {
 		if(*m_cancel) return;
 		LASReader r(file);
+		if(!r.isValid()) {
+			g_warn("Invalid LAS file: " << file);
+			continue;
+		}
 		m_files.push_back(file);
-		g_debug(r.bounds().print());
 		m_bounds.extend(r.bounds());
 		m_blockBounds.push_back(r.bounds());
 		m_pointCount += r.pointCount();
@@ -205,7 +240,6 @@ void LASMultiReader::setFilter(const LASFilter *filter) {
 }
 
 void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {
-
 	try {
 		int cols = m_cols = m_bounds.maxCol(m_resolutionX) + 1;
 		int rows =          m_bounds.maxRow(m_resolutionY) + 1;
@@ -234,9 +268,8 @@ void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {
 
 	} catch(const std::exception &ex) {
 		m_finalizer.resize(0);
-		g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header.");
+		g_runerr("Failed to initialize finalizer. LAS bounds may be incorrect in header: " << ex.what());
 	}
-
 	reset();
 }
 
