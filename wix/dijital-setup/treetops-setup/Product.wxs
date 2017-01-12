@@ -4,15 +4,16 @@
 <?define CompanyName = "dijital.ca"?>
 <?define AppName = "treetops"?>
 <?define AppExecutable = "treetops-app.exe"?>
-<?define OptDir = "E:\opt"?>
-<?define BoostDir = "E:\boost_1_63_0\lib64-msvc-14.0"?>
-<?define QtDir = "C:\Qt\5.7\msvc2015_64"?>
+<?define OptDir = "C:\Users\admin\Documents\software\geotools\makefiles\Release"?> <!-- E:\opt"?> -->
+<?define BoostDir = "C:\Users\admin\Documents\software\geotools\makefiles\Release"?> <!--E:\boost_1_63_0\lib64-msvc-14.0"?>-->
+<?define QtDir = "C:\Users\admin\Documents\software\geotools\makefiles\Release"?> <!-- C:\Qt\5.7\msvc2015_64"?> -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <Product Id="E2F73549-DB3C-4310-8CC5-E0219D54C15C" Name="$(var.AppName)"
             Language="1033" Version="$(var.ProductVersion)"
             Manufacturer="$(var.CompanyName)" UpgradeCode="$(var.ProductUpgradeCode)">
 
+    
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <Media Id="1" Cabinet="cab1.cab" EmbedCab="yes"/>
@@ -21,15 +22,20 @@
 
     <Feature Id="ProductFeature" Title="$(var.AppName) Setup" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="QtPlatform" />
       <ComponentRef Id="ProgramMenuDir" />
     </Feature>
+    
   </Product>
 
   <Fragment>
     <Directory Id="TARGETDIR" Name="SourceDir">
 
       <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="dijital.ca" />
+        <Directory Id="INSTALLFOLDER" Name="$(var.CompanyName)">
+          <Directory Id="QtPlatformsFolder" Name="platforms">
+          </Directory>
+        </Directory>
       </Directory>
 
       <Directory Id="ProgramMenuFolder" Name="Programs">
@@ -48,9 +54,25 @@
       </Directory>
 
     </Directory>
+
   </Fragment>
 
   <Fragment>
+
+
+
+    <ComponentGroup Id="QtPlatform" Directory="QtPlatformsFolder">
+      <Component Id="Dep25" Guid="9ACD5045-39CD-4563-AE52-718684552EB9">
+        <File Id="QtPlatform3" Source="$(var.QtDir)\plugins\platforms\qminimal.dll" />
+      </Component>
+      <Component Id="Dep26" Guid="9ACD5045-39CD-4563-AE52-718684552EB8">
+        <File Id="QtPlatform2" Source="$(var.QtDir)\plugins\platforms\qoffscreen.dll" />
+      </Component>
+      <Component Id="Dep27" Guid="9ACD5045-39CD-4563-AE52-718684552EB7">
+        <File Id="QtPlatform1" Source="$(var.QtDir)\plugins\platforms\qwindows.dll" />
+      </Component>
+    </ComponentGroup>
+
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="ProductLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E81">
         <File Source="..\..\..\makefiles\Release\treetops.dll" />
@@ -134,15 +156,14 @@
       <Component Id="Dep24" Guid="0D951344-4F6B-4390-B553-2ED4FBABED6A">
         <File Source="$(var.QtDir)\bin\Qt5Gui.dll" />
       </Component>
-      <Component Id="Dep25" Guid="9ACD5045-39CD-4563-AE52-718684552EB9">
-        <File Source="$(var.QtDir)\plugins\platforms" />
-      </Component>
+      <!--//
       <Component Id="Dep26" Guid="2964A2A4-578B-4EB6-BC34-573C888760B2">
         <File Source="$(var.OptDir)\bin\proj" />
       </Component>
       <Component Id="Dep27" Guid="EB7E80EE-702E-4978-A8AD-857EA33F577B">
         <File Source="$(var.OptDir)\bin\gdal-data" />
       </Component>
+      //-->
     </ComponentGroup>
   </Fragment>
 </Wix>
