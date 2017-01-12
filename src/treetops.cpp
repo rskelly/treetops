@@ -276,7 +276,7 @@ void TreetopsConfig::parseThresholds(const std::string &str) {
 		float height = atof(item1.c_str());
 		uint8_t window = atoi(item2.c_str());
 		if(window == 0) continue;
-		topsThresholds[height] = window;
+		topsThresholds.push_back(std::make_pair(height, window));
 	}
 }
 

@@ -2,6 +2,7 @@
 #define __TREETOPS_HPP__
 
 #include <string>
+#include <vector>
 
 #include "geotools.hpp"
 #include "util.hpp"
@@ -57,7 +58,7 @@ namespace geotools {
                 // window size to detect maxima. Previously-detected maxima will be
                 // obliterated if a new maximum is found whose window encompases
                 // the previous one.
-                std::map<float, uint8_t> topsThresholds;
+                std::vector<std::pair<float, uint8_t> > topsThresholds;
 
 
                 std::string topsOriginalCHM;

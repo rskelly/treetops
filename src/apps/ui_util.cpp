@@ -55,15 +55,14 @@ void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, 
 	}
 }
 
-void geotools::ui::util::getThresholds(QWidget *form, std::map<float, uint8_t> &thresholds) {
+void geotools::ui::util::getThresholds(QWidget *form, std::vector<std::pair<float, uint8_t> > &thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);
 	tf.setThresholds(thresholds);
-	if(dlg.exec()) {
-		if(tf.isConfirm())
-			thresholds = tf.thresholds();
-	}
+	dlg.exec(); // TODO: There is a correct way to manage accepted response from dialogs.
+	if(tf.isConfirm())
+		thresholds = tf.thresholds();
 }
 
 
