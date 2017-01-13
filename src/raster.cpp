@@ -1131,9 +1131,11 @@ void FloatRaster::init(const std::string &filename, bool writable) {
 	m_props.setTrans(trans);
 	m_props.setSize(m_ds->GetRasterXSize(), m_ds->GetRasterYSize());
 	m_props.setGDALDataType(m_ds->GetRasterBand(1)->GetRasterDataType());
+	m_props.setBands(m_ds->GetRasterCount());
+	m_props.setWritable(writable);
+	m_props.setProjection(std::string(m_ds->GetProjectionRef()));
 	m_cache.setSize(100);
 	m_cache.setDataset(m_ds);
-	m_props.setWritable(writable);
 	m_inited = true;
 }
 
