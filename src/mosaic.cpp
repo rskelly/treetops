@@ -252,7 +252,7 @@ void Mosaic::mosaic(const std::vector<std::string> &files,
 	}
 
 	// Create the destination file to modify it.
-	Raster<float> output(outfile, 1, base);
+	Raster<float> output(outfile, base.props());
 	{
 		MemRaster<float> buf(base.cols(), 1000);
 		g_debug(" -- writing base file to output.");

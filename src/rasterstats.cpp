@@ -507,8 +507,12 @@ namespace geotools {
 			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
 			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
 
-			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
-				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+			GridProps props;
+			props.setTopLeft(bounds.minx(), bounds.maxy());
+			props.setBands(bands);
+			props.setResolution(resX, resY);
+			props.setSrid(0);
+			Raster<float> writerast(config.destFile, props);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
@@ -555,8 +559,12 @@ namespace geotools {
 			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 
-			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
-				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+			GridProps props;
+			props.setTopLeft(bounds.minx(), bounds.maxy());
+			props.setBands(bands);
+			props.setResolution(resX, resY);
+			props.setSrid(0);
+			Raster<float> writerast(config.destFile, props);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
@@ -643,8 +651,12 @@ namespace geotools {
 			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 
-			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
-				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+			GridProps props;
+			props.setTopLeft(bounds.minx(), bounds.maxy());
+			props.setBands(bands);
+			props.setResolution(resX, resY);
+			props.setSrid(0);
+			Raster<float> writerast(config.destFile, props);
 
 			TargetOperator<float> op(2.0f);
 
@@ -718,8 +730,12 @@ namespace geotools {
 			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
 			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
 
-			Raster<float> writerast(config.destFile, bands, bounds.minx(), 
-				bounds.miny(), bounds.maxx(), bounds.maxy(), resX, resY, 0);
+			GridProps props;
+			props.setTopLeft(bounds.minx(), bounds.maxy());
+			props.setBands(bands);
+			props.setResolution(resX, resY);
+			props.setSrid(0);
+			Raster<float> writerast(config.destFile, props);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
@@ -876,7 +892,7 @@ namespace geotools {
 				}
 			}
 			g_debug("Writing out.");
-			Raster<float> dest(config.destFile, 1, source);
+			Raster<float> dest(config.destFile, source.props());
 			dest.writeBlock(outrast);
 			dest.normalize();
 		}
@@ -884,9 +900,9 @@ namespace geotools {
 
 		void normalize(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
 			Raster<float> source(config.sourceFiles[0]);			
-			Raster<float> dest(config.destFile, source.bandCount(), source);
+			Raster<float> dest(config.destFile, source.props());
 			dest.writeBlock(source);
-			//dest.normalize();
+			dest.normalize();
 		}
 
 		void contributingarea(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
@@ -969,7 +985,7 @@ namespace geotools {
 			}
 			g_debug("Writing out.");
 			accum.logNormalize();
-			Raster<float> dest(config.destFile, 1, source);
+			Raster<float> dest(config.destFile, source.props());
 			dest.writeBlock(1, accum);
 			//dest.writeBlock(2, direction);
 		}

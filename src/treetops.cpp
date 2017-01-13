@@ -76,7 +76,7 @@ namespace geotools {
 
 			// Returns true if the pixel at the center of the given circular window is
 			// the maximum value in the window.
-			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max) {
+			bool isMaxCenter(Grid<double> &raster, int col, int row, int window, double *max) {
 				*max = 0;
 				int mc = 0, mr = 0;
 				float v;
@@ -95,7 +95,7 @@ namespace geotools {
 			}
 
 			// Returns the max value of pixels in the kernel.
-			void getKernelMax(Grid<float> &raster, int col, int row, int window,
+			void getKernelMax(Grid<double> &raster, int col, int row, int window,
 				double *max, uint16_t *mc, uint16_t *mr) {
 				*max = G_DBL_MAX_NEG;
 				float v;
@@ -303,8 +303,8 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	if (!cancel)
 		cancel = &__tt_cancel;
 
-	Raster<float> in(config.smoothOriginalCHM);
-	Raster<float> out(config.smoothSmoothedCHM, 1, in);
+	FloatRaster in(config.smoothOriginalCHM);
+	FloatRaster out(config.smoothSmoothedCHM, in.props());
 	out.setNodata(in.nodata());
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks, cancel);
 }
@@ -327,8 +327,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Loading rasters...");
 
 	// Initialize input rasters.
-	Raster<float> original(config.topsOriginalCHM);
-	Raster<float> smoothed(config.topsSmoothedCHM);
+	FloatRaster original(config.topsOriginalCHM);
+	FloatRaster smoothed(config.topsSmoothedCHM);
 
 	if (*cancel)
 		return;
@@ -383,7 +383,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		#pragma omp parallel
 		{
 
-			MemRaster<float> smooth(smoothed.cols(), bufSize + window, true);
+			MemRaster<double> smooth(smoothed.cols(), bufSize + window, true);
 			smooth.setNodata(smoothed.nodata());
 
 			#pragma omp for
@@ -546,10 +546,11 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing rasters...");
 
-	Raster<float> inrast(config.crownsSmoothedCHM);
+	FloatRaster inrast(config.crownsSmoothedCHM);
 	double nodata = inrast.nodata();
-
-	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
+	GridProps props = inrast.props();
+	props.setBands(1);
+	Raster<uint32_t> outrast(config.crownsCrownsRaster, props);
 	outrast.setNodata(0);
 
 	MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
@@ -587,7 +588,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	{
 
 		// To keep track of visited cells.
-		MemRaster<float> buf(inrast.cols(), bufSize + radius * 2 + 1);
+		MemRaster<double> buf(inrast.cols(), bufSize + radius * 2 + 1);
 		MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
 
 		#pragma omp for

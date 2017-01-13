@@ -332,11 +332,9 @@ public:
 	int fillBasins(std::string &filename, float elevation) {
 		g_debug("Filling basins: " << filename << "; " << elevation);
 
-		std::string proj;
-		m_dem.projection(proj);
-		Raster<unsigned int> basins(filename, 1, m_dem.minx(), m_dem.miny(),
-				m_dem.maxx(), m_dem.maxy(), m_dem.resolutionX(),
-				m_dem.resolutionY(), proj);
+		GridProps props = m_dem.props();
+		props.setBands(1);
+		Raster<unsigned int> basins(filename, props);
 		basins.setNodata(0, 1);
 		basins.fill(0, 1);
 		m_basinList.clear();

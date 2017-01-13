@@ -32,6 +32,52 @@ namespace geotools {
 
     namespace raster {
 
+		enum DataType {
+			Float64, Float32, UInt32, UInt16, Byte, Int32, Int16, None
+		};
+
+
+    	class G_DLL_EXPORT GridProps {
+    	private:
+    		double m_trans[6];
+    		uint16_t m_cols, m_rows;
+    		uint16_t m_vsrid, m_hsrid;
+            uint16_t m_bands;           // The number of bands.
+            bool m_writable;            // True if the raster is writable
+    		std::string m_projection;
+    		DataType m_type;
+    	public:
+    		GridProps();
+    		int32_t toRow(double y) const;
+    		int32_t toCol(double x) const;
+    		double toX(int32_t col) const;
+    		double toY(int32_t row) const;
+    		void setDataType(DataType type);
+    		void setGDALDataType(GDALDataType);
+    		DataType dataType() const;
+    		GDALDataType gdalDataType() const;
+    		void setTopLeft(double x, double y);
+    		double tlx() const;
+    		double tly() const;
+    		void setSize(uint16_t cols, uint16_t rows);
+    		uint16_t cols() const;
+    		uint16_t rows() const;
+    		void setSrid(uint16_t hsrid, uint16_t vsrid = 0);
+    		uint16_t vsrid() const;
+    		uint16_t hsrid() const;
+    		void setProjection(const std::string &proj);
+    		std::string projection() const;
+    		void setTrans(double m_trans[6]);
+    		void trans(double m_trans[6]) const;
+    		void setResolution(double resolutionX, double resolutionY);
+    		double resolutionX() const;
+    		double resolutionY() const;
+    		void setBands(uint16_t bands);
+    		uint16_t bands() const;
+    		void setWritable(bool writable);
+    		bool writable() const;
+    	};
+
         // Simple class to represent a single grid cell.
         class G_DLL_EXPORT Cell {
         public:
@@ -553,83 +599,38 @@ namespace geotools {
 
         class G_DLL_EXPORT FloatRaster : public Grid<double> {
         private:
-            enum DataType {
-            	Float64, Float32, UInt32, UInt16, Byte, Int32, Int16
-            };
-
-        private:
-            uint16_t m_cols, m_rows;    // Raster cols/rows
-            uint16_t m_bands;           // The number of bands.
-            bool m_writable;            // True if the raster is writable
             GDALDataset *m_ds;          // GDAL dataset
             GDALDataType m_type;        // GDALDataType -- limits the possible template types.
-            double m_trans[6];          // Raster transform
             bool m_inited;              // True if the instance is initialized.
             std::string m_filename;     // Raster filename
             BlockCache<double> m_cache; // Block cache.
-
-            GDALDataType getGDType(FloatRaster::DataType type) const;
+            GridProps m_props;
+            GDALDataType getGDType(DataType type) const;
 
         public:
 
              // Basic constructor.
             FloatRaster();
 
-            // Create a new raster for writing with a template of a different type.
-            /*
-            FloatRaster(const std::string &filename, uint16_t bands, const FloatRaster &tpl) {
-                std::string proj;
-                tpl.projection(proj);
-                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
-                        tpl.resolutionY(), proj, tpl.getDataType());
-            }
-			*/
-
             // Create a new raster for writing with a template.
-            FloatRaster(const std::string &filename, uint16_t bands, const FloatRaster &tpl);
-
-            // Build a new raster with the given filename, bounds, resolution and projection.
-            FloatRaster(const std::string &filename, uint16_t bands,
-            		double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, const std::string &proj, DataType type);
-
-            // Build a new raster with the given filename, bounds, resolution and projection.
-            FloatRaster(const std::string &filename, uint16_t bands, const Bounds &bounds,
-            		double resolutionX, double resolutionY, uint16_t crs, DataType type);
-
-            // Build a new raster with the given filename, bounds, resolution and SRID.
-            FloatRaster(const std::string &filename, uint16_t bands,
-            		double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, uint16_t crs, DataType type);
+            FloatRaster(const std::string &filename, const GridProps &props);
 
             // Open the given raster. Set the writable argument to true
             // to enable writing.
             FloatRaster(const std::string &filename, bool writable = false);
 
             // Initialize the raster using the given file (which may not exist) using
-            // another raster as a template. The raster pixel types need not be the same.
-            void init(const std::string &filename, uint16_t bands, const FloatRaster &tpl) {
-                std::string proj;
-                tpl.projection(proj);
-                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
-                        tpl.resolutionY(), proj, tpl.getDataType());
-            }
-
-            void init(const std::string &filename, uint16_t bands, const Bounds &bounds,
-            		double resolutionX, double resolutionY, const std::string &proj, DataType type);
-
-            // Initializes the raster with the given filename, bounds, resolution and projection.
-            void init(const std::string &filename, uint16_t bands, double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, const std::string &proj, DataType type);
+            // a template.
+            void init(const std::string &filename, const GridProps &props);
 
             // Initializes a Raster from the existing file.
             void init(const std::string &filename, bool writable = false);
 
+            GridProps props() const;
+
             // Attempts to return the datatype of the raster
             // with the given filename.
-            static FloatRaster::DataType getFileDataType(const std::string &filename);
-
-            FloatRaster::DataType getDataType() const;
+            static DataType getFileDataType(const std::string &filename);
 
             // Set the number of blocks in the cache.
             void setCacheSize(uint32_t size);
@@ -838,14 +839,10 @@ namespace geotools {
         template <class T>
         class G_DLL_EXPORT Raster : public Grid<T> {
         private:
-            uint16_t m_cols, m_rows;    // Raster cols/rows
-            uint16_t m_bands;           // The number of bands.
-            bool m_writable;            // True if the raster is writable
+            GridProps m_props;
             bool m_inited;              // True if the instance is initialized.
-            GDALDataType m_type;        // GDALDataType -- limits the possible template types.
             GDALDataset *m_ds;          // GDAL dataset
 
-            double m_trans[6];          // Raster transform
             std::string m_filename;     // Raster filename
             BlockCache<T> m_cache;      // Block cache.
 
@@ -890,60 +887,18 @@ namespace geotools {
             Raster();
 
             // Create a new raster for writing with a template of a different type.
-            template <class U>
-            Raster(const std::string &filename, uint16_t bands, const Raster<U> &tpl) :
-				m_cols(0), m_rows(0),
-				m_bands(0),
-				m_writable(false),
-				m_inited(false),
-				m_type(GDT_Float32),
-				m_ds(nullptr) {
-                std::string proj;
-                tpl.projection(proj);
-                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
-                        tpl.resolutionY(), proj);
-            }
-
-            // Create a new raster for writing with a template of a different type.
-            Raster(const std::string &filename, uint16_t bands, const Raster<T> &tpl);
-
-            // Build a new raster with the given filename, bounds, resolution and projection.
-            Raster(const std::string &filename, uint16_t bands,
-            		double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, const std::string &proj);
-
-            // Build a new raster with the given filename, bounds, resolution and projection.
-            Raster(const std::string &filename, uint16_t bands, const Bounds &bounds,
-            		double resolutionX, double resolutionY, uint16_t crs);
-
-            // Build a new raster with the given filename, bounds, resolution and SRID.
-            Raster(const std::string &filename, uint16_t bands,
-            		double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, uint16_t crs);
+            Raster(const std::string &filename, const GridProps &props);
 
             // Open the given raster. Set the writable argument to true
             // to enable writing.
             Raster(const std::string &filename, bool writable = false);
 
-            // Initialize the raster using the given file (which may not exist) using
-            // another raster as a template. The raster pixel types need not be the same.
-            template <class U>
-            void init(const std::string &filename, uint16_t bands, const Raster<U> &tpl) {
-                std::string proj;
-                tpl.projection(proj);
-                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
-                        tpl.resolutionY(), proj);
-            }
-
-            void init(const std::string &filename, uint16_t band, const Bounds &bounds,
-            		double resolutionX, double resolutionY, const std::string &proj);
-
-            // Initializes the raster with the given filename, bounds, resolution and projection.
-            void init(const std::string &filename, uint16_t bands, double minx, double miny, double maxx, double maxy,
-                    double resolutionX, double resolutionY, const std::string &proj);
+            void init(const std::string &filename, const GridProps &props);
 
             // Initializes a Raster from the existing file.
             void init(const std::string &filename, bool writable = false);
+
+            GridProps props() const;
 
             // Attempts to return the datatype of the raster
             // with the given filename.

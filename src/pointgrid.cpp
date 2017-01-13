@@ -46,8 +46,12 @@ void min(const PointgridConfig &config, Callbacks *callbacks, bool *cancel) {
 			config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds,
-			config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> min(out.cols(), out.rows());
@@ -112,8 +116,12 @@ void max(const PointgridConfig &config, Callbacks *callbacks, bool *cancel) {
 			config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds,
-			config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> max(out.cols(), out.rows());
@@ -178,8 +186,12 @@ void mean(const PointgridConfig &config, Callbacks *callbacks, bool *cancel) {
 			config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds,
-			config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> sum(out.cols(), out.rows());
@@ -248,8 +260,12 @@ void variance(const PointgridConfig &config, Callbacks *callbacks, bool *cancel)
 			config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds,
-			config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> sum(out.cols(), out.rows());
@@ -346,8 +362,12 @@ void stddev(const PointgridConfig &config, Callbacks *callbacks, bool *cancel) {
 			config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds,
-			config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> sum(out.cols(), out.rows());
@@ -437,7 +457,12 @@ void density(const PointgridConfig &config, Callbacks *callbacks, bool *cancel) 
 	bounds.align(config.alignX, config.alignY, config.resolutionX, config.resolutionY);
 	lr.setBounds(bounds);
 
-	Raster<float> out(config.destFile, 1, bounds, config.resolutionX, config.resolutionY, config.srid);
+	GridProps p;
+	p.setTopLeft(bounds.minx(), bounds.maxy());
+	p.setResolution(config.resolutionX, config.resolutionY);
+	p.setSrid(config.srid);
+	p.setBands(1);
+	Raster<float> out(config.destFile, p);
 	out.setNodata(-9999);
 
 	MemRaster<float> sum(out.cols(), out.rows());

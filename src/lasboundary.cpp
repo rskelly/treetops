@@ -52,11 +52,11 @@ namespace geotools {
 
 			g_loglevel(G_LOG_DEBUG);
 			g_debug("reader");
-			LASMultiReader lr(srcFiles, res, res);
+			LASMultiReader lr(srcFiles, res, -res);
 			Bounds bounds = lr.bounds();
 
 			g_debug("raster");
-			MemRaster<uint16_t> rast(bounds.maxCol(res) + 1, bounds.maxRow(res) + 1);
+			MemRaster<uint16_t> rast(bounds.maxCol(res) + 1, bounds.maxRow(-res) + 1);
 			rast.fill(0);
 			rast.setNodata(0);
 
@@ -65,7 +65,7 @@ namespace geotools {
 			while(lr.next(pt)) {
 				if(classes.find(pt.cls) == classes.end()) continue;
 				int col = bounds.toCol(pt.x, res);
-				int row = bounds.toRow(pt.y, res);
+				int row = bounds.toRow(pt.y, -res);
 				rast.set(col, row, rast.get(col, row) + 1);
 			}
 
@@ -85,7 +85,12 @@ namespace geotools {
 				rast.set(i, rast.get(i) == 2 ? 0 : 1);
 
 			g_debug("polygonizing");
-			Raster<uint16_t> out(dstFile, 1, bounds, res, res, 0);
+			GridProps p;
+			p.setBands(1);
+			p.setTopLeft(bounds.minx(), bounds.maxy());
+			p.setResolution(res, -res);
+			p.setSrid(0);
+			Raster<uint16_t> out(dstFile, p);
 			out.writeBlock(rast);
 			if(!polyFile.empty())
 				out.polygonize(polyFile, 1);

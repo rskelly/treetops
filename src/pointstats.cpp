@@ -478,8 +478,12 @@ namespace geotools {
                 // Prepare the grid
                 // TODO: Only works with UTM north.
                 int band = 1;
-                Raster<float> grid(config.dstFiles[0].c_str(), m_mem[i].size(), m_bounds, m_resolutionX,
-                    m_resolutionY, config.hsrid);
+                GridProps p;
+                p.setBands(m_mem[i].size());
+                p.setResolution(m_resolutionX, m_resolutionY);
+                p.setSrid(config.hsrid);
+                p.setTopLeft(m_bounds.minx(), m_bounds.maxy());
+                Raster<float> grid(config.dstFiles[0].c_str(), p);
                 for(const std::unique_ptr<MemRaster<float> > &m : m_mem[i]) {
                     if(*cancel) return;
                     // Write grid to file.
