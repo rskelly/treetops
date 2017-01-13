@@ -165,6 +165,7 @@ namespace geotools {
                 std::vector<Point*> *result = (std::vector<Point*> *) resultPtr;
                 Point *pt = new Point();
                 for (int i = 0; i < cols; ++i) {
+                    if(values[i] == NULL) continue;
                     std::string colname(colnames[i]);
                     if (colname == "geomx") {
                         pt->x = atof(values[i]);
@@ -197,7 +198,6 @@ namespace geotools {
                 ss << "))', SRID(geom)))";
 
                 std::string q = ss.str();
-                g_debug("getPoints: " << q);
                 char *err;
                 begin();
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
