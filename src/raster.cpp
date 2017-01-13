@@ -469,6 +469,8 @@ void Grid<T>::smooth(Grid<T> &smoothed, double sigma, uint16_t size,
 	if (status)
 		status->stepCallback(0.02f);
 
+	omp_set_num_threads(1);
+
 	#pragma omp parallel
 	{
 
@@ -1081,6 +1083,7 @@ void FloatRaster::init(const std::string &filename, const GridProps &props) {
 	if (filename.empty())
 		g_argerr("Filename must be given.");
 
+	m_props = props;
 	m_filename.assign(filename);
 
 	// Create GDAL dataset.
