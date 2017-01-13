@@ -551,8 +551,12 @@ namespace geotools {
 
         };
 
-        template <class T>
-        class G_DLL_EXPORT Raster : public Grid<T> {
+        class G_DLL_EXPORT FloatRaster : public Grid<double> {
+        private:
+            enum DataType {
+            	Float64, Float32, UInt32, UInt16, Byte, Int32, Int16
+            };
+
         private:
             uint16_t m_cols, m_rows;    // Raster cols/rows
             uint16_t m_bands;           // The number of bands.
@@ -561,6 +565,287 @@ namespace geotools {
             GDALDataType m_type;        // GDALDataType -- limits the possible template types.
             double m_trans[6];          // Raster transform
             bool m_inited;              // True if the instance is initialized.
+            std::string m_filename;     // Raster filename
+            BlockCache<double> m_cache; // Block cache.
+
+            GDALDataType getGDType(FloatRaster::DataType type) const;
+
+        public:
+
+             // Basic constructor.
+            FloatRaster();
+
+            // Create a new raster for writing with a template of a different type.
+            /*
+            FloatRaster(const std::string &filename, uint16_t bands, const FloatRaster &tpl) {
+                std::string proj;
+                tpl.projection(proj);
+                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
+                        tpl.resolutionY(), proj, tpl.getDataType());
+            }
+			*/
+
+            // Create a new raster for writing with a template.
+            FloatRaster(const std::string &filename, uint16_t bands, const FloatRaster &tpl);
+
+            // Build a new raster with the given filename, bounds, resolution and projection.
+            FloatRaster(const std::string &filename, uint16_t bands,
+            		double minx, double miny, double maxx, double maxy,
+                    double resolutionX, double resolutionY, const std::string &proj, DataType type);
+
+            // Build a new raster with the given filename, bounds, resolution and projection.
+            FloatRaster(const std::string &filename, uint16_t bands, const Bounds &bounds,
+            		double resolutionX, double resolutionY, uint16_t crs, DataType type);
+
+            // Build a new raster with the given filename, bounds, resolution and SRID.
+            FloatRaster(const std::string &filename, uint16_t bands,
+            		double minx, double miny, double maxx, double maxy,
+                    double resolutionX, double resolutionY, uint16_t crs, DataType type);
+
+            // Open the given raster. Set the writable argument to true
+            // to enable writing.
+            FloatRaster(const std::string &filename, bool writable = false);
+
+            // Initialize the raster using the given file (which may not exist) using
+            // another raster as a template. The raster pixel types need not be the same.
+            void init(const std::string &filename, uint16_t bands, const FloatRaster &tpl) {
+                std::string proj;
+                tpl.projection(proj);
+                init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
+                        tpl.resolutionY(), proj, tpl.getDataType());
+            }
+
+            void init(const std::string &filename, uint16_t bands, const Bounds &bounds,
+            		double resolutionX, double resolutionY, const std::string &proj, DataType type);
+
+            // Initializes the raster with the given filename, bounds, resolution and projection.
+            void init(const std::string &filename, uint16_t bands, double minx, double miny, double maxx, double maxy,
+                    double resolutionX, double resolutionY, const std::string &proj, DataType type);
+
+            // Initializes a Raster from the existing file.
+            void init(const std::string &filename, bool writable = false);
+
+            // Attempts to return the datatype of the raster
+            // with the given filename.
+            static FloatRaster::DataType getFileDataType(const std::string &filename);
+
+            FloatRaster::DataType getDataType() const;
+
+            // Set the number of blocks in the cache.
+            void setCacheSize(uint32_t size);
+
+            // Return the filename for this raster.
+            std::string filename() const;
+
+            // Return the number of bands in the raster.
+            uint16_t bandCount() const;
+
+            // Converts a numerical (EPSG) crs code to a projection string.
+            std::string epsg2ProjText(uint16_t crs) const;
+
+            // Returns true if the raster is initialized.
+            bool inited() const;
+
+            // Fill the given band with the given value.
+            void fill(const double value, uint16_t band);
+
+            void fill(const double value);
+
+            // Read the block at the given band and position into the given grid.
+            void readBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
+            		int32_t dstCol = 0, int32_t dstRow = 0,
+					int32_t xcols = 0, int32_t xrows = 0);
+
+            void readBlock(int32_t col, int32_t row, Grid<double> &grd,
+            		int32_t dstCol = 0, int32_t dstRow = 0,
+					int32_t xcols = 0, int32_t xrows = 0);
+
+            // Write the block at the given band and position from the given grid.
+            void writeBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
+            		int32_t srcCol = 0, int32_t srcRow = 0,
+					int32_t xcols = 0, int32_t xrows = 0);
+
+            void writeBlock(int32_t col, int32_t row, Grid<double> &grd,
+            		int32_t srcCol = 0, int32_t srcRow = 0,
+					int32_t xcols = 0, int32_t xrows = 0);
+
+            // Read the block at the given band into the given grid.
+            void readBlock(uint16_t band, Grid<double> &block);
+
+            void readBlock(Grid<double> &block);
+
+            // Write the block at the given band from the given grid.
+            void writeBlock(uint16_t band, Grid<double> &block);
+
+            void writeBlock(Grid<double> &block);
+
+            // Get the x resolution.
+            double resolutionX() const;
+
+            // Get the y resolution.
+            double resolutionY() const;
+
+            // Return true if the x-resolution is positive.
+            bool positiveX() const;
+
+            // Return true if the y-resolution is positive.
+            bool positiveY() const;
+
+            // Write the projection data to the given string object.
+            void projection(std::string &proj) const;
+
+            // Return the GDAL datatype of the raster.
+            GDALDataType type() const;
+
+            // Return the raster's geographic bounds.
+            geotools::util::Bounds bounds() const;
+
+            // The minimum bounding x.
+            double minx() const;
+
+            // The maximum bounding x.
+            double maxx() const;
+
+            // The left x.
+            double leftx() const;
+
+            // The right x.
+            double rightx() const;
+
+            // The minimum bounding y.
+            double miny() const;
+
+            // The maximum bounding y.
+            double maxy() const;
+
+            // The top y.
+            double topy() const;
+
+            // The bottom y.
+            double bottomy() const;
+
+            // The width of the raster in map units.
+            double width() const;
+
+            // The height of the raster in map units.
+            double height() const;
+
+            double nodata(uint16_t band) const;
+
+            double nodata() const;
+
+            void setNodata(const double nodata, uint16_t band);
+
+            void setNodata(const double nodata);
+
+            uint16_t cols() const;
+
+            uint16_t rows() const;
+
+            // Returns the row for a given y-coordinate.
+            int32_t toRow(double y) const;
+
+            // Returns the column for a given x-coordinate.
+            int32_t toCol(double x) const;
+
+            // Returns the x-coordinate for a given column.
+            double toX(int32_t col) const;
+
+            // Returns the y-coordinate for a given row.
+            double toY(int32_t row) const;
+
+            // Returns the x-coordinate for the cell centroid of a given column.
+            double toCentroidX(int32_t col) const;
+
+            // Returns the y-coordinate for the cell centorid of a given row.
+            double toCentroidY(int32_t row) const;
+
+            uint32_t size() const;
+
+            // Returns true if the pixel is nodata.
+            bool isNoData(int32_t col, int32_t row, uint16_t band);
+
+            bool isNoData(int32_t col, int32_t row);
+
+            // Returns true if the pixel is nodata.
+            bool isNoData(uint32_t idx, uint16_t band);
+
+            bool isNoData(uint32_t idx);
+
+            // Returns true if the pixel is nodata.
+            bool isNoData(double x, double y, uint16_t band);
+
+            bool isNoData(double x, double y);
+
+            // Returns true if the pixel exists and is not nodata.
+            bool isValid(int32_t c, int32_t r, uint16_t band = 1);
+
+            // Returns true if the pixel exists and is not nodata.
+            bool isValid(double x, double y, uint16_t band = 1);
+
+            // Gets the pixel value or nodata if the pixel doesn't exist.
+            double getOrNodata(double x, double y, uint16_t band = 1);
+
+            // Gets the pixel value or nodata if the pixel doesn't exist.
+            double getOrNodata(int32_t col, int32_t row, uint16_t band = 1);
+
+            double *grid();
+
+            bool hasGrid() const;
+
+            double get(double x, double y, uint16_t band);
+
+            double get(double x, double y);
+
+            double get(int32_t col, int32_t row, uint16_t band);
+
+            double get(int32_t col, int32_t row);
+
+            double get(uint32_t idx, uint16_t band);
+
+            double get(uint32_t idx);
+
+            void set(int32_t col, int32_t row, const double v, uint16_t band);
+
+            void set(int32_t col, int32_t row, const double v);
+
+            void set(uint32_t idx, const double v, uint16_t band);
+
+            void set(uint32_t idx, const double v);
+
+            void set(double x, double y, const double v, uint16_t band);
+
+            void set(double x, double y, const double v);
+
+            bool isSquare() const;
+
+            bool has(int32_t col, int32_t row) const;
+
+            bool has(double x, double y) const;
+
+            bool has(uint32_t idx) const;
+
+            // Flush the current block to the dataset.
+            void flush();
+
+            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1, 
+				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
+
+            ~FloatRaster();
+
+        };
+
+        template <class T>
+        class G_DLL_EXPORT Raster : public Grid<T> {
+        private:
+            uint16_t m_cols, m_rows;    // Raster cols/rows
+            uint16_t m_bands;           // The number of bands.
+            bool m_writable;            // True if the raster is writable
+            bool m_inited;              // True if the instance is initialized.
+            GDALDataType m_type;        // GDALDataType -- limits the possible template types.
+            GDALDataset *m_ds;          // GDAL dataset
+
+            double m_trans[6];          // Raster transform
             std::string m_filename;     // Raster filename
             BlockCache<T> m_cache;      // Block cache.
 
@@ -606,7 +891,13 @@ namespace geotools {
 
             // Create a new raster for writing with a template of a different type.
             template <class U>
-            Raster(const std::string &filename, uint16_t bands, const Raster<U> &tpl) {
+            Raster(const std::string &filename, uint16_t bands, const Raster<U> &tpl) :
+				m_cols(0), m_rows(0),
+				m_bands(0),
+				m_writable(false),
+				m_inited(false),
+				m_type(GDT_Float32),
+				m_ds(nullptr) {
                 std::string proj;
                 tpl.projection(proj);
                 init(filename, bands, tpl.minx(), tpl.miny(), tpl.maxx(), tpl.maxy(), tpl.resolutionX(),
@@ -855,7 +1146,7 @@ namespace geotools {
             // Flush the current block to the dataset.
             void flush();
 
-            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1, 
+            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1,
 				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
 
             ~Raster();

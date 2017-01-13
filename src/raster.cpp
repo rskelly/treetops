@@ -864,6 +864,753 @@ BlockCache<T>::~BlockCache() {
 
 // Implementations for Raster
 
+GDALDataType FloatRaster::getGDType(DataType type) const {
+	switch(type) {
+	case DataType::Float64: return GDT_Float64;
+	case DataType::UInt32:  return GDT_UInt32;
+	case DataType::Int32:   return GDT_Int32;
+	case DataType::UInt16:  return GDT_UInt16;
+	case DataType::Int16:   return GDT_Int16;
+	case DataType::Byte:    return GDT_Byte;
+	case DataType::Float32:
+	default:
+		return GDT_Float32;
+	}
+}
+
+FloatRaster::FloatRaster() :
+	m_cols(-1), m_rows(-1),
+	m_bands(1),
+	m_writable(false),
+	m_ds(nullptr),
+	m_type(GDT_Float32),
+	m_inited(false) {
+}
+
+FloatRaster::FloatRaster(const std::string &filename, uint16_t bands, const FloatRaster &tpl) :
+	m_cols(-1), m_rows(-1),
+	m_bands(1),
+	m_writable(false),
+	m_ds(nullptr),
+	m_type(GDT_Float32),
+	m_inited(false) {
+	init(filename, bands, tpl);
+}
+
+FloatRaster::FloatRaster(const std::string &filename, uint16_t bands, double minx,
+		double miny, double maxx, double maxy, double resolutionX,
+		double resolutionY, const std::string &proj, DataType type) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(GDT_Float32),
+		m_inited(false) {
+	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj, type);
+}
+
+FloatRaster::FloatRaster(const std::string &filename, uint16_t bands, const Bounds &bounds,
+		double resolutionX, double resolutionY, uint16_t crs, DataType type) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(GDT_Float32),
+		m_inited(false) {
+	std::string proj = epsg2ProjText(crs);
+	init(filename, bands, bounds.minx(), bounds.miny(), bounds.maxx(),
+			bounds.maxy(), resolutionX, resolutionY, proj, type);
+}
+
+FloatRaster::FloatRaster(const std::string &filename, uint16_t bands, double minx,
+		double miny, double maxx, double maxy, double resolutionX,
+		double resolutionY, uint16_t crs, DataType type) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(GDT_Float32),
+		m_inited(false) {
+	std::string proj = epsg2ProjText(crs);
+	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj, type);
+}
+
+FloatRaster::FloatRaster(const std::string &filename, bool writable) :
+		m_cols(-1), m_rows(-1),
+		m_bands(1),
+		m_writable(false),
+		m_ds(nullptr),
+		m_type(GDT_Float32),
+		m_inited(false) {
+	init(filename, writable);
+}
+
+
+void FloatRaster::init(const std::string &filename, uint16_t bands,
+		const Bounds &bounds, double resolutionX, double resolutionY,
+		const std::string &proj, DataType type) {
+	init(filename, bands, bounds.minx(), bounds.miny(), bounds.maxx(),
+			bounds.maxy(), resolutionX, resolutionY, proj, type);
+}
+
+
+void FloatRaster::init(const std::string &filename, uint16_t bands, double minx,
+		double miny, double maxx, double maxy, double resolutionX,
+		double resolutionY, const std::string &proj, DataType type) {
+	if (resolutionX == 0 || resolutionY == 0)
+		g_argerr("Resolution must be larger or smaller than 0.");
+	if (maxx < minx)
+		g_argerr("Minimum x must be smaller than or equal to maximum x.");
+	if (maxy < miny)
+		g_argerr("Minimum y must be smaller than or equal to maximum y.");
+	if (filename.empty())
+		g_argerr("Filename must be given.");
+
+	m_filename.assign(filename);
+
+	// Compute columns/rows
+	int32_t width = (int) std::ceil((maxx - minx) / g_abs(resolutionX));
+	int32_t height = (int) std::ceil((maxy - miny) / g_abs(resolutionY));
+
+	// Create GDAL dataset.
+	char **opts = NULL;
+	//opts = CSLSetNameValue(opts, "COMPRESS", "LZW");
+	opts = CSLSetNameValue(opts, "BIGTIFF", "YES");
+	GDALAllRegister();
+	m_ds = GetGDALDriverManager()->GetDriverByName("GTiff")->Create(
+			filename.c_str(), width, height, bands, getGDType(type), opts);
+	if (m_ds == nullptr)
+		g_runerr("Failed to create file.");
+
+	// Initialize geotransform.
+	double trans[6] = {
+		resolutionX < 0 ? maxx : minx, resolutionX, 0.0,
+		resolutionY < 0 ? maxy : miny, 0.0, resolutionY
+	};
+	for (int i = 0; i < 6; ++i)
+		m_trans[i] = trans[i];
+	m_ds->SetGeoTransform(m_trans);
+
+	// Set projection.
+	if (!proj.empty())
+		m_ds->SetProjection(proj.c_str());
+
+	// Save some dataset properties.
+	m_rows = m_ds->GetRasterYSize();
+	m_cols = m_ds->GetRasterXSize();
+	m_bands = bands;
+	m_cache.setSize(100);
+	m_cache.setDataset(m_ds);
+	m_writable = true;
+	m_inited = true;
+}
+
+
+void FloatRaster::init(const std::string &filename, bool writable) {
+
+	if (filename.empty())
+		g_argerr("Filename must be given.");
+
+	m_filename.assign(filename);
+
+	// Attempt to open the dataset.
+	GDALAllRegister();
+	m_ds = (GDALDataset *) GDALOpen(filename.c_str(),
+			writable ? GA_Update : GA_ReadOnly);
+	if (m_ds == NULL)
+		g_runerr("Failed to open raster.");
+
+	// Save some raster properties
+	m_ds->GetGeoTransform(m_trans);
+	m_rows = m_ds->GetRasterYSize();
+	m_cols = m_ds->GetRasterXSize();
+	m_type = m_ds->GetRasterBand(1)->GetRasterDataType();
+	m_cache.setSize(100);
+	m_cache.setDataset(m_ds);
+	m_writable = writable;
+	m_inited = true;
+}
+
+
+FloatRaster::DataType FloatRaster::getFileDataType(const std::string &filename) {
+	GDALDataset *ds = (GDALDataset *) GDALOpen(filename.c_str(), GA_ReadOnly);
+	int32_t type = ds->GetRasterBand(1)->GetRasterDataType();
+	GDALClose(ds);
+	switch (type) {
+	case GDT_Byte:    return FloatRaster::Byte;
+	case GDT_UInt16:  return FloatRaster::UInt16;
+	case GDT_UInt32:  return FloatRaster::UInt32;
+	case GDT_Int16:   return FloatRaster::Int16;
+	case GDT_Int32:   return FloatRaster::Int32;
+	case GDT_Float32: return FloatRaster::Float32;
+	case GDT_Float64: return FloatRaster::Float64;
+	default:
+		g_argerr("Unknown data type: " << type);
+	}
+}
+
+FloatRaster::DataType FloatRaster::getDataType() const {
+	switch (m_type) {
+	case GDT_Byte:    return FloatRaster::Byte;
+	case GDT_UInt16:  return FloatRaster::UInt16;
+	case GDT_UInt32:  return FloatRaster::UInt32;
+	case GDT_Int16:   return FloatRaster::Int16;
+	case GDT_Int32:   return FloatRaster::Int32;
+	case GDT_Float64: return FloatRaster::Float64;
+	case GDT_Float32:
+	default:
+		return FloatRaster::Float32;
+	}
+}
+
+void FloatRaster::setCacheSize(uint32_t size) {
+	m_cache.setSize(size);
+}
+
+
+std::string FloatRaster::filename() const {
+	return m_filename;
+}
+
+
+uint16_t FloatRaster::bandCount() const {
+	return m_ds->GetRasterCount();
+}
+
+
+std::string FloatRaster::epsg2ProjText(uint16_t crs) const {
+	OGRSpatialReference ref;
+	char *wkt;
+	ref.importFromEPSG(crs);
+	ref.exportToWkt(&wkt);
+	return std::string(wkt);
+}
+
+bool FloatRaster::inited() const {
+	return m_inited;
+}
+
+void FloatRaster::fill(double value, uint16_t band) {
+	m_cache.flush();
+	MemRaster<double> grd(m_cache.blockWidth(), m_cache.blockHeight());
+	grd.fill(value);
+	#pragma omp critical(__gdal_io)
+	{
+		GDALRasterBand *bnd = m_ds->GetRasterBand(band);
+		for (int32_t r = 0; r < rows() / grd.rows(); ++r) {
+			for (int32_t c = 0; c < cols() / grd.cols(); ++c) {
+				if (bnd->WriteBlock(c, r, grd.grid()) != CE_None)
+					g_runerr("Fill error.");
+			}
+		}
+	}
+}
+
+void FloatRaster::fill(double value) {
+	fill(value, 1);
+}
+
+void FloatRaster::readBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
+		int32_t dstCol, int32_t dstRow,
+		int32_t xcols, int32_t xrows) {
+	if (&grd == this)
+		g_runerr("Recursive call to readBlock.");
+	m_cache.flush();
+	uint16_t cols = g_min(m_cols - col, grd.cols() - dstCol);
+	uint16_t rows = g_min(m_rows - row, grd.rows() - dstRow);
+	if (xcols > 0)
+		cols = g_min(xcols, cols);
+	if (xrows > 0)
+		rows = g_min(xrows, rows);
+	if (cols < 1 || rows < 1)
+		g_argerr("Zero read size.");
+	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
+	if (grd.hasGrid()) {
+		if (cols != grd.cols() || rows != grd.rows()) {
+			MemRaster<double> g(cols, rows);
+			#pragma omp critical(__gdal_io)
+			{
+				if (bnd->RasterIO(GF_Read, col, row, cols, rows, g.grid(),
+						cols, rows, m_type, 0, 0) != CE_None)
+					g_runerr("Failed to read from band. (1)");
+				bnd->FlushCache();
+			}
+			grd.writeBlock(dstCol, dstRow, g);
+		} else {
+			#pragma omp critical(__gdal_io)
+			{
+				if (bnd->RasterIO(GF_Read, col, row, cols, rows, grd.grid(),
+						cols, rows, m_type, 0, 0) != CE_None)
+					g_runerr("Failed to read from band. (2)");
+				bnd->FlushCache();
+			}
+		}
+	} else {
+		MemRaster<double> mr(cols, rows);
+		#pragma omp critical(__gdal_io)
+		{
+			if (bnd->RasterIO(GF_Read, col, row, cols, rows, mr.grid(), cols,
+					rows, m_type, 0, 0) != CE_None)
+				g_runerr("Failed to read from band. (3)");
+			bnd->FlushCache();
+		}
+		grd.writeBlock(dstCol, dstRow, mr);
+	}
+}
+
+
+void FloatRaster::readBlock(int32_t col, int32_t row, Grid<double> &grd,
+		int32_t dstCol, int32_t dstRow,
+		int32_t xcols, int32_t xrows) {
+	readBlock(1, col, row, grd, dstCol, dstRow, xcols, xrows);
+}
+
+
+void FloatRaster::writeBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
+		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
+	if (&grd == this)
+		g_runerr("Recursive call to writeBlock.");
+	m_cache.flush();
+	uint16_t cols = g_min(m_cols - col, grd.cols() - srcCol);
+	uint16_t rows = g_min(m_rows - row, grd.rows() - srcRow);
+	if (xcols > 0)
+		cols = g_min(xcols, cols);
+	if (xrows > 0)
+		rows = g_min(xrows, rows);
+	if (cols < 1 || rows < 1)
+		g_argerr("Zero write size.");
+	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
+	if (grd.hasGrid()) {
+		if (cols != grd.cols() || rows != grd.rows()) {
+			MemRaster<double> g(cols, rows);
+			grd.readBlock(srcCol, srcRow, g);
+			#pragma omp critical(__gdal_io)
+			{
+				if (bnd->RasterIO(GF_Write, col, row, cols, rows, g.grid(),
+						cols, rows, m_type, 0, 0) != CE_None)
+					g_runerr("Failed to write to band. (1)");
+				bnd->FlushCache();
+			}
+		} else {
+			#pragma omp critical(__gdal_io)
+			{
+				if (bnd->RasterIO(GF_Write, col, row, cols, rows, grd.grid(),
+						cols, rows, m_type, 0, 0) != CE_None)
+					g_runerr("Failed to write to band. (2)");
+				bnd->FlushCache();
+			}
+		}
+	} else {
+		MemRaster<double> mr(cols, rows);
+		grd.readBlock(srcCol, srcRow, mr);
+		#pragma omp critical(__gdal_io)
+		{
+			if (bnd->RasterIO(GF_Write, col, row, cols, rows, mr.grid(),
+					cols, rows, m_type, 0, 0) != CE_None)
+				g_runerr("Failed to write to band. (3)");
+			bnd->FlushCache();
+		}
+	}
+}
+
+
+void FloatRaster::writeBlock(int32_t col, int32_t row, Grid<double> &grd,
+		int32_t srcCol, int32_t srcRow, int32_t xcols, int32_t xrows) {
+	writeBlock(1, col, row, grd, srcCol, srcRow, xcols, xrows);
+}
+
+
+void FloatRaster::writeBlock(uint16_t band, Grid<double> &block) {
+	writeBlock(band, 0, 0, block);
+}
+
+
+void FloatRaster::writeBlock(Grid<double> &block) {
+	writeBlock(1, block);
+}
+
+
+void FloatRaster::readBlock(uint16_t band, Grid<double> &block) {
+	readBlock(band, 0, 0, block);
+}
+
+
+void FloatRaster::readBlock(Grid<double> &block) {
+	readBlock(1, block);
+}
+
+
+double FloatRaster::resolutionX() const {
+	return m_trans[1];
+}
+
+
+double FloatRaster::resolutionY() const {
+	return m_trans[5];
+}
+
+
+bool FloatRaster::positiveX() const {
+	return resolutionX() > 0;
+}
+
+
+bool FloatRaster::positiveY() const {
+	return resolutionY() > 0;
+}
+
+
+void FloatRaster::projection(std::string &proj) const {
+	proj.assign(m_ds->GetProjectionRef());
+}
+
+
+GDALDataType FloatRaster::type() const {
+	return m_ds->GetRasterBand(1)->GetRasterDataType();
+}
+
+
+Bounds FloatRaster::bounds() const {
+	return Bounds(minx(), miny(), maxx(), maxy());
+}
+
+
+double FloatRaster::minx() const {
+	return toX(0);
+}
+
+
+double FloatRaster::maxx() const {
+	return toX(cols());
+}
+
+
+double FloatRaster::miny() const {
+	return toY(rows());
+}
+
+
+double FloatRaster::maxy() const {
+	return toY(0);
+}
+
+
+double FloatRaster::leftx() const {
+	return resolutionX() > 0 ? minx() : maxx();
+}
+
+
+double FloatRaster::rightx() const {
+	return resolutionX() < 0 ? minx() : maxx();
+}
+
+
+double FloatRaster::topy() const {
+	return resolutionY() > 0 ? miny() : maxy();
+}
+
+
+double FloatRaster::bottomy() const {
+	return resolutionY() < 0 ? miny() : maxy();
+}
+
+
+double FloatRaster::width() const {
+	return maxx() - minx();
+}
+
+
+double FloatRaster::height() const {
+	return maxy() - miny();
+}
+
+
+double FloatRaster::nodata(uint16_t band) const {
+	return m_ds->GetRasterBand(band)->GetNoDataValue();
+}
+
+
+double FloatRaster::nodata() const {
+	return nodata(1);
+}
+
+
+void FloatRaster::setNodata(const double nodata, uint16_t band) {
+	m_ds->GetRasterBand(band)->SetNoDataValue((double) nodata);
+}
+
+
+void FloatRaster::setNodata(const double nodata) {
+	setNodata(nodata, 1);
+}
+
+
+uint16_t FloatRaster::cols() const {
+	return m_cols;
+}
+
+
+uint16_t FloatRaster::rows() const {
+	return m_rows;
+}
+
+
+int32_t FloatRaster::toRow(double y) const {
+	return (int32_t) ((y - m_trans[3]) / m_trans[5]);
+}
+
+
+int32_t FloatRaster::toCol(double x) const {
+	return (int32_t) ((x - m_trans[0]) / m_trans[1]);
+}
+
+
+double FloatRaster::toX(int32_t col) const {
+	return m_trans[0] + col * m_trans[1];
+}
+
+
+double FloatRaster::toY(int32_t row) const {
+	return m_trans[3] + row * m_trans[5];
+}
+
+
+double FloatRaster::toCentroidX(int32_t col) const {
+	return m_trans[0] + col * m_trans[1] + m_trans[1] / 2.0;
+}
+
+
+double FloatRaster::toCentroidY(int32_t row) const {
+	return m_trans[3] + row * m_trans[5] + m_trans[5] / 2.0;
+}
+
+
+uint32_t FloatRaster::size() const {
+	return (uint32_t) (m_cols * m_rows);
+}
+
+
+bool FloatRaster::isNoData(int32_t col, int32_t row, uint16_t band) {
+	return get(col, row, band) == nodata(band);
+}
+
+
+bool FloatRaster::isNoData(int32_t col, int32_t row) {
+	return isNoData(col, row, 1);
+}
+
+
+bool FloatRaster::isNoData(uint32_t idx, uint16_t band) {
+	return get(idx, band) == nodata(band);
+}
+
+
+bool FloatRaster::isNoData(uint32_t idx) {
+	return isNoData(idx, (uint16_t) 1);
+}
+
+
+bool FloatRaster::isNoData(double x, double y, uint16_t band) {
+	return isNoData(toCol(x), toRow(y), band);
+}
+
+
+bool FloatRaster::isNoData(double x, double y) {
+	return isNoData(x, y, 1);
+}
+
+
+bool FloatRaster::isValid(int32_t c, int32_t r, uint16_t band) {
+	return getOrNodata(c, r, band) != nodata(band);
+}
+
+
+bool FloatRaster::isValid(double x, double y, uint16_t band) {
+	return getOrNodata(x, y, band) != nodata(band);
+}
+
+
+double FloatRaster::getOrNodata(double x, double y, uint16_t band) {
+	if (!has(x, y)) {
+		return nodata(band);
+	} else {
+		return get(x, y, band);
+	}
+}
+
+
+double FloatRaster::getOrNodata(int32_t col, int32_t row, uint16_t band) {
+	if (!has(col, row)) {
+		return nodata(band);
+	} else {
+		return get(col, row, band);
+	}
+}
+
+
+double *FloatRaster::grid() {
+	g_implerr("grid() Not implemented in Raster.");
+}
+
+
+bool FloatRaster::hasGrid() const {
+	return false;
+}
+
+
+double FloatRaster::get(double x, double y, uint16_t band) {
+	return get(toCol(x), toRow(y), band);
+}
+
+
+double FloatRaster::get(double x, double y) {
+	return get(x, y, 1);
+}
+
+
+double FloatRaster::get(int32_t col, int32_t row, uint16_t band) {
+	return m_cache.get(band, col, row);
+}
+
+
+double FloatRaster::get(int32_t col, int32_t row) {
+	return get(col, row, 1);
+}
+
+
+double FloatRaster::get(uint32_t idx, uint16_t band) {
+	if (idx >= size())
+		g_argerr("Index out of bounds.");
+	return get(idx % m_cols, (int) idx / m_cols, band);
+}
+
+
+double FloatRaster::get(uint32_t idx) {
+	return get(idx, (uint16_t) 1);
+}
+
+
+void FloatRaster::set(int32_t col, int32_t row, double v, uint16_t band) {
+	if (!m_writable)
+		g_runerr("This raster is not writable.");
+	m_cache.set(band, col, row, v);
+}
+
+
+void FloatRaster::set(int32_t col, int32_t row, double v) {
+	set(col, row, v, 1);
+}
+
+
+void FloatRaster::set(uint32_t idx, double v, uint16_t band) {
+	if (idx >= size())
+		g_argerr("Index out of bounds.");
+	set(idx % m_cols, (int) idx / m_cols, v, band);
+}
+
+
+void FloatRaster::set(uint32_t idx, double v) {
+	set(idx, v, (uint16_t) 1);
+}
+
+
+void FloatRaster::set(double x, double y, double v, uint16_t band) {
+	set(toCol(x), toRow(y), v, band);
+}
+
+
+void FloatRaster::set(double x, double y, double v) {
+	set(x, y, v, 1);
+}
+
+
+bool FloatRaster::isSquare() const {
+	return cols() == rows();
+}
+
+
+bool FloatRaster::has(int32_t col, int32_t row) const {
+	return col >= 0 && col < m_cols && row >= 0 && row < m_rows;
+}
+
+
+bool FloatRaster::has(double x, double y) const {
+	return has(toCol(x), toRow(y));
+}
+
+
+bool FloatRaster::has(uint32_t idx) const {
+	return idx < (uint32_t) (m_cols * m_rows);
+}
+
+// Keeps track of polygonization progress and provides a cancellation mechanism.
+class __PolyProgressData {
+public:
+	Callbacks *cb;
+	bool *cancel;
+	bool _cancel;
+	__PolyProgressData(Callbacks *cb, bool *cancel) :
+		cb(cb), cancel(cancel), _cancel(false) {
+		if (cancel == nullptr)
+			cancel = &_cancel;
+	}
+};
+
+// Callback for polygonization.
+int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg) {
+	__PolyProgressData *data = (__PolyProgressData *)pProgressArg;
+	if (data) {
+		data->cb->stepCallback((float)dfComplete);
+		// TODO: The message doesn't really do anything.
+		// if(pszMessage != NULL)
+		//	data->cb->statusCallback(std::string(pszMessage));
+		return *(data->cancel) ? 0 : 1;
+	}
+	return 1;
+}
+
+
+void FloatRaster::polygonize(const std::string &filename, uint16_t srid, uint16_t band,
+		Callbacks *callbacks, bool *cancel) {
+	Util::rm(filename);
+	GDALAllRegister();
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
+	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+	ds->SetProjection(m_ds->GetProjectionRef());
+	double trans[6];
+	m_ds->GetGeoTransform(trans);
+	ds->SetGeoTransform(trans);
+	char **opts = nullptr;
+	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
+	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
+	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	OGRSpatialReference sr;
+	sr.importFromEPSG(srid);
+	OGRLayer *layer = ds->CreateLayer("boundary", &sr, wkbMultiPolygon, opts);
+	OGRFieldDefn field( "id", OFTInteger);
+	layer->CreateField(&field);
+	if (callbacks) {
+		__PolyProgressData pd(callbacks, cancel);
+		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &__polyProgress, &pd);
+	} else {
+		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
+	}
+	GDALClose(ds);
+}
+
+
+void FloatRaster::flush() {
+	if (m_writable)
+		m_cache.flush();
+}
+
+
+FloatRaster::~FloatRaster() {
+	m_cache.close();
+	if(m_ds)
+		GDALClose(m_ds);
+}
+
 template<class T>
 GDALDataType Raster<T>::getType(uint64_t v) {
 	(void) v;
@@ -936,22 +1683,22 @@ T Raster<T>::getDefaultNodata() {
 
 template<class T>
 Raster<T>::Raster() :
-	m_cols(-1), m_rows(-1),
-	m_bands(1),
-	m_writable(false),
-	m_ds(nullptr),
-	m_type(getType()),
-	m_inited(false) {
+		m_cols(0), m_rows(0),
+		m_bands(0),
+		m_writable(false),
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 }
 
 template<class T>
 Raster<T>::Raster(const std::string &filename, uint16_t bands, const Raster<T> &tpl) :
-	m_cols(-1), m_rows(-1),
-	m_bands(1),
-	m_writable(false),
-	m_ds(nullptr),
-	m_type(getType()),
-	m_inited(false) {
+		m_cols(0), m_rows(0),
+		m_bands(0),
+		m_writable(false),
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 	init(filename, bands, tpl);
 }
 
@@ -959,24 +1706,24 @@ template<class T>
 Raster<T>::Raster(const std::string &filename, uint16_t bands, double minx,
 		double miny, double maxx, double maxy, double resolutionX,
 		double resolutionY, const std::string &proj) :
-		m_cols(-1), m_rows(-1),
-		m_bands(1),
+		m_cols(0), m_rows(0),
+		m_bands(0),
 		m_writable(false),
-		m_ds(nullptr),
-		m_type(getType()),
-		m_inited(false) {
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj);
 }
 
 template<class T>
 Raster<T>::Raster(const std::string &filename, uint16_t bands, const Bounds &bounds,
 		double resolutionX, double resolutionY, uint16_t crs) :
-		m_cols(-1), m_rows(-1),
-		m_bands(1),
+		m_cols(0), m_rows(0),
+		m_bands(0),
 		m_writable(false),
-		m_ds(nullptr),
-		m_type(getType()),
-		m_inited(false) {
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 	std::string proj = epsg2ProjText(crs);
 	init(filename, bands, bounds.minx(), bounds.miny(), bounds.maxx(),
 			bounds.maxy(), resolutionX, resolutionY, proj);
@@ -986,24 +1733,24 @@ template<class T>
 Raster<T>::Raster(const std::string &filename, uint16_t bands, double minx,
 		double miny, double maxx, double maxy, double resolutionX,
 		double resolutionY, uint16_t crs) :
-		m_cols(-1), m_rows(-1),
-		m_bands(1),
+		m_cols(0), m_rows(0),
+		m_bands(0),
 		m_writable(false),
-		m_ds(nullptr),
-		m_type(getType()),
-		m_inited(false) {
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 	std::string proj = epsg2ProjText(crs);
 	init(filename, bands, minx, miny, maxx, maxy, resolutionX, resolutionY, proj);
 }
 
 template<class T>
 Raster<T>::Raster(const std::string &filename, bool writable) :
-		m_cols(-1), m_rows(-1),
-		m_bands(1),
+		m_cols(0), m_rows(0),
+		m_bands(0),
 		m_writable(false),
-		m_ds(nullptr),
-		m_type(getType()),
-		m_inited(false) {
+		m_inited(false),
+		m_type(GDT_Float32),
+		m_ds(nullptr) {
 	init(filename, writable);
 }
 
@@ -1605,31 +2352,6 @@ bool Raster<T>::has(uint32_t idx) const {
 	return idx < (uint32_t) (m_cols * m_rows);
 }
 
-// Keeps track of polygonization progress and provides a cancellation mechanism.
-class __PolyProgressData {
-public:
-	Callbacks *cb;
-	bool *cancel;
-	bool _cancel;
-	__PolyProgressData(Callbacks *cb, bool *cancel) :
-		cb(cb), cancel(cancel), _cancel(false) {
-		if (cancel == nullptr)
-			cancel = &_cancel;
-	}
-};
-
-// Callback for polygonization.
-int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg) {
-	__PolyProgressData *data = (__PolyProgressData *)pProgressArg;
-	if (data) {
-		data->cb->stepCallback((float)dfComplete);
-		// TODO: The message doesn't really do anything.
-		// if(pszMessage != NULL)
-		//	data->cb->statusCallback(std::string(pszMessage));
-		return *(data->cancel) ? 0 : 1;
-	}
-	return 1;
-}
 
 template<class T>
 void Raster<T>::polygonize(const std::string &filename, uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
@@ -1671,6 +2393,7 @@ Raster<T>::~Raster() {
 	if(m_ds)
 		GDALClose(m_ds);
 }
+
 
 template class geotools::raster::BlockCache<float>;
 template class geotools::raster::BlockCache<double>;
