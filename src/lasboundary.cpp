@@ -56,16 +56,16 @@ namespace geotools {
 			Bounds bounds = lr.bounds();
 
 			g_debug("raster");
-			MemRaster<uint16_t> rast(bounds.maxCol(res) + 1, bounds.maxRow(res) + 1);
+			MemRaster<uint16_t> rast(bounds.maxCol(res) + 1, bounds.maxRow(-res) + 1);
 			rast.fill(0);
-			rast.setNodata(0);
+			//rast.setNodata(0);
 
 			g_debug("reading");
 			LASPoint pt;
 			while(lr.next(pt)) {
-				if(classes.find(pt.cls) == classes.end()) continue;
+				//if(classes.find(pt.cls) == classes.end()) continue;
 				int col = bounds.toCol(pt.x, res);
-				int row = bounds.toRow(pt.y, res);
+				int row = bounds.toRow(pt.y, -res);
 				rast.set(col, row, rast.get(col, row) + 1);
 			}
 
@@ -83,12 +83,14 @@ namespace geotools {
 			g_debug("cleaning");
 			for(uint64_t i = 0; i < rast.size(); ++i)
 				rast.set(i, rast.get(i) == 2 ? 0 : 1);
-
-			g_debug("polygonizing");
-			Raster<uint16_t> out(dstFile, 1, bounds, res, res, 0);
+			
+			g_debug("writing");
+			Raster<uint16_t> out(dstFile, 1, bounds, res, -res, 26912);
 			out.writeBlock(rast);
-			if(!polyFile.empty())
+			if(!polyFile.empty()) {
+				g_debug("polygonizing");
 				out.polygonize(polyFile, 1);
+			}
 		}
 
 	} // las
