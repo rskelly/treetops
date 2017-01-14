@@ -374,6 +374,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	uint16_t bufSize = 1024;
 
+	omp_set_num_threads(1);
+
 	// Iterate over the thresholds from lowest height to highest.
 	for(const auto &it : config.topsThresholds) {
 
@@ -407,7 +409,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					m_callbacks->statusCallback("Processing...");
 
 				// Iterate over the raster, applying the kernel to find the maxium at the centre.
-				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.rows() - b) - window / 2; ++row) {
+				for (int32_t row = window / 2; row < g_min(smooth.rows(), smoothed.rows() - b) - window / 2; ++row) {
 					for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
 
 						double v = smooth.get(col, row);
@@ -459,8 +461,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
-	//tmp.writeBlock(topsGrid);
+	Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
+	tmp.writeBlock(topsWindowGrid);
 
 	total = topsIDGrid.rows();
 	status = 0;
@@ -613,11 +615,12 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			// Convert the Tops to Nodes.
 			std::queue<Node*> q;
 			for (Point *p : tops) {
-				if (*cancel)
-					break;
 				q.push(new Node(p));
 				delete p;
 			}
+
+			if (*cancel)
+				continue;
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Loading raster...");
@@ -639,11 +642,16 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				Node *n = q.front();
 				q.pop();
 
+				int c = n->c;
+				int r = n->r - b + radius;
+				if(!(c >= 0 && r >= 0 && c < blk.cols() && r < blk.rows()))
+					continue;
+
 				blk.set(n->c, n->r - b + radius, (uint32_t) n->id);
 
 				for(size_t i = 0; i < offsetCount; ++i) {
-					int c = n->c + offsets[i][0];
-					int r = n->r + offsets[i][1];
+					c = n->c + offsets[i][0];
+					r = n->r + offsets[i][1];
 
 					if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= buf.rows() || c >= buf.cols())
 						continue;
