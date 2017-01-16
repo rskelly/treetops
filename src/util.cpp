@@ -532,6 +532,12 @@ void Util::status(int step, int of, const std::string &message, bool end) {
 	}
 }
 
+bool Util::pathExists(const std::string &name) {
+	using namespace boost::filesystem;
+	path p(name);
+	return exists(p.remove_filename());
+}
+
 bool Util::rm(const std::string &name) {
 	using namespace boost::filesystem;
 	path p(name);

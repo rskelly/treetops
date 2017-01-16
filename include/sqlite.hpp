@@ -357,8 +357,10 @@ namespace geotools {
 
         void SQLite::init(bool replace) {
 
+            if(!Util::pathExists(m_file))
+                g_argerr("The parent path of the file " << m_file << " does not exist and cannot be created.");
+
             bool dbExists = exists(m_file);
-            
             if(dbExists && replace) {
                 Util::rm(m_file);
                 dbExists = false;

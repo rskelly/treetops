@@ -234,6 +234,8 @@ namespace geotools {
 
             static const std::string tmpFile();
 
+            static bool pathExists(const std::string &name);
+            
             static bool rm(const std::string &name);
 
             static bool mkdir(const std::string &dir);
