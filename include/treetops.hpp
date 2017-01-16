@@ -60,10 +60,13 @@ namespace geotools {
                 // the previous one.
                 std::vector<std::pair<float, uint8_t> > topsThresholds;
 
-
                 std::string topsOriginalCHM;
                 std::string topsSmoothedCHM;
                 std::string topsTreetopsDatabase;
+
+                // The max proportion of pixels in a given kernel that are allowed
+                // to be null. Any kernel with this many or greater is ignored.
+                double topsMaxNulls;
 
                 // Set to true to delineate crowns.
                 bool doCrowns;

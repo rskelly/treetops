@@ -76,21 +76,28 @@ namespace geotools {
 
 			// Returns true if the pixel at the center of the given circular window is
 			// the maximum value in the window.
-			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max) {
+			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max, double *nulls) {
 				*max = 0;
 				int mc = 0, mr = 0;
-				float v;
-				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				int n = 0, ntotal = 0;
+				double d = g_max(std::sqrt(2.0), g_sq((double) window / 2));
 				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
 					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
-						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
-						if (d0 <= d && (v = raster.get(c, r)) > *max) {
-							*max = v;
-							mc = c;
-							mr = r;
+						float d0 = g_sq((double) col - c) + g_sq((double) row - r);
+						if (d0 <= d) {
+							++ntotal;
+							double v = raster.get(c, r);
+							if(v == raster.nodata()) {
+								++n;
+							} else if(v > *max) {
+								*max = v;
+								mc = c;
+								mr = r;
+							}
 						}
 					}
 				}
+				*nulls = (double) n / ntotal;
 				return mc == col && mr == row;
 			}
 
@@ -167,6 +174,7 @@ TreetopsConfig::TreetopsConfig() :
 	smoothWindowSize(3),
 	smoothSigma(0.8),
 	doTops(false),
+	topsMaxNulls(0.2),
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
@@ -416,7 +424,9 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 						if(v < threshold) continue;
 
 						double max;
-						if (isMaxCenter(smooth, col, row, window, &max))
+						double nulls; // The proportion of null pixels.
+						bool isMax = isMaxCenter(smooth, col, row, window, &max, &nulls);
+						if (isMax && nulls <= config.topsMaxNulls)
 							tops.push_back(std::make_tuple(col, b + row - window / 2, window));
 					}
 					if (m_callbacks)
