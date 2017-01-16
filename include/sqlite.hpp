@@ -271,6 +271,27 @@ namespace geotools {
                 return count;
             }
 
+            void updateRow(const std::string &idField, uint64_t id, std::map<std::string, double> &values) {
+                std::stringstream ss;
+                ss << std::setprecision(12) << "UPDATE data SET ";
+                size_t d = values.size();
+                for(const auto &it : values) { 
+                    ss << "\"" << it.first << "\"=" << it.second;
+                    if(--d)
+                        ss << ",";
+                }
+                ss << " WHERE " << idField << "=" << id;
+                char *err;
+                if(SQLITE_OK != sqlite3_exec(m_db, ss.str().c_str(), NULL, NULL, &err))
+                    handleError("Failed to update: ", err);
+            }
+
+            void execute(std::string &sql) {
+                char *err;
+                if(SQLITE_OK != sqlite3_exec(m_db, sql.c_str(), NULL, NULL, &err))
+                    handleError("Failed to update: ", err);
+            }
+
             void begin() {
                 m_trans = true;
                 char *err;

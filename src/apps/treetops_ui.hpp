@@ -78,12 +78,13 @@ namespace geotools {
 			void topsTreetopsSRIDClicked();
 			void topsTreetopsSRIDChanged(int);
 			void topsMaxNullsChanged(double);
-			
+
 			void crownsRadiusChanged(double);
 			void crownsHeightFractionChanged(double);
 			void crownsMinHeightChanged(double);
 			void crownsTreetopsDatabaseChanged(QString);
 			void crownsSmoothedCHMChanged(QString);
+			void crownsOriginalCHMChanged(QString);
 			void crownsCrownsRasterChanged(QString);
 			void crownsCrownsDatabaseChanged(QString);
 
@@ -104,6 +105,7 @@ namespace geotools {
 			void crownsCrownsRasterClicked();
 			void crownsTreetopsDatabaseClicked();
 			void crownsSmoothedCHMClicked();
+			void crownsOriginalCHMClicked();
 
 			void done();
 		};

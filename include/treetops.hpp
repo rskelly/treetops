@@ -83,6 +83,9 @@ namespace geotools {
                 // The input raster -- ideally the same one used for tops.
                 std::string crownsSmoothedCHM;
 
+                // The original CHM from which the smoothed raster was created.
+                std::string crownsOriginalCHM;
+
                 // The treetops database file.
                 std::string crownsTreetopsDatabase;
 

@@ -55,6 +55,8 @@ void _loadConfig(TreetopsConfig &config) {
 			config.crownsHeightFraction).toDouble();
 	config.crownsMinHeight = qs.value("crownsMinHeight",
 			config.crownsMinHeight).toDouble();
+	config.crownsOriginalCHM = qs.value("crownsOriginalCHM",
+			qstr(config.crownsOriginalCHM)).toString().toStdString();
 	config.crownsSmoothedCHM = qs.value("crownsSmoothedCHM",
 			qstr(config.crownsSmoothedCHM)).toString().toStdString();
 	config.crownsTreetopsDatabase = qs.value("crownsTreetopsDatabase",
@@ -89,6 +91,7 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("crownsHeightFraction", config.crownsHeightFraction);
 	qs.setValue("crownsMinHeight", config.crownsMinHeight);
 	qs.setValue("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM));
+	qs.setValue("crownsOriginalCHM", qstr(config.crownsOriginalCHM));
 	qs.setValue("crownsTreetopsDatabase",
 			qstr(config.crownsTreetopsDatabase));
 	qs.setValue("crownsCrownsRaster", qstr(config.crownsCrownsRaster));
@@ -237,6 +240,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
 	spnCrownsRadius->setValue(m_config.crownsRadius);
 	spnCrownsMinHeight->setValue(m_config.crownsMinHeight);
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
@@ -269,10 +273,12 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), this, SLOT(crownsRadiusChanged(double)));
 	connect(spnCrownsHeightFraction, SIGNAL(valueChanged(double)), this, SLOT(crownsHeightFractionChanged(double)));
 	connect(spnCrownsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(crownsMinHeightChanged(double)));
+	connect(txtCrownsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsOriginalCHMChanged(QString)));
 	connect(txtCrownsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsSmoothedCHMChanged(QString)));
 	connect(txtCrownsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsTreetopsDatabaseChanged(QString)));
 	connect(txtCrownsCrownsRaster, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsRasterChanged(QString)));
 	connect(txtCrownsCrownsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsDatabaseChanged(QString)));
+	connect(btnCrownsOriginalCHM, SIGNAL(clicked()), this, SLOT(crownsOriginalCHMClicked()));
 	connect(btnCrownsSmoothedCHM, SIGNAL(clicked()), this, SLOT(crownsSmoothedCHMClicked()));
 	connect(btnCrownsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(crownsTreetopsDatabaseClicked()));
 	connect(btnCrownsCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsCrownsRasterClicked()));
@@ -369,6 +375,12 @@ void TreetopsForm::topsThresholdsClicked() {
 	checkRun();
 }
 
+void TreetopsForm::crownsOriginalCHMClicked() {
+	getInputFile(m_form, "Original CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsOriginalCHM);
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
+	checkRun();
+}
+
 void TreetopsForm::crownsSmoothedCHMClicked() {
 	getInputFile(m_form, "Smoothed CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsSmoothedCHM);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
@@ -423,6 +435,11 @@ void TreetopsForm::crownsHeightFractionChanged(double frac) {
 
 void TreetopsForm::crownsMinHeightChanged(double height) {
 	m_config.crownsMinHeight = height;
+	checkRun();
+}
+
+void TreetopsForm::crownsOriginalCHMChanged(QString file) {
+	m_config.crownsOriginalCHM = file.toStdString();
 	checkRun();
 }
 
