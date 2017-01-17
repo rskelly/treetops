@@ -303,9 +303,9 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	if (!cancel)
 		cancel = &__tt_cancel;
 
-	FloatRaster in(config.smoothOriginalCHM);
-	FloatRaster out(config.smoothSmoothedCHM, in.props());
-	out.setNodata(in.nodata());
+	Raster in(config.smoothOriginalCHM);
+	GridProps props = new GridProps(in.props());
+	Raster out(config.smoothSmoothedCHM, in.props());
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks, cancel);
 }
 
@@ -327,8 +327,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Loading rasters...");
 
 	// Initialize input rasters.
-	FloatRaster original(config.topsOriginalCHM);
-	FloatRaster smoothed(config.topsSmoothedCHM);
+	Raster original(config.topsOriginalCHM);
+	Raster smoothed(config.topsSmoothedCHM);
 
 	if (*cancel)
 		return;
@@ -546,14 +546,14 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing rasters...");
 
-	FloatRaster inrast(config.crownsSmoothedCHM);
-	double nodata = inrast.nodata();
-	GridProps props = inrast.props();
+	Raster inrast(config.crownsSmoothedCHM);
+	double nodata = inrast.props().nodata();
+	GridProps props = new GridProps(inrast.props());
 	props.setBands(1);
+	props.setNoData(0);
 	Raster<uint32_t> outrast(config.crownsCrownsRaster, props);
-	outrast.setNodata(0);
 
-	MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
+	MemRaster<uint32_t> blk(inrast.props().cols(), inrast.props()rows(), 1);
 	blk.fill(0);
 
 	if (*cancel)

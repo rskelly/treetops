@@ -12,6 +12,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include <ogr_spatialref.h>
+
 #include "geotools.hpp"
 #include "util.hpp"
 
@@ -627,3 +629,21 @@ std::unique_ptr<MappedFile> Util::mapFile(const std::string &filename,
 	std::unique_ptr<MappedFile> mf(new MappedFile(filename, size, remove));
 	return std::move(mf);
 }
+
+std::string CRS::epsg2Proj4(int crs) const {
+	OGRSpatialReference ref;
+	char *wkt;
+	ref.importFromEPSG(crs);
+	ref.exportToProj4(&wkt);
+	return std::string(wkt);
+}
+
+std::string CRS::epsg2WKT(int crs) const {
+	OGRSpatialReference ref;
+	char *wkt;
+	ref.importFromEPSG(crs);
+	ref.exportToWkt(&wkt);
+	return std::string(wkt);
+}
+
+

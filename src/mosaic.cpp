@@ -135,29 +135,6 @@ public:
 					iRow), oCol(oCol), oRow(oRow) {
 	}
 
-	bool readInput(MemRaster<float> &buf, Raster<float> &input) const {
-		int col = iCol - buffer;
-		int row = iRow - buffer;
-		int cols = tileSize + buffer * 2;
-		int rows = tileSize + buffer * 2;
-		int cOff = 0;
-		int rOff = 0;
-		if (col < 0) {
-			cOff = -col;
-			cols -= col;
-			col = 0;
-		}
-		if (row < 0) {
-			rOff = -row;
-			rows -= row;
-			row = 0;
-		}
-		if (cols <= 0 || rows <= 0)
-			return false;
-		input.readBlock(col, row, buf, cOff, rOff, cols, rows);
-		return true;
-	}
-
 	bool readOutput(MemRaster<float> &buf, Raster<float> &output) const {
 		int col = oCol - buffer;
 		int row = oRow - buffer;
@@ -288,8 +265,8 @@ void Mosaic::mosaic(const std::vector<std::string> &files,
 				output.positiveY() ? bounds.miny() : bounds.maxy());
 
 		// Get the minimum absolute resolution.			
-		double res = g_min(g_abs(base.resolutionX()),
-				g_abs(base.resolutionY()));
+		double res = g_min(g_abs(base.props().resolutionX()),
+				g_abs(base.props().resolutionY()));
 		g_debug(" -- resolution is: " << res);
 
 		// Snap the distance to resolution
@@ -330,8 +307,8 @@ void Mosaic::mosaic(const std::vector<std::string> &files,
 					tileSize + buffer * 2);
 			MemRaster<float> alphaGrid(tileSize + buffer * 2,
 					tileSize + buffer * 2);
-			float outNodata = output.nodata();
-			float inNodata = input.nodata();
+			float outNodata = output.props().nodata();
+			float inNodata = input.props().nodata();
 
 #pragma omp for nowait
 			for (size_t t = 0; t < tiles.size(); ++t) {

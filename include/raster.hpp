@@ -39,220 +39,202 @@ namespace geotools {
 
     	class G_DLL_EXPORT GridProps {
     	private:
-    		double m_trans[6];
-    		uint16_t m_cols, m_rows;
-    		uint16_t m_vsrid, m_hsrid;
-            uint16_t m_bands;           // The number of bands.
+    		double m_trans[6];			// The geotransform properties.
+    		int m_cols, m_rows;			// The number of rows and columns.
+    		int m_vsrid, m_hsrid;		// The vertical and horizontal SRIDs
+            int m_bands;           		// The number of bands.
             bool m_writable;            // True if the raster is writable
-    		std::string m_projection;
+            double m_nodata;			// The nodata value.
     		DataType m_type;
+    		std::string m_projection;	// The WKT representation of the projection
+
     	public:
+
     		GridProps();
-    		int32_t toRow(double y) const;
-    		int32_t toCol(double x) const;
-    		double toX(int32_t col) const;
-    		double toY(int32_t row) const;
+
+    		bool isInt() const;
+    		bool isFloat() const;
+
+    		double nodata() const;
+
+    		void setNoData(double nodata);
+
+    		// Return the number of columns.
+            int cols() const;
+
+            // Return the number of rows.
+            int rows() const;
+
+            // Returns true if the cell is in the raster.
+            bool hasCell(int col, int row) const;
+            bool hasCell(double x, double y) const;
+
+            // Returns the row for a given y-coordinate.
+            int toRow(double y) const;
+
+            // Returns the column for a given x-coordinate.
+            int toCol(double x) const;
+
+            // Returns the x-coordinate for a given column.
+            double toX(int col) const;
+
+            // Returns the y-coordinate for a given row.
+            double toY(int row) const;
+
+            // Returns the x-coordinate for the cell centroid of a given column.
+            double toCentroidX(int col) const;
+
+            // Returns the y-coordinate for the cell centorid of a given row.
+            double toCentroidY(int row) const;
+
+            // Returns the number of pixels.
+            long size() const;
+
+            // Set the data type of the raster.
     		void setDataType(DataType type);
-    		void setGDALDataType(GDALDataType);
+
+    		// Get the data type of the raster.
     		DataType dataType() const;
-    		GDALDataType gdalDataType() const;
-    		void setTopLeft(double x, double y);
-    		double tlx() const;
-    		double tly() const;
-    		void setSize(uint16_t cols, uint16_t rows);
-    		uint16_t cols() const;
-    		uint16_t rows() const;
-    		void setSrid(uint16_t hsrid, uint16_t vsrid = 0);
-    		uint16_t vsrid() const;
-    		uint16_t hsrid() const;
+
+    		// Set the size of the raster in columns, rows.
+    		void setSize(int cols, int rows);
+
+    		// Set the horizontal and vertical (optional) SRID.
+    		void setSrid(int hsrid, int vsrid = 0);
+
+    		// Get the vertical SRID.
+    		int vsrid() const;
+
+    		// Get the horizontal SRID.
+    		int hsrid() const;
+
+    		// Set the WKT projection.
     		void setProjection(const std::string &proj);
+
+    		// Get the WKT projection.
     		std::string projection() const;
+
+    		// Set the geo transform properties.
     		void setTrans(double m_trans[6]);
+
+    		// Get the geo transform properties.
     		void trans(double m_trans[6]) const;
+
+    		// Set the vertical and horizontal resolution.
     		void setResolution(double resolutionX, double resolutionY);
+
+    		// Get the horizontal resolution.
     		double resolutionX() const;
+
+    		// Get the vertical resolution.
     		double resolutionY() const;
-    		void setBands(uint16_t bands);
-    		uint16_t bands() const;
+
+    		// Set the number of bands.
+    		void setBands(int bands);
+
+    		// Get the number of bands.
+    		int bands() const;
+
+    		// Set the writable state of the raster.
     		void setWritable(bool writable);
+
+    		// Get the writable state of the raster.
     		bool writable() const;
+    	};
+
+    	class G_DLL_EXPORT GridStats {
+    	public:
+            double min;
+            double max;
+            double mean;
+            double stdDev;
+            double variance;
+            double sum;
+            long count;
     	};
 
         // Simple class to represent a single grid cell.
         class G_DLL_EXPORT Cell {
         public:
-            uint16_t col;
-            uint16_t row;
-            Cell(uint16_t col, uint16_t row);
+            int col;
+            int row;
+            Cell(int col, int row);
         };
 
         // Used by Grid::floodFill to determine whether
         // a pixel should be filled.
-        template <class T>
         class G_DLL_EXPORT FillOperator {
         public:
-            virtual bool fill(T value) const = 0;
+            virtual bool fill(int value) const = 0;
             virtual ~FillOperator() = 0;
         };
 
-        template <class T>
-        class G_DLL_EXPORT TargetOperator : public FillOperator<T> {
+        class G_DLL_EXPORT TargetOperator : public FillOperator {
         private:
-            T m_match;
+            int m_match;
         public:
-            TargetOperator(T match);
+            TargetOperator(int match);
 
-            bool fill(T value) const;
+            bool fill(int value) const;
 
             ~TargetOperator();
         };
 
         // Abstract class for grids (rasters).
-        template <class T>
         class G_DLL_EXPORT Grid {
-        protected:
-            T m_min;
-            T m_max;
-            T m_mean;
-            T m_stddev;
-            T m_variance;
-            T m_sum;
-            uint32_t m_count;
-            bool m_stats;
-
-            // Compute the table of Gaussian weights given the size of the table
-            // and the std. deviation.
-            void gaussianWeights(double *weights, uint16_t size, double sigma);
-
         public:
             Grid();
 
             virtual ~Grid() = 0;
             
-            // Return the number of rows in the dataset.
-            virtual uint16_t rows() const = 0;
+            // Compute the table of Gaussian weights given the size of the table
+            // and the std. deviation.
+            static void gaussianWeights(double *weights, int size, double sigma);
 
-            // Return the number of columns in the dataset.
-            virtual uint16_t cols() const = 0;
+            GridStats stats();
 
-            // Return the number of cells in the dataset.
-            virtual uint32_t size() const = 0;
+            // Returns the grid properties
+            const GridProps &props() const;
 
             // Fill the entire dataset with the given value.
-            virtual void fill(const T value) = 0;
+            virtual void fillFloat(double value, int band = 1) = 0;
+            virtual void fillInt(int value, int band = 1) = 0;
 
-            // Return a pointer to an in-memory grid of the raster data.
-            // Throw an exception if this is not possible.
-            virtual T *grid() = 0;
-
-            // Returns true if this class has a complete, in-memory
-            // grid that can be manipulated.
-            virtual bool hasGrid() const = 0;
-
-            // Return a reference to the value held at the given index in the grid.
-            // Not const because the get operation might imply (e.g.) a buffering 
-            // operation in the subclass.
-            virtual T get(uint32_t idx) = 0;
-
-            // Return a reference to the value held at the given column and row.
-            // Not const because the get operation might imply (e.g.) a buffering 
-            // operation in the subclass.
-            virtual T get(int32_t col, int32_t row) = 0;
+            // Return a the value held at the given index in the grid.
+            virtual int getInt(long idx, int band = 1) = 0;
+            virtual int getInt(int col, int row, int band = 1) = 0;
+            virtual double getFloat(long idx, int band = 1) = 0;
+            virtual double getFloat(int col, int row, int band = 1) = 0;
 
             // Set the value held at  the given index in the grid.
-            virtual void set(uint32_t idx, const T value) = 0;
+            virtual void setInt(long idx, int value, int band = 1) = 0;
+            virtual void setInt(int col, int row, int value, int band = 1) = 0;
+            virtual void setFloat(long idx, double value, int band = 1) = 0;
+            virtual void setFloat(int col, int row, double value, int band = 1) = 0;
 
-            // Set the value held at  the given column and row.
-            virtual void set(int32_t col, int32_t row, const T value) = 0;
+            // Read data into Grid instance.
+            virtual void readBlock(Grid &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1) = 0;
 
-            // Return true if the dataset contains the given element.
-            virtual bool has(int32_t col, int32_t row) const = 0;
-
-            // Return true if the dataset contains the given element.
-            virtual bool has(uint32_t idx) const = 0;
-
-            // Returns trueif the dataset contains the given element and it is nodata.
-            virtual bool isNoData(int32_t col, int32_t row) = 0;
-
-            // Returns trueif the dataset contains the given element and it is nodata.
-            virtual bool isNoData(uint32_t idx) = 0;
-
-            // Returns true if the grid is a perfect square.
-            virtual bool isSquare() const = 0;
-
-            // Returns the nodata value.
-            virtual T nodata() const = 0;
-
-            // Sets the nodata value.
-            virtual void setNodata(const T nodata) = 0;
-
-            // Read data into Grid instance. Will attempt to read a region of 
-            // the same size as the given block.
-            // col    - The column in the data source to read from.
-            // row    - The row in the data source to read from.
-            // block  - The block to read into.
-            // dstCol - The column in the destination block to write to.
-            // dstRow - The row in the destination block to write to. 
-            // xcols  - The max number of cols to write.
-            // xrows  - The max number of rows to write.
-            virtual void readBlock(int32_t col, int32_t row, Grid<T> &block,
-                int32_t dstCol = 0, int32_t dstRow = 0, int32_t xcols = 0,
-                int32_t xrows = 0) = 0;
-
-            // Read data into Grid instance. Will attempt to read a region of the same size
-            // as the given block.
-            virtual void readBlock(Grid<T> &block) = 0;
-
-            // Write data from Grid instance. Will attempt to write a region of the same size
-            // as the given block.
-            // col    - The column in the data source to write to..
-            // row    - The row in the data source to write to.
-            // block  - The block to write from..
-            // srcCol - The column in the source block to read from.
-            // srcRow - The row in the source block to read from. 
-            // xcols  - The max number of cols to write.
-            // xrows  - The max number of rows to write.
-            virtual void writeBlock(int32_t col, int32_t row, Grid<T> &block,
-                int32_t dstCol = 0, int32_t dstRow = 0, int32_t xcols = 0, 
-                int32_t xrows = 0) = 0;
-
-            // Write data from Grid instance. Will attempt to write a region of 
-            // the same size as the given block.
-            virtual void writeBlock(Grid<T> &block) = 0;
-
-
-            // Computes descriptive statistics for the values in the grid.
-            // A nodata value must be set.
-            void computeStats();
+            // Write data from Grid instance.
+            virtual void writeBlock(Grid &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1) = 0;
 
             // Normalize the grid so that one standard deviation is +-1.
-            void normalize();
+            void normalize(int band = 1);
 
             // Normalize the grid so that the max value is equal to 1, and
             // the minimum is zero.
-            void logNormalize();
-
-            // Return the maximum value in the raster.
-            T max();
-
-            // Return the minimum value in the raster.
-            T min();
-
-            // Return the mean value in the raster.
-            T mean();
-
-            // Return the standard deviation of  values in the raster.
-            T stddev();
-
-            // Return the variance of values in the raster.
-            T variance();
+            void logNormalize(int band = 1);
 
             // Convert a Grid to some other type.
-            template <class U>
-            void convert(Grid<U> &g) {
-                for (uint32_t i = 0; i < size(); ++i)
-                    g.set(i, (U) get(i));
-            }
+            void convert(Grid &g, int srcBand = 1, int dstBand = 1);
 
             // Fill the grid, beginning with the target cell, where any contiguous cell
             // satisfies the given FillOperator. The other grid is actually filled,
@@ -266,120 +248,28 @@ namespace geotools {
             // d8       -- Whether to enable diagonal fills.
             // out*     -- Pointer to variables that hold min and max rows and columns
             //             plus the area of the fill's bounding box.
-            template <class U>
-            void floodFill(int32_t col, int32_t row,
-                FillOperator<T> &op, Grid<U> &other, U fill, bool d8 = false,
-				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
-				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-				uint32_t *outarea = nullptr) {
-
-                int32_t minc = cols() + 1;
-                int32_t minr = rows() + 1;
-                int32_t maxc = -1;
-                int32_t maxr = -1;
-                int32_t area = 0;
-                std::queue<std::unique_ptr<Cell> > q;
-                q.push(std::unique_ptr<Cell>(new Cell(col, row)));
-
-                std::vector<bool> visited(size(), false); // Tracks visited pixels.
-
-                while (q.size()) {
-
-                    std::unique_ptr<Cell> cel = std::move(q.front());
-                    row = cel->row;
-                    col = cel->col;
-                    q.pop();
-
-                    uint64_t idx = (uint64_t) row * cols() + col;
-
-                    if (!visited[idx] && op.fill(get(col, row))) {
-
-                        minc = g_min(col, minc);
-                        maxc = g_max(col, maxc);
-                        minr = g_min(row, minr);
-                        maxr = g_max(row, maxr);
-                        ++area;
-                        other.set(col, row, fill);
-                        visited[idx] = true;
-
-                        if (row > 0)
-                            q.push(std::unique_ptr<Cell>(new Cell(col, row - 1)));
-                        if (row < rows() - 1)
-                            q.push(std::unique_ptr<Cell>(new Cell(col, row + 1)));
-
-                        int32_t c;
-                        for (c = col - 1; c >= 0; --c) {
-                            idx = (uint64_t) row * cols() + c;
-                            if (!visited[idx] && op.fill(get(c, row))) {
-                                minc = g_min(c, minc);
-                                ++area;
-                                other.set(c, row, fill);
-                                visited[idx] = true;
-                                if (row > 0)
-                                    q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
-                                if (row < rows() - 1)
-                                    q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
-                            } else {
-                                break;
-                            }
-                        }
-                        if(d8) {
-                            if (row > 0)
-                                q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
-                            if (row < rows() - 1)
-                                q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
-                        }
-                        for (c = col + 1; c < cols(); ++c) {
-                            idx = (uint64_t) row * cols() + c;
-                            if (!visited[idx] && op.fill(get(c, row))) {
-                                maxc = g_max(c, maxc);
-                                ++area;
-                                other.set(c, row, fill);
-                                visited[idx] = true;
-                                if (row > 0)
-                                    q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
-                                if (row < rows() - 1)
-                                    q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
-                            } else {
-                                break;
-                            }
-                        }
-                        if(d8) {
-                            if (row > 0)
-                                q.push(std::unique_ptr<Cell>(new Cell(c, row - 1)));
-                            if (row < rows() - 1)
-                                q.push(std::unique_ptr<Cell>(new Cell(c, row + 1)));
-                        }
-                    }
-                }
-                if(outminc != nullptr)
-                    *outminc = minc;
-                if(outminr != nullptr)
-                    *outminr = minr;
-                if(outmaxc != nullptr)
-                    *outmaxc = maxc;
-                if(outmaxr != nullptr)
-                    *outmaxr = maxr;
-                if(outarea != nullptr)
-                    *outarea = area;
-            }
+            void floodFill(int col, int row,
+                FillOperator &op, Grid &other, int fill, bool d8 = false,
+				int *outminc = nullptr, int *outminr = nullptr,
+				int *outmaxc = nullptr, int *outmaxr = nullptr,
+				int *outarea = nullptr);
 
             // Begin flood fill at the given cell; fill cells equal to the target value.
-            void floodFill(int32_t col, int32_t row, T target, T fill, bool d8 = false,
-    				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
-    				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-    				uint32_t *outarea = nullptr);
+            void floodFill(int col, int row, int target, int fill, bool d8 = false,
+    				int *outminc = nullptr, int *outminr = nullptr,
+    				int *outmaxc = nullptr, int *outmaxr = nullptr,
+    				int *outarea = nullptr);
 
             // Begin flood fill at the given cell; fill cells that satisfy the operator.
-            void floodFill(int32_t col, int32_t row, FillOperator<T> &op, T fill, bool d8 = false,
-    				uint16_t *outminc = nullptr, uint16_t *outminr = nullptr,
-    				uint16_t *outmaxc = nullptr, uint16_t *outmaxr = nullptr,
-    				uint32_t *outarea = nullptr);
+            void floodFill(int col, int row, FillOperator &op, int fill, bool d8 = false,
+    				int *outminc = nullptr, int *outminr = nullptr,
+    				int *outmaxc = nullptr, int *outmaxr = nullptr,
+    				int *outarea = nullptr);
 
             // Smooth the raster and write the smoothed version to the output raster.
             // Callback is an optional function reference with a single float
             // between 0 and 1, for status tracking.
-            void smooth(Grid<T> &smoothed, double sigma, uint16_t size,
+            void smooth(Grid &smoothed, double sigma, int size, int band = 1,
                 geotools::util::Callbacks *status = nullptr, 
                 bool *cancel = nullptr);
 
@@ -387,22 +277,17 @@ namespace geotools {
             // can be rational. When determining which cells to
             // include in the calculation, any cell which partially
             // falls in the radius will be included.
-            void voidFillIDW(double radius, uint32_t count = 4, double exp = 2.0);
+            void voidFillIDW(double radius, int count = 4, double exp = 2.0, int band = 1);
 
         };
 
         // A convenience class for managing a grid of values.
         // Handles allocation and deallocation of memory.
-        template <class T>
-        class G_DLL_EXPORT MemRaster : public Grid<T> {
+        class G_DLL_EXPORT MemRaster : public Grid {
         private:
-            T *m_grid;
-            uint16_t m_cols;
-            uint16_t m_rows;
-            void (*m_item_dealloc)(T);
-            T m_nodata;
+            void *m_grid;
             bool m_mmapped;
-            uint32_t m_size;
+            GridProps m_props;
             std::unique_ptr<geotools::util::MappedFile> m_mappedFile;
             std::unique_ptr<boost::interprocess::mapped_region> m_region;
             std::unique_ptr<boost::interprocess::file_mapping> m_mapping;
@@ -415,693 +300,140 @@ namespace geotools {
         public:
             MemRaster();
 
-            MemRaster(uint16_t cols, uint16_t rows, bool mapped = false);
-
-            template <class U>
-            MemRaster(Grid<U> &tpl, bool mapped = false) : MemRaster() {
-                init(tpl.cols(), tpl.rows(), mapped);
-            }
+            MemRaster(const GridProps &props, bool mapped = false);
 
             ~MemRaster();
 
-            // A pointer to a function that can deallocate the grid
-            // items. Not necessary if a primitive type is used (the usual case.)
-            void setDeallocator(void (*item_dealloc)(T));
-
             // Return a pointer to the allocated memory.
-            T *grid();
-
-            bool hasGrid() const;
-
-            uint16_t rows() const;
-
-            uint16_t cols() const;
-
-            uint32_t size() const;
-
-            template <class U>
-            void init(Grid<U> &tpl, bool mapped = false) {
-                init(tpl.cols(), tpl.rows(), mapped);
-            }
+            void *grid();
 
             // Initialize with the given number of cols and rows.
             // (Re)allocates memory for the internal grid.
-            void init(uint16_t cols, uint16_t rows, bool mapped = false);
+            void init(const GridProps &props, bool mapped = false);
 
-            // Fill the grid with the given value.
-            void fill(const T value);
+            // Fill the entire dataset with the given value.
+            void fillFloat(double value, int band = 1);
+            void fillInt(int value, int band = 1);
 
-            // Return a reference to the value held at
-            // the given index in the grid.
-            T get(uint32_t idx);
+            // Return a the value held at the given index in the grid.
+            int getInt(long idx, int band = 1);
+            int getInt(int col, int row, int band = 1);
+            double getFloat(long idx, int band = 1);
+            double getFloat(int col, int row, int band = 1);
 
-            T get(int32_t col, int32_t row);
+            // Set the value held at  the given index in the grid.
+            void setInt(long idx, int value, int band = 1);
+            void setInt(int col, int row, int value, int band = 1);
+            void setFloat(long idx, double value, int band = 1);
+            void setFloat(int col, int row, double value, int band = 1);
 
-            bool isNoData(int32_t col, int32_t row);
+            // Read data into Grid instance.
+            void readBlock(Grid &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
 
-            bool isNoData(uint32_t idx);
+            // Write data from Grid instance.
+            void writeBlock(Grid &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
 
-            void set(int32_t col, int32_t row, const T value);
-
-            void set(uint32_t idx, const T value);
-
-            bool has(int32_t col, int32_t row) const;
-
-            bool has(uint32_t idx) const;
-
-            bool isSquare() const;
 
             // Convert the grid to matrix.
-            void toMatrix(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &mtx);
+            void toMatrix(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> &mtx, int band = 1);
 
             // Initialize the grid from a matrix.
-            void fromMatrix(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &mtx);
-
-            T nodata() const;
-
-            void setNodata(const T nodata);
-
-            void readBlock(int32_t col, int32_t row, Grid<T> &block,
-            		int32_t dstCol = 0, int32_t dstRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            void writeBlock(int32_t col, int32_t row, Grid<T> &block,
-            		int32_t srcCol = 0, int32_t srcRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            void writeBlock(Grid<T> &block);
-
-            void readBlock(Grid<T> &block);
+            void fromMatrix(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> &mtx, int band = 1);
 
         };
 
-        template <class T>
-        class G_DLL_EXPORT Block {
-        public:
-        	uint64_t idx;
-        	uint16_t band, col, row;
-        	uint32_t size;
-        	uint64_t time;
-        	bool dirty;
-        	T *data;
-        	Block(uint64_t idx, uint16_t band,
-        			uint16_t col, uint16_t row,
-					uint32_t size, uint64_t time);
-        	~Block();
-        };
-
-        template <class T>
-        class G_DLL_EXPORT BlockCache {
-        private:
-            GDALDataset *m_ds;
-            uint32_t m_size;
-            uint32_t m_time;
-            int32_t m_bw;
-            int32_t m_bh;
-            std::unordered_map<uint64_t, geotools::raster::Block<T>*> m_blocks;
-            std::map<uint64_t, uint64_t> m_time_idx;
-
-            // Flush the block at the given index to disk, if it is dirty.
-            void flushBlock(uint64_t idx);
-            void flushBlock(geotools::raster::Block<T> *blk);
-
-            // Convert the row and column indices to an index.
-            uint64_t toIdx(uint16_t band, uint16_t col, uint16_t row) const;
-
-            // Convert the index to a column index.
-            uint16_t toCol(uint64_t idx) const;
-
-            // Convert the index to a row index.
-            uint16_t toRow(uint64_t idx) const;
-
-            // Convert the index to a band.
-            uint16_t toBand(uint64_t idx) const;
-
-            // Remove the oldest block from the cache and return a reference
-            // to it. Flush first if dirty.
-            geotools::raster::Block<T>* freeOldest();
-
-            // Remove a block from the cache and return a reference to it for reuse.
-            // If there are more than the limit of blocks keep removing until the
-            // cache is full-1. Will flush dirty blocks.
-            geotools::raster::Block<T>* freeOne();
-
-        public:
-            BlockCache();
-
-            // The number of columns in a single block.
-            uint16_t blockWidth() const;
-
-            // The number of rows in a single block.
-            uint16_t blockHeight() const;
-
-            // Convert the raster row and column into a row and
-            // column index for a single block.
-            uint32_t toBlockIdx(uint16_t col, uint16_t row) const;
-
-            // Set the raster band for this cache to manage.
-            void setDataset(GDALDataset *ds);
-
-            // Return true if the cache is managing a block that contains the
-            // given column and row.
-            bool hasBlock(uint16_t band, uint16_t col, uint16_t row) const;
-
-            // Return true if the given index is valid for this cache.
-            bool hasBlock(uint64_t idx) const;
-
-            // Set the number of blocks managed by the cache.
-            void setSize(uint32_t size);
-
-            // Return the number of blocks managed by the cache.
-            uint32_t getSize();
-
-            // Return a pointer to the block containing the given column and row.
-            // If the block is to be written, the forWrite argument flags it as 
-            // dirty.
-            geotools::raster::Block<T>* getBlock(uint16_t band,
-            		uint16_t col, uint16_t row, bool forWrite);
-
-            // Get the value from the cache.
-            T get(uint16_t band, int32_t col, int32_t row);
-
-            // Set the value in the cache. Implies a dirty block.
-            void set(uint16_t band, int32_t col, int32_t row, T value);
-
-            // Flush all blocks to disk.
-            void flush();
-
-            // Free all blocks.
-            void close();
-
-            ~BlockCache();
-
-        };
-
-        class G_DLL_EXPORT FloatRaster : public Grid<double> {
+        class G_DLL_EXPORT Raster : public Grid {
         private:
             GDALDataset *m_ds;          // GDAL dataset
-            GDALDataType m_type;        // GDALDataType -- limits the possible template types.
-            bool m_inited;              // True if the instance is initialized.
+            int m_bcols, m_brows;
+    		void *m_block;
             std::string m_filename;     // Raster filename
-            BlockCache<double> m_cache; // Block cache.
             GridProps m_props;
-            GDALDataType getGDType(DataType type) const;
+            GDALDataType m_type;        // GDALDataType -- limits the possible template types.
+
+            GDALDataType getGDType() const;
 
         public:
-
-             // Basic constructor.
-            FloatRaster();
 
             // Create a new raster for writing with a template.
-            FloatRaster(const std::string &filename, const GridProps &props);
-
-            // Open the given raster. Set the writable argument to true
-            // to enable writing.
-            FloatRaster(const std::string &filename, bool writable = false);
-
-            // Initialize the raster using the given file (which may not exist) using
-            // a template.
-            void init(const std::string &filename, const GridProps &props);
-
-            // Initializes a Raster from the existing file.
-            void init(const std::string &filename, bool writable = false);
-
-            GridProps props() const;
-
-            // Attempts to return the datatype of the raster
-            // with the given filename.
-            static DataType getFileDataType(const std::string &filename);
-
-            // Set the number of blocks in the cache.
-            void setCacheSize(uint32_t size);
-
-            // Return the filename for this raster.
-            std::string filename() const;
-
-            // Return the number of bands in the raster.
-            uint16_t bandCount() const;
-
-            // Converts a numerical (EPSG) crs code to a projection string.
-            std::string epsg2ProjText(uint16_t crs) const;
-
-            // Returns true if the raster is initialized.
-            bool inited() const;
-
-            // Fill the given band with the given value.
-            void fill(const double value, uint16_t band);
-
-            void fill(const double value);
-
-            // Read the block at the given band and position into the given grid.
-            void readBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
-            		int32_t dstCol = 0, int32_t dstRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            void readBlock(int32_t col, int32_t row, Grid<double> &grd,
-            		int32_t dstCol = 0, int32_t dstRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            // Write the block at the given band and position from the given grid.
-            void writeBlock(uint16_t band, int32_t col, int32_t row, Grid<double> &grd,
-            		int32_t srcCol = 0, int32_t srcRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            void writeBlock(int32_t col, int32_t row, Grid<double> &grd,
-            		int32_t srcCol = 0, int32_t srcRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            // Read the block at the given band into the given grid.
-            void readBlock(uint16_t band, Grid<double> &block);
-
-            void readBlock(Grid<double> &block);
-
-            // Write the block at the given band from the given grid.
-            void writeBlock(uint16_t band, Grid<double> &block);
-
-            void writeBlock(Grid<double> &block);
-
-            // Get the x resolution.
-            double resolutionX() const;
-
-            // Get the y resolution.
-            double resolutionY() const;
-
-            // Return true if the x-resolution is positive.
-            bool positiveX() const;
-
-            // Return true if the y-resolution is positive.
-            bool positiveY() const;
-
-            // Write the projection data to the given string object.
-            void projection(std::string &proj) const;
-
-            // Return the GDAL datatype of the raster.
-            GDALDataType type() const;
-
-            // Return the raster's geographic bounds.
-            geotools::util::Bounds bounds() const;
-
-            // The minimum bounding x.
-            double minx() const;
-
-            // The maximum bounding x.
-            double maxx() const;
-
-            // The left x.
-            double leftx() const;
-
-            // The right x.
-            double rightx() const;
-
-            // The minimum bounding y.
-            double miny() const;
-
-            // The maximum bounding y.
-            double maxy() const;
-
-            // The top y.
-            double topy() const;
-
-            // The bottom y.
-            double bottomy() const;
-
-            // The width of the raster in map units.
-            double width() const;
-
-            // The height of the raster in map units.
-            double height() const;
-
-            double nodata(uint16_t band) const;
-
-            double nodata() const;
-
-            void setNodata(const double nodata, uint16_t band);
-
-            void setNodata(const double nodata);
-
-            uint16_t cols() const;
-
-            uint16_t rows() const;
-
-            // Returns the row for a given y-coordinate.
-            int32_t toRow(double y) const;
-
-            // Returns the column for a given x-coordinate.
-            int32_t toCol(double x) const;
-
-            // Returns the x-coordinate for a given column.
-            double toX(int32_t col) const;
-
-            // Returns the y-coordinate for a given row.
-            double toY(int32_t row) const;
-
-            // Returns the x-coordinate for the cell centroid of a given column.
-            double toCentroidX(int32_t col) const;
-
-            // Returns the y-coordinate for the cell centorid of a given row.
-            double toCentroidY(int32_t row) const;
-
-            uint32_t size() const;
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(int32_t col, int32_t row, uint16_t band);
-
-            bool isNoData(int32_t col, int32_t row);
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(uint32_t idx, uint16_t band);
-
-            bool isNoData(uint32_t idx);
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(double x, double y, uint16_t band);
-
-            bool isNoData(double x, double y);
-
-            // Returns true if the pixel exists and is not nodata.
-            bool isValid(int32_t c, int32_t r, uint16_t band = 1);
-
-            // Returns true if the pixel exists and is not nodata.
-            bool isValid(double x, double y, uint16_t band = 1);
-
-            // Gets the pixel value or nodata if the pixel doesn't exist.
-            double getOrNodata(double x, double y, uint16_t band = 1);
-
-            // Gets the pixel value or nodata if the pixel doesn't exist.
-            double getOrNodata(int32_t col, int32_t row, uint16_t band = 1);
-
-            double *grid();
-
-            bool hasGrid() const;
-
-            double get(double x, double y, uint16_t band);
-
-            double get(double x, double y);
-
-            double get(int32_t col, int32_t row, uint16_t band);
-
-            double get(int32_t col, int32_t row);
-
-            double get(uint32_t idx, uint16_t band);
-
-            double get(uint32_t idx);
-
-            void set(int32_t col, int32_t row, const double v, uint16_t band);
-
-            void set(int32_t col, int32_t row, const double v);
-
-            void set(uint32_t idx, const double v, uint16_t band);
-
-            void set(uint32_t idx, const double v);
-
-            void set(double x, double y, const double v, uint16_t band);
-
-            void set(double x, double y, const double v);
-
-            bool isSquare() const;
-
-            bool has(int32_t col, int32_t row) const;
-
-            bool has(double x, double y) const;
-
-            bool has(uint32_t idx) const;
-
-            // Flush the current block to the dataset.
-            void flush();
-
-            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1, 
-				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
-
-            ~FloatRaster();
-
-        };
-
-        template <class T>
-        class G_DLL_EXPORT Raster : public Grid<T> {
-        private:
-            GridProps m_props;
-            bool m_inited;              // True if the instance is initialized.
-            GDALDataset *m_ds;          // GDAL dataset
-
-            std::string m_filename;     // Raster filename
-            BlockCache<T> m_cache;      // Block cache.
-
-            // Get the GDAL type for the given c++ type.
-            GDALDataType getType(double v);
-
-            GDALDataType getType(float v);
-
-            GDALDataType getType(uint64_t v);
-
-            GDALDataType getType(int64_t v);
-
-            GDALDataType getType(uint32_t v);
-
-            GDALDataType getType(int32_t v);
-
-            GDALDataType getType(uint16_t v);
-
-            GDALDataType getType(int16_t v);
-
-            GDALDataType getType(uint8_t v);
-
-            GDALDataType getType(int8_t v);
-
-            // Get the GDAL type for the current raster.
-            GDALDataType getType();
-
-            // Return the default nodata for the raster's type.
-            T getDefaultNodata();
-
-        public:
-
-            const static int32_t FLOAT64 = 1;
-            const static int32_t FLOAT32 = 2;
-            const static int32_t UINT32 = 3;
-            const static int32_t UINT16 = 4;
-            const static int32_t BYTE = 5;
-            const static int32_t INT32 = 6;
-            const static int32_t INT16 = 7;
-
-            // Basic constructor.
-            Raster();
-
-            // Create a new raster for writing with a template of a different type.
             Raster(const std::string &filename, const GridProps &props);
 
             // Open the given raster. Set the writable argument to true
             // to enable writing.
             Raster(const std::string &filename, bool writable = false);
 
-            void init(const std::string &filename, const GridProps &props);
-
-            // Initializes a Raster from the existing file.
-            void init(const std::string &filename, bool writable = false);
-
-            GridProps props() const;
+            // Return the grid properties object.
+            const GridProps& props() const;
 
             // Attempts to return the datatype of the raster
             // with the given filename.
-            static int32_t getType(const std::string &filename);
-
-            // Set the number of blocks in the cache.
-            void setCacheSize(uint32_t size);
+            static DataType getFileDataType(const std::string &filename);
 
             // Return the filename for this raster.
             std::string filename() const;
 
-            // Return the number of bands in the raster.
-            uint16_t bandCount() const;
-
-            // Converts a numerical (EPSG) crs code to a projection string.
-            std::string epsg2ProjText(uint16_t crs) const;
-
-            // Returns true if the raster is initialized.
-            bool inited() const;
-
             // Fill the given band with the given value.
-            void fill(const T value, uint16_t band);
-
-            void fill(const T value);
+            void fill(int value, int band = 1);
+            void fill(double value, int band = 1);
 
             // Read the block at the given band and position into the given grid.
-            void readBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
-            		int32_t dstCol = 0, int32_t dstRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
-
-            void readBlock(int32_t col, int32_t row, Grid<T> &grd,
-            		int32_t dstCol = 0, int32_t dstRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
+            void readBlock(MemRaster &grd,
+            		int cols = 0, int rows = 0, int dstBand = 1,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0);
+            void readBlock(Raster &grd,
+            		int cols = 0, int rows = 0,
+					int srcBand = 1, int dstBand = 1,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0);
 
             // Write the block at the given band and position from the given grid.
-            void writeBlock(uint16_t band, int32_t col, int32_t row, Grid<T> &grd,
-            		int32_t srcCol = 0, int32_t srcRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
+            void writeBlock(MemRaster &grd,
+            		int cols = 0, int rows = 0, int srcBand = 1,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0);
+            void writeBlock(Raster &grd,
+            		int cols = 0, int rows = 0,
+					int srcBand = 1, int dstBand = 1,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0);
 
-            void writeBlock(int32_t col, int32_t row, Grid<T> &grd,
-            		int32_t srcCol = 0, int32_t srcRow = 0,
-					int32_t xcols = 0, int32_t xrows = 0);
+            // Returns a pixel value.
+            int getInt(double x, double y, int band = 1);
+            int getInt(int col, int row, int band = 1);
+            int getInt(long idx, int band = 1);
 
-            // Read the block at the given band into the given grid.
-            void readBlock(uint16_t band, Grid<T> &block);
+            double getFloat(double x, double y, int band = 1);
+            double getFloat(int col, int row, int band = 1);
+            double getFloat(long idx, int band = 1);
 
-            void readBlock(Grid<T> &block);
+            // Set an pixel value.
+            void setInt(double x, double y, int v, int band = 1);
+            void setInt(int col, int row, int v, int band = 1);
+            void setInt(long idx, int v, int band = 1);
 
-            // Write the block at the given band from the given grid.
-            void writeBlock(uint16_t band, Grid<T> &block);
+            void setFloat(double x, double y, double v, int band = 1);
+            void setFloat(int col, int row, double v, int band = 1);
+            void setFloat(long idx, double v, int band = 1);
 
-            void writeBlock(Grid<T> &block);
-
-            // Get the x resolution.
-            double resolutionX() const;
-
-            // Get the y resolution.
-            double resolutionY() const;
-
-            // Return true if the x-resolution is positive.
-            bool positiveX() const;
-
-            // Return true if the y-resolution is positive.
-            bool positiveY() const;
-
-            // Write the projection data to the given string object.
-            void projection(std::string &proj) const;
-
-            // Return the GDAL datatype of the raster.
-            GDALDataType type() const;
-
-            // Return the raster's geographic bounds.
-            geotools::util::Bounds bounds() const;
-
-            // The minimum bounding x.
-            double minx() const;
-
-            // The maximum bounding x.
-            double maxx() const;
-
-            // The left x.
-            double leftx() const;
-
-            // The right x.
-            double rightx() const;
-
-            // The minimum bounding y.
-            double miny() const;
-
-            // The maximum bounding y.
-            double maxy() const;
-
-            // The top y.
-            double topy() const;
-
-            // The bottom y.
-            double bottomy() const;
-
-            // The width of the raster in map units.
-            double width() const;
-
-            // The height of the raster in map units.
-            double height() const;
-
-            T nodata(uint16_t band) const;
-
-            T nodata() const;
-
-            void setNodata(const T nodata, uint16_t band);
-
-            void setNodata(const T nodata);
-
-            uint16_t cols() const;
-
-            uint16_t rows() const;
-
-            // Returns the row for a given y-coordinate.
-            int32_t toRow(double y) const;
-
-            // Returns the column for a given x-coordinate.
-            int32_t toCol(double x) const;
-
-            // Returns the x-coordinate for a given column.
-            double toX(int32_t col) const;
-
-            // Returns the y-coordinate for a given row.
-            double toY(int32_t row) const;
-
-            // Returns the x-coordinate for the cell centroid of a given column.
-            double toCentroidX(int32_t col) const;
-
-            // Returns the y-coordinate for the cell centorid of a given row.
-            double toCentroidY(int32_t row) const;
-
-            uint32_t size() const;
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(int32_t col, int32_t row, uint16_t band);
-
-            bool isNoData(int32_t col, int32_t row);
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(uint32_t idx, uint16_t band);
-
-            bool isNoData(uint32_t idx);
-
-            // Returns true if the pixel is nodata.
-            bool isNoData(double x, double y, uint16_t band);
-
-            bool isNoData(double x, double y);
-
-            // Returns true if the pixel exists and is not nodata.
-            bool isValid(int32_t c, int32_t r, uint16_t band = 1);
-
-            // Returns true if the pixel exists and is not nodata.
-            bool isValid(double x, double y, uint16_t band = 1);
-
-            // Gets the pixel value or nodata if the pixel doesn't exist.
-            T getOrNodata(double x, double y, uint16_t band = 1);
-
-            // Gets the pixel value or nodata if the pixel doesn't exist.
-            T getOrNodata(int32_t col, int32_t row, uint16_t band = 1);
-
-            T *grid();
-
-            bool hasGrid() const;
-
-            T get(double x, double y, uint16_t band);
-
-            T get(double x, double y);
-
-            T get(int32_t col, int32_t row, uint16_t band);
-
-            T get(int32_t col, int32_t row);
-
-            T get(uint32_t idx, uint16_t band);
-
-            T get(uint32_t idx);
-
-            void set(int32_t col, int32_t row, const T v, uint16_t band);
-
-            void set(int32_t col, int32_t row, const T v);
-
-            void set(uint32_t idx, const T v, uint16_t band);
-
-            void set(uint32_t idx, const T v);
-
-            void set(double x, double y, const T v, uint16_t band);
-
-            void set(double x, double y, const T v);
-
+            // Returns true if the raster is square.
             bool isSquare() const;
-
-            bool has(int32_t col, int32_t row) const;
-
-            bool has(double x, double y) const;
-
-            bool has(uint32_t idx) const;
 
             // Flush the current block to the dataset.
             void flush();
 
-            void polygonize(const std::string &filename, uint16_t srid = 0, uint16_t band = 1,
+            //Raster convert(DataType type);
+
+            // Vectorize the raster.
+            void polygonize(const std::string &filename, int srid = 0, int band = 1,
 				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
 
             ~Raster();

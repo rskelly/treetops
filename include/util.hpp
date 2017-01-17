@@ -249,6 +249,13 @@ namespace geotools {
 
         };
 
+        class CRS {
+        public:
+
+        	std::string epsg2Proj4(int crs) const;
+        	std::string epsg2WKT(int crs) const;
+        };
+
     } // util
 
 } // geotools
