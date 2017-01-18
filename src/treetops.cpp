@@ -397,7 +397,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			smooth.setNodata(smoothed.nodata());
 
 			#pragma omp for
-			for(uint16_t j = 0; j < smoothed.rows() / bufSize + 1; ++j) {
+			for(int j = 0; j < smoothed.rows() / bufSize + 1; ++j) {
 				if (*cancel) continue;
 
 				int32_t b = j * bufSize;
@@ -470,9 +470,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			}
 		}
 	}
-
-	Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
-	tmp.writeBlock(topsWindowGrid);
 
 	total = topsIDGrid.rows();
 	status = 0;
@@ -601,7 +598,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
 
 			#pragma omp for
-			for(uint32_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+			for(int i = 0; i < inrast.rows() / bufSize + 1; ++i) {
 				if (*cancel) continue;
 
 				if (m_callbacks)
