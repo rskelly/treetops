@@ -461,7 +461,7 @@ void MemRaster<T>::init(uint16_t cols, uint16_t rows, bool mapped) {
 		m_size = sizeof(T) * cols * rows;
 		m_mappedFile.release();
 		if (mapped) {
-			const std::string filename = Util::tmpFile("/tmp");
+			const std::string filename = Util::tmpFile();
 			m_mappedFile = Util::mapFile(filename, m_size);
 			m_grid = (T *) m_mappedFile->data();
 		} else {
