@@ -704,6 +704,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 		if(m_callbacks)
 			m_callbacks->statusCallback("Saving true maxima...");
+
 		std::map<std::string, double> data;
 		db.begin();
 		for(const auto &it : maxHeights) {

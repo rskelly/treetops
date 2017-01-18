@@ -537,7 +537,7 @@ void TreetopsForm::cancelClicked() {
 
 void TreetopsForm::helpClicked() {
 	g_debug("help");
-	QDesktopServices::openUrl(QUrl("http://www.dijital.ca/geotools/help/treetops.html", QUrl::TolerantMode));
+	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/geotools/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
 }
 
 void TreetopsForm::checkRun() {
