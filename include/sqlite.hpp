@@ -18,6 +18,7 @@ namespace geotools {
 
     namespace db {
 
+        // Provides some easy database read/write methods.
         class SQLite {
         private:
             int m_type;
@@ -104,6 +105,11 @@ namespace geotools {
                     handleError("Failed to insert row: ");
             }
 
+            void addPoints(std::vector<geotools::util::Point*> &points) {
+                for (const geotools::util::Point *pt : points)
+                    addPoint(pt->x, pt->y, pt->z, pt->fields);
+            }
+
             /**
              * Returns the number of points that can be added at one time by 
              * addPoints. This is computed from the parameter limit and the 
@@ -111,18 +117,15 @@ namespace geotools {
              */
             uint64_t maxAddPointCount() {
                 uint64_t c = (uint64_t) (sqlite3_limit(m_db, SQLITE_LIMIT_VARIABLE_NUMBER, -1) / (m_fields.size() + 1));
-                g_debug("max point count: " << c << ", " << sqlite3_limit(m_db, SQLITE_LIMIT_VARIABLE_NUMBER, -1));
                 return c;
             }
 
             void makeFast() {
-                g_debug("makeFast");
                 char *err;
                 if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA synchronous = OFF", NULL, NULL, &err))
                     handleError("Failed to set synchronous: ", err);
                 if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA journal_mode = MEMORY", NULL, NULL, &err))
                     handleError("Failed to set journal mode: ", err);
-                g_debug("done makeFast");
             }
 
             void makeSlow() {
@@ -134,18 +137,11 @@ namespace geotools {
             }
 
             void setCacheSize(size_t size) {
-                g_debug("setCacheSize " << size);
                 char *err;
                 std::stringstream ss;
                 ss << "PRAGMA cache_size = " << size;
                 if (SQLITE_OK != sqlite3_exec(m_db, ss.str().c_str(), NULL, NULL, &err))
                     handleError("Failed to set cache size: ", err);
-                g_debug("done setCacheSize " << size);
-            }
-
-            void addPoints(std::vector<geotools::util::Point*> &points) {
-                for (const geotools::util::Point *pt : points)
-                    addPoint(pt->x, pt->y, pt->z, pt->fields);
             }
 
             void dropGeomIndex() {
@@ -203,7 +199,7 @@ namespace geotools {
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
                         geotools::db::SQLite::getPointsCallback, &points, &err)) {
                     rollback();
-                    handleError("Failed to execute query.", err);
+                    handleError("Failed to get points for bounds: ", err);
                 }
                 rollback();
             }
@@ -224,7 +220,7 @@ namespace geotools {
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
                         geotools::db::SQLite::getPointsCallback, &points, &err)) {
                     rollback();
-                    handleError("Failed to execute query.", err);
+                    handleError("Failed to get points for limit and offset: ", err);
                 }
                 rollback();
             }
@@ -247,7 +243,7 @@ namespace geotools {
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
                         geotools::db::SQLite::getPointsCallback, &points, &err)) {
                     rollback();
-                    handleError("Failed to execute query.", err);
+                    handleError("Failed to get nearest points:", err);
                 }
                 rollback();
             }
@@ -363,10 +359,8 @@ namespace geotools {
                     }
                 }
             }
-            if (kv.first != "geom" && kv.first != "gid") {
-                g_debug("Field: " << kv.first << ", " << kv.second);
+            if (kv.first != "geom" && kv.first != "gid")
                 fields->insert(kv);
-            }
             return 0;
         }
 
@@ -387,11 +381,7 @@ namespace geotools {
                 dbExists = false;
             }
 
-            g_debug("Initializing sqlite with exists: " << dbExists);
-
             char *err;
-
-            g_debug("Opening...");
             if (SQLITE_OK != sqlite3_open_v2(m_file.c_str(), &m_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
                 handleError("Failed to open DB: ");
 
@@ -413,8 +403,6 @@ namespace geotools {
                 if (SQLITE_OK != sqlite3_exec(m_db, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err))
                     handleError("Failed to initialize DB: ", err);
             }
-
-            g_debug("Building DDL");
 
             std::stringstream ss;
             std::stringstream fn;
@@ -453,7 +441,6 @@ namespace geotools {
 
             if (!dbExists) {
                 q.assign(ss.str());
-                g_debug("Creating table: " << q);
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(), NULL, NULL, &err))
                     handleError("Failed to create table: ", err);
                 ss.str(std::string());
@@ -473,7 +460,6 @@ namespace geotools {
                 ss << "', 'XYZ')";
                 q.assign(ss.str());
 
-                g_debug("Creating geometry column: " << q);
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(), NULL, NULL, &err))
                     handleError("Failed to create geometry: ", err);
             }
@@ -484,14 +470,12 @@ namespace geotools {
                     << m_srid << "), " << fp.str() << ")";
 
             q.assign(ss.str());
-            g_debug("Preparing insert query: " << q);
             if (SQLITE_OK != sqlite3_prepare_v2(m_db, q.c_str(), (int) q.size(), &m_stmt, NULL))
-                handleError("Failed to prepare insert statement: ");
+                handleError("Failed to prepare insert statement.");
 
         }
 
         void SQLite::clear() {
-            g_debug("Deleting existing records.");
             char *err;
             begin();
             dropGeomIndex();
