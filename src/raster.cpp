@@ -82,6 +82,14 @@ GridProps::GridProps() :
 		m_type(DataType::None) {	// The data type.
 }
 
+Bounds GridProps::bounds() const {
+	double x0 = m_trans[0];
+	double y0 = m_trans[3];
+	double x1 = x0 + m_trans[1] * m_cols;
+	double y1 = y0 + m_trans[5] * m_rows;
+	return Bounds(g_min(x0, x1), g_min(y0, y1), g_max(x0, x1), g_max(y0, y1));
+}
+
 void GridProps::setNoData(double nodata) {
 	m_nodata = nodata;
 }
@@ -122,6 +130,14 @@ double GridProps::resolutionX() const {
 
 double GridProps::resolutionY() const {
 	return m_trans[5];
+}
+
+double GridProps::tlx() const {
+	return m_trans[0];
+}
+
+double GridProps::tly() const {
+	return m_trans[3];
 }
 
 void GridProps::setDataType(DataType type) {
@@ -851,7 +867,20 @@ std::string Raster::filename() const {
 	return m_filename;
 }
 
-void Raster::fill(double value, int band) {
+void Raster::fillInt(int value, int band) {
+	Buffer buf(m_bcols * m_brows * _getTypeSize(props().dataType()));
+	for(int i = 0; i < m_bcols * m_brows; ++i)
+		*(((int *) buf.buf) + i) = value;
+	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
+	for (int r = 0; r < m_brows; ++r) {
+		for (int c = 0; c < m_bcols; ++c) {
+			if (bnd->WriteBlock(c, r, buf.buf) != CE_None)
+				g_runerr("Fill error.");
+		}
+	}
+}
+
+void Raster::fillFloat(double value, int band) {
 	Buffer buf(m_bcols * m_brows * _getTypeSize(props().dataType()));
 	for(int i = 0; i < m_bcols * m_brows; ++i)
 		*(((double *) buf.buf) + i) = value;

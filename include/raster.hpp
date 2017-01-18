@@ -52,6 +52,8 @@ namespace geotools {
 
     		GridProps();
 
+    		Bounds bounds() const;
+
     		bool isInt() const;
     		bool isFloat() const;
 
@@ -128,6 +130,10 @@ namespace geotools {
 
     		// Get the vertical resolution.
     		double resolutionY() const;
+
+    		double tlx() const;
+
+    		double tly() const;
 
     		// Set the number of bands.
     		void setBands(int bands);
@@ -381,8 +387,8 @@ namespace geotools {
             std::string filename() const;
 
             // Fill the given band with the given value.
-            void fill(int value, int band = 1);
-            void fill(double value, int band = 1);
+            void fillInt(int value, int band = 1);
+            void fillFloat(double value, int band = 1);
 
             // Read the block at the given band and position into the given grid.
             void readBlock(MemRaster &grd,
