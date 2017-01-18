@@ -165,6 +165,7 @@ namespace geotools {
                 std::vector<Point*> *result = (std::vector<Point*> *) resultPtr;
                 Point *pt = new Point();
                 for (int i = 0; i < cols; ++i) {
+                    if(values[i] == NULL) continue;
                     std::string colname(colnames[i]);
                     if (colname == "geomx") {
                         pt->x = atof(values[i]);
@@ -197,7 +198,6 @@ namespace geotools {
                 ss << "))', SRID(geom)))";
 
                 std::string q = ss.str();
-                g_debug("getPoints: " << q);
                 char *err;
                 begin();
                 if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
@@ -269,6 +269,27 @@ namespace geotools {
                 }
                 rollback();
                 return count;
+            }
+
+            void updateRow(const std::string &idField, uint64_t id, std::map<std::string, double> &values) {
+                std::stringstream ss;
+                ss << std::setprecision(12) << "UPDATE data SET ";
+                size_t d = values.size();
+                for(const auto &it : values) { 
+                    ss << "\"" << it.first << "\"=" << it.second;
+                    if(--d)
+                        ss << ",";
+                }
+                ss << " WHERE " << idField << "=" << id;
+                char *err;
+                if(SQLITE_OK != sqlite3_exec(m_db, ss.str().c_str(), NULL, NULL, &err))
+                    handleError("Failed to update: ", err);
+            }
+
+            void execute(std::string &sql) {
+                char *err;
+                if(SQLITE_OK != sqlite3_exec(m_db, sql.c_str(), NULL, NULL, &err))
+                    handleError("Failed to update: ", err);
             }
 
             void begin() {
@@ -357,8 +378,10 @@ namespace geotools {
 
         void SQLite::init(bool replace) {
 
+            if(!Util::pathExists(m_file))
+                g_argerr("The parent path of the file " << m_file << " does not exist and cannot be created.");
+
             bool dbExists = exists(m_file);
-            
             if(dbExists && replace) {
                 Util::rm(m_file);
                 dbExists = false;

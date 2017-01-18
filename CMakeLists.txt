@@ -193,6 +193,9 @@ target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 #add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
 #target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
 
+add_executable (rasternormalize src/rasternormalize.cpp)
+target_link_libraries (rasternormalize raster)
+
 add_executable (pointgrid src/pointgrid.cpp)
 target_link_libraries (pointgrid ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools lasreader)
 

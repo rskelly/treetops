@@ -2,6 +2,7 @@
 #define __TREETOPS_HPP__
 
 #include <string>
+#include <vector>
 
 #include "geotools.hpp"
 #include "util.hpp"
@@ -57,12 +58,15 @@ namespace geotools {
                 // window size to detect maxima. Previously-detected maxima will be
                 // obliterated if a new maximum is found whose window encompases
                 // the previous one.
-                std::map<float, uint8_t> topsThresholds;
-
+                std::vector<std::pair<float, uint8_t> > topsThresholds;
 
                 std::string topsOriginalCHM;
                 std::string topsSmoothedCHM;
                 std::string topsTreetopsDatabase;
+
+                // The max proportion of pixels in a given kernel that are allowed
+                // to be null. Any kernel with this many or greater is ignored.
+                double topsMaxNulls;
 
                 // Set to true to delineate crowns.
                 bool doCrowns;
@@ -78,6 +82,9 @@ namespace geotools {
 
                 // The input raster -- ideally the same one used for tops.
                 std::string crownsSmoothedCHM;
+
+                // The original CHM from which the smoothed raster was created.
+                std::string crownsOriginalCHM;
 
                 // The treetops database file.
                 std::string crownsTreetopsDatabase;

@@ -15,6 +15,7 @@ using namespace geotools::las;
 using namespace geotools::util;
 
 #define FILE_SIZE 1000000
+#define NODE_SIZE 100
 
 class OctMemManager {
 private:
@@ -41,20 +42,20 @@ public:
 	}
 
 	void writePoint(uint64_t id, const LASPoint &pt) {
-		uint64_t offset = id * 1000 * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
+		uint64_t offset = id * NODE_SIZE * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
 		MappedFile *mf = getMappedFile(offset);
 		pt.write(mf->data() + offset);
 	}
 
 	void readPoint(uint64_t id, LASPoint &pt) {
-		uint64_t offset = id * 1000 * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
+		uint64_t offset = id * NODE_SIZE * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
 		MappedFile *mf = getMappedFile(offset);
 		pt.read(mf->data() + offset);
 	}
 
 	void readPoints(uint64_t id, std::vector<LASPoint*> &pts) {
-		uint64_t start = id * 1000 * LASPoint::dataSize();
-		uint64_t end = id * 1000 * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
+		uint64_t start = id * NODE_SIZE * LASPoint::dataSize();
+		uint64_t end = id * NODE_SIZE * LASPoint::dataSize() + m_offsets[id] * LASPoint::dataSize();
 		MappedFile *mf = getMappedFile(start);
 		for(uint64_t offset = start; offset < end; ++offset) {
 			LASPoint *pt = new LASPoint();
@@ -145,7 +146,7 @@ public:
 	}
 
 	void addPoint(const LASPoint &pt) {
-		if(m_count < 1000) {
+		if(m_count < NODE_SIZE) {
 			m_manager->writePoint(m_mid, pt);
 		} else {
 			if(!m_split)
@@ -165,11 +166,49 @@ public:
 			}
 		}
 	}
+
+	int getPoints(const Bounds &bounds, std::vector<LASPoint*> &pts) {
+		if(m_split) {
+			int cnt = 0;
+			for(int i = 0; i < 4; ++i) {
+				if(m_nodes[i])
+					cnt += m_nodes[i]->getPoints(bounds, pts);
+			}
+			return cnt;
+		} else if(m_bounds.intersects(bounds)) {
+			std::vector<LASPoint*> tmp;
+			m_manager->readPoints(m_mid, tmp);
+			for(LASPoint *p : tmp) {
+				if(bounds.contains(p->x, p->y)) {
+					pts.push_back(p);
+				} else {
+					delete p;
+				}
+			}
+			return tmp.size();
+		}
+		return 0;
+	}
+
+	int getPoints(double x, double y, double radius, std::vector<LASPoint*> &pts) {
+		Bounds bounds(x - radius, y - radius, x + radius, y + radius);
+		std::vector<LASPoint*> tmp;
+		if(getPoints(bounds, tmp)) {
+			for(LASPoint *p : tmp) {
+				double d = g_sq(x - p->x) + g_sq(y - p->y);
+				if(d > g_sq(radius)) {
+					delete p;
+				} else {
+					pts.push_back(p);
+				}
+			}
+		}
+		return tmp.size();
+	}
+
 };
 
 class OctTree : public OctNode {
-	OctNode *m_nodes[4]; // Clockwise, zero northwest.
-
 public:
 	OctTree(Bounds &bounds) :
 		m_manager(new OctMemManager()),

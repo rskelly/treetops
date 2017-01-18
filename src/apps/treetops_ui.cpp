@@ -22,75 +22,80 @@ QSettings _settings("Treetops", "dijital.ca");
 // Load the config settings for this app.
 void _loadConfig(TreetopsConfig &config) {
 	QSettings qs("TreetopsConfig", "dijital.ca");
-	config.srid = qs.value(QString("srid"), config.srid).toInt();
+	config.srid = qs.value("srid", config.srid).toInt();
 	config.buildIndex =
-			qs.value(QString("buildIndex"), config.buildIndex).toBool();
-	config.tableCacheSize = qs.value(QString("tableCacheSize"),
+			qs.value("buildIndex", config.buildIndex).toBool();
+	config.tableCacheSize = qs.value("tableCacheSize",
 			config.tableCacheSize).toInt();
 	config.rowCacheSize =
-			qs.value(QString("rowCacheSize"), config.rowCacheSize).toInt();
+			qs.value("rowCacheSize", config.rowCacheSize).toInt();
 	config.doSmoothing =
-			qs.value(QString("doSmoothing"), config.doSmoothing).toBool();
-	config.smoothWindowSize = qs.value(QString("smoothingWindowSize"),
+			qs.value("doSmoothing", config.doSmoothing).toBool();
+	config.smoothWindowSize = qs.value("smoothingWindowSize",
 			config.smoothWindowSize).toInt();
 	config.smoothSigma =
-			qs.value(QString("smoothSigma"), config.smoothSigma).toDouble();
-	config.smoothOriginalCHM = qs.value(QString("smoothOriginalCHM"),
+			qs.value("smoothSigma", config.smoothSigma).toDouble();
+	config.smoothOriginalCHM = qs.value("smoothOriginalCHM",
 			qstr(config.smoothOriginalCHM)).toString().toStdString();
-	config.smoothSmoothedCHM = qs.value(QString("smoothSmoothedCHM"),
+	config.smoothSmoothedCHM = qs.value("smoothSmoothedCHM",
 			qstr(config.smoothSmoothedCHM)).toString().toStdString();
-	config.doTops = qs.value(QString("doTops"), config.doTops).toBool();
-	config.parseThresholds(qs.value(QString("topsThresholds"), "").toString().toStdString());
-	config.topsOriginalCHM = qs.value(QString("topsOriginalCHM"),
+	config.doTops = qs.value("doTops", config.doTops).toBool();
+	config.parseThresholds(qs.value("topsThresholds", "").toString().toStdString());
+	config.topsOriginalCHM = qs.value("topsOriginalCHM",
 			qstr(config.topsOriginalCHM)).toString().toStdString();
-	config.topsSmoothedCHM = qs.value(QString("topsSmoothedCHM"),
+	config.topsSmoothedCHM = qs.value("topsSmoothedCHM",
 			qstr(config.topsSmoothedCHM)).toString().toStdString();
-	config.topsTreetopsDatabase = qs.value(QString("topsTreetopsDatabase"),
+	config.topsTreetopsDatabase = qs.value("topsTreetopsDatabase",
 			qstr(config.topsTreetopsDatabase)).toString().toStdString();
-	config.doCrowns = qs.value(QString("doCrowns"), config.doCrowns).toBool();
+	config.topsMaxNulls = qs.value("topsMaxNulls", config.topsMaxNulls).toDouble();
+	config.doCrowns = qs.value("doCrowns", config.doCrowns).toBool();
 	config.crownsRadius =
-			qs.value(QString("crownsRadius"), config.crownsRadius).toDouble();
-	config.crownsHeightFraction = qs.value(QString("crownsHeightFraction"),
+			qs.value("crownsRadius", config.crownsRadius).toDouble();
+	config.crownsHeightFraction = qs.value("crownsHeightFraction",
 			config.crownsHeightFraction).toDouble();
-	config.crownsMinHeight = qs.value(QString("crownsMinHeight"),
+	config.crownsMinHeight = qs.value("crownsMinHeight",
 			config.crownsMinHeight).toDouble();
-	config.crownsSmoothedCHM = qs.value(QString("crownsSmoothedCHM"),
+	config.crownsOriginalCHM = qs.value("crownsOriginalCHM",
+			qstr(config.crownsOriginalCHM)).toString().toStdString();
+	config.crownsSmoothedCHM = qs.value("crownsSmoothedCHM",
 			qstr(config.crownsSmoothedCHM)).toString().toStdString();
-	config.crownsTreetopsDatabase = qs.value(QString("crownsTreetopsDatabase"),
+	config.crownsTreetopsDatabase = qs.value("crownsTreetopsDatabase",
 			qstr(config.crownsTreetopsDatabase)).toString().toStdString();
-	config.crownsCrownsRaster = qs.value(QString("crownsCrownsRaster"),
+	config.crownsCrownsRaster = qs.value("crownsCrownsRaster",
 			qstr(config.crownsCrownsRaster)).toString().toStdString();
-	config.crownsCrownsDatabase = qs.value(QString("crownsCrownsDatabase"),
+	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase)).toString().toStdString();
 }
 
 // Save the config settings for this app.
 void _saveConfig(TreetopsConfig &config) {
 	QSettings qs("TreetopsConfig", "dijital.ca");
-	qs.setValue(QString("srid"), config.srid);
-	qs.setValue(QString("buildIndex"), config.buildIndex);
-	qs.setValue(QString("tableCacheSize"), config.tableCacheSize);
-	qs.setValue(QString("rowCacheSize"), config.rowCacheSize); //(24 * 1024 * 1024),
-	qs.setValue(QString("doSmoothing"), config.doSmoothing);
-	qs.setValue(QString("smoothingWindowSize"), config.smoothWindowSize);
-	qs.setValue(QString("smoothSigma"), config.smoothSigma);
-	qs.setValue(QString("smoothOriginalCHM"), qstr(config.smoothOriginalCHM));
-	qs.setValue(QString("smoothSmoothedCHM"), qstr(config.smoothSmoothedCHM));
-	qs.setValue(QString("doTops"), config.doTops);
-	qs.setValue(QString("topsThresholds"), qstr(config.thresholds()));
-	qs.setValue(QString("topsOriginalCHM"), qstr(config.topsOriginalCHM));
-	qs.setValue(QString("topsSmoothedCHM"), qstr(config.topsSmoothedCHM));
-	qs.setValue(QString("topsTreetopsDatabase"),
+	qs.setValue("srid", config.srid);
+	qs.setValue("buildIndex", config.buildIndex);
+	qs.setValue("tableCacheSize", config.tableCacheSize);
+	qs.setValue("rowCacheSize", config.rowCacheSize); //(24 * 1024 * 1024),
+	qs.setValue("doSmoothing", config.doSmoothing);
+	qs.setValue("smoothingWindowSize", config.smoothWindowSize);
+	qs.setValue("smoothSigma", config.smoothSigma);
+	qs.setValue("smoothOriginalCHM", qstr(config.smoothOriginalCHM));
+	qs.setValue("smoothSmoothedCHM", qstr(config.smoothSmoothedCHM));
+	qs.setValue("doTops", config.doTops);
+	qs.setValue("topsThresholds", qstr(config.thresholds()));
+	qs.setValue("topsOriginalCHM", qstr(config.topsOriginalCHM));
+	qs.setValue("topsSmoothedCHM", qstr(config.topsSmoothedCHM));
+	qs.setValue("topsTreetopsDatabase",
 			qstr(config.topsTreetopsDatabase));
-	qs.setValue(QString("doCrowns"), config.doCrowns);
-	qs.setValue(QString("crownsRadius"), config.crownsRadius);
-	qs.setValue(QString("crownsHeightFraction"), config.crownsHeightFraction);
-	qs.setValue(QString("crownsMinHeight"), config.crownsMinHeight);
-	qs.setValue(QString("crownsSmoothedCHM"), qstr(config.crownsSmoothedCHM));
-	qs.setValue(QString("crownsTreetopsDatabase"),
+	qs.setValue("topsMaxNulls", config.topsMaxNulls);
+	qs.setValue("doCrowns", config.doCrowns);
+	qs.setValue("crownsRadius", config.crownsRadius);
+	qs.setValue("crownsHeightFraction", config.crownsHeightFraction);
+	qs.setValue("crownsMinHeight", config.crownsMinHeight);
+	qs.setValue("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM));
+	qs.setValue("crownsOriginalCHM", qstr(config.crownsOriginalCHM));
+	qs.setValue("crownsTreetopsDatabase",
 			qstr(config.crownsTreetopsDatabase));
-	qs.setValue(QString("crownsCrownsRaster"), qstr(config.crownsCrownsRaster));
-	qs.setValue(QString("crownsCrownsDatabase"),
+	qs.setValue("crownsCrownsRaster", qstr(config.crownsCrownsRaster));
+	qs.setValue("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase));
 
 }
@@ -228,11 +233,14 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	spnTopsTreetopsSRID->setValue(m_config.srid);
+	spnTopsMaxNulls->setValue(m_config.topsMaxNulls);
+
 	// -- crowns
 	grpCrowns->setChecked(m_config.doCrowns);
 	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
 	spnCrownsRadius->setValue(m_config.crownsRadius);
 	spnCrownsMinHeight->setValue(m_config.crownsMinHeight);
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
@@ -253,6 +261,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- tops
 	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
 	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
+	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
 	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(topsOriginalCHMChanged(QString)));
 	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(topsSmoothedCHMChanged(QString)));
 	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(topsTreetopsDatabaseChanged(QString)));
@@ -264,10 +273,12 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), this, SLOT(crownsRadiusChanged(double)));
 	connect(spnCrownsHeightFraction, SIGNAL(valueChanged(double)), this, SLOT(crownsHeightFractionChanged(double)));
 	connect(spnCrownsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(crownsMinHeightChanged(double)));
+	connect(txtCrownsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsOriginalCHMChanged(QString)));
 	connect(txtCrownsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsSmoothedCHMChanged(QString)));
 	connect(txtCrownsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsTreetopsDatabaseChanged(QString)));
 	connect(txtCrownsCrownsRaster, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsRasterChanged(QString)));
 	connect(txtCrownsCrownsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsCrownsDatabaseChanged(QString)));
+	connect(btnCrownsOriginalCHM, SIGNAL(clicked()), this, SLOT(crownsOriginalCHMClicked()));
 	connect(btnCrownsSmoothedCHM, SIGNAL(clicked()), this, SLOT(crownsSmoothedCHMClicked()));
 	connect(btnCrownsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(crownsTreetopsDatabaseClicked()));
 	connect(btnCrownsCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsCrownsRasterClicked()));
@@ -298,6 +309,11 @@ void TreetopsForm::resetProgress() {
 
 void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
 	m_config.srid = srid;
+	checkRun();
+}
+
+void TreetopsForm::topsMaxNullsChanged(double maxNulls) {
+	m_config.topsMaxNulls = maxNulls;
 	checkRun();
 }
 
@@ -359,6 +375,12 @@ void TreetopsForm::topsThresholdsClicked() {
 	checkRun();
 }
 
+void TreetopsForm::crownsOriginalCHMClicked() {
+	getInputFile(m_form, "Original CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsOriginalCHM);
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
+	checkRun();
+}
+
 void TreetopsForm::crownsSmoothedCHMClicked() {
 	getInputFile(m_form, "Smoothed CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsSmoothedCHM);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
@@ -413,6 +435,11 @@ void TreetopsForm::crownsHeightFractionChanged(double frac) {
 
 void TreetopsForm::crownsMinHeightChanged(double height) {
 	m_config.crownsMinHeight = height;
+	checkRun();
+}
+
+void TreetopsForm::crownsOriginalCHMChanged(QString file) {
+	m_config.crownsOriginalCHM = file.toStdString();
 	checkRun();
 }
 

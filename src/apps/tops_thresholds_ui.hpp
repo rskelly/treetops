@@ -15,18 +15,22 @@
 
 #include "ui_tops_thresholds.h"
 
+// Represents a single line in the tops thresholds dialog.
 class TopsThresholdItem : public QWidget {
 	Q_OBJECT
+private:
+	int m_index;
+
 public:
 	QDoubleSpinBox *spnHeight;
 	QSpinBox *spnWindow;
 	QToolButton *btnDelete;
-
 	TopsThresholdItem(QWidget *parent = 0);
-	void set(float height, uint8_t window);
+	void set(int index, float height, uint8_t window);
 	float height() const;
 	uint8_t window() const;
 	bool operator<(const TopsThresholdItem &other) const;
+	int index() const;
 
 public slots:
 	void itemDeleteClicked();
@@ -38,21 +42,24 @@ signals:
 	void itemDelete(TopsThresholdItem *item);
 };
 
+// Represents the thresholds dialog.
 class TopsThresholdsForm : public QObject, public Ui::TopsThresholdsForm {
 	Q_OBJECT
 private:
 	void sortItems();
+	bool valid() const;
+	void updateButtons();
 
 public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
-	std::map<float, uint8_t> m_thresholds;
+	std::vector<std::pair<float, uint8_t> > m_thresholds;
 	bool m_confirm;
 
 	TopsThresholdsForm();
-	void setThresholds(const std::map<float, uint8_t> &thresholds);
-	std::map<float, uint8_t> thresholds() const;
+	void setThresholds(const std::vector<std::pair<float, uint8_t> > &thresholds);
+	std::vector<std::pair<float, uint8_t> > thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~TopsThresholdsForm();

@@ -1043,7 +1043,7 @@ void Raster<T>::init(const std::string &filename, uint16_t bands, double minx,
 	m_ds = GetGDALDriverManager()->GetDriverByName("GTiff")->Create(
 			filename.c_str(), width, height, bands, m_type, opts);
 	if (m_ds == nullptr)
-		g_runerr("Failed to create file.");
+		g_runerr("Failed to create file: " << filename);
 
 	// Initialize geotransform.
 	double trans[6] = {

@@ -76,21 +76,28 @@ namespace geotools {
 
 			// Returns true if the pixel at the center of the given circular window is
 			// the maximum value in the window.
-			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max) {
+			bool isMaxCenter(Grid<float> &raster, int col, int row, int window, double *max, double *nulls) {
 				*max = 0;
 				int mc = 0, mr = 0;
-				float v;
-				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				int n = 0, ntotal = 0;
+				double d = g_max(std::sqrt(2.0), g_sq((double) window / 2));
 				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
 					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
-						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
-						if (d0 <= d && (v = raster.get(c, r)) > *max) {
-							*max = v;
-							mc = c;
-							mr = r;
+						float d0 = g_sq((double) col - c) + g_sq((double) row - r);
+						if (d0 <= d) {
+							++ntotal;
+							double v = raster.get(c, r);
+							if(v == raster.nodata()) {
+								++n;
+							} else if(v > *max) {
+								*max = v;
+								mc = c;
+								mr = r;
+							}
 						}
 					}
 				}
+				*nulls = (double) n / ntotal;
 				return mc == col && mr == row;
 			}
 
@@ -167,6 +174,7 @@ TreetopsConfig::TreetopsConfig() :
 	smoothWindowSize(3),
 	smoothSigma(0.8),
 	doTops(false),
+	topsMaxNulls(0.2),
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
@@ -276,7 +284,7 @@ void TreetopsConfig::parseThresholds(const std::string &str) {
 		float height = atof(item1.c_str());
 		uint8_t window = atoi(item2.c_str());
 		if(window == 0) continue;
-		topsThresholds[height] = window;
+		topsThresholds.push_back(std::make_pair(height, window));
 	}
 }
 
@@ -374,6 +382,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	uint16_t bufSize = 1024;
 
+	omp_set_num_threads(1);
+
 	// Iterate over the thresholds from lowest height to highest.
 	for(const auto &it : config.topsThresholds) {
 
@@ -407,14 +417,16 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					m_callbacks->statusCallback("Processing...");
 
 				// Iterate over the raster, applying the kernel to find the maxium at the centre.
-				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.rows() - b) - window / 2; ++row) {
+				for (int32_t row = window / 2; row < g_min(smooth.rows(), smoothed.rows() - b) - window / 2; ++row) {
 					for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
 
 						double v = smooth.get(col, row);
 						if(v < threshold) continue;
 
 						double max;
-						if (isMaxCenter(smooth, col, row, window, &max))
+						double nulls; // The proportion of null pixels.
+						bool isMax = isMaxCenter(smooth, col, row, window, &max, &nulls);
+						if (isMax && nulls <= config.topsMaxNulls)
 							tops.push_back(std::make_tuple(col, b + row - window / 2, window));
 					}
 					if (m_callbacks)
@@ -459,8 +471,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
-	//tmp.writeBlock(topsGrid);
+	Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
+	tmp.writeBlock(topsWindowGrid);
 
 	total = topsIDGrid.rows();
 	status = 0;
@@ -528,6 +540,15 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 }
 
+void _findCrownMax(Raster<float> &chm, Raster<uint32_t> &crowns, std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights) {
+	for(int i = 0; i < crowns.size(); ++i) {
+		uint32_t id = crowns.get(i);
+		double v = chm.get(i);
+		if(heights.find(id) == heights.end() || v > std::get<2>(heights[id]))
+			heights[id] = std::make_tuple(chm.toCentroidX(i % chm.cols()), chm.toCentroidY(i / chm.rows()), v);
+	}
+}
+
 void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	config.checkCrowns();
 
@@ -542,29 +563,10 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if (*cancel)
 		return;
 
-	// Initialize the rasters.
-	if(m_callbacks)
-		m_callbacks->statusCallback("Preparing rasters...");
-
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	double nodata = inrast.nodata();
 
-	Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
-	outrast.setNodata(0);
-
-	MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
-	blk.fill(0);
-
-	if (*cancel)
-		return;
-
-	if (m_callbacks) {
-		m_callbacks->stepCallback(0.02f);
-		m_callbacks->statusCallback("Preparing database...");
-	}
-
 	// Initialize the database, get the treetop count and estimate the buffer size.
-
 	SQLite db(config.crownsTreetopsDatabase);
 
 	if (m_callbacks) {
@@ -572,110 +574,152 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing crowns...");
 	}
 
-	// Build the list of offsets for D8 or D4 search.
-	size_t offsetCount = 8;
-	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-	//size_t offsetCount = 4;
-	//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
-
-	uint64_t geomCount = db.getGeomCount();
-	std::atomic<uint64_t> status(0);
-	uint32_t bufSize = 128;
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
-
-	#pragma omp parallel
 	{
 
-		// To keep track of visited cells.
-		MemRaster<float> buf(inrast.cols(), bufSize + radius * 2 + 1);
-		MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
+		Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
+		outrast.setNodata(0);
 
-		#pragma omp for
-		for(uint32_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
-			if (*cancel) continue;
+		MemRaster<uint32_t> blk(inrast.cols(), inrast.rows(), 1);
+		blk.fill(0);
 
-			if (m_callbacks)
-				m_callbacks->statusCallback("Loading tops...");
+		// Build the list of offsets for D8 or D4 search.
+		size_t offsetCount = 8;
+		int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+		//size_t offsetCount = 4;
+		//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
 
-			int b = i * bufSize;
+		uint64_t geomCount = db.getGeomCount();
+		std::atomic<uint64_t> status(0);
+		uint32_t bufSize = 128;
+		int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
 
-			Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
-				inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
+		#pragma omp parallel
+		{
 
-			std::vector<Point*> tops;
-			#pragma omp critical(__crowns_db)
-			db.getPoints(tops, bounds);
-			if(tops.empty())
-				continue;
+			// To keep track of visited cells.
+			MemRaster<float> buf(inrast.cols(), bufSize + radius * 2 + 1);
+			MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
 
-			status += tops.size();
+			#pragma omp for
+			for(uint32_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+				if (*cancel) continue;
 
-			// Convert the Tops to Nodes.
-			std::queue<Node*> q;
-			for (Point *p : tops) {
-				if (*cancel)
-					break;
-				q.push(new Node(p));
-				delete p;
-			}
+				if (m_callbacks)
+					m_callbacks->statusCallback("Loading tops...");
 
-			if (m_callbacks)
-				m_callbacks->statusCallback("Loading raster...");
+				int b = i * bufSize;
 
-			uint16_t readOffset = b > 0 ? b - radius : 0;
-			uint16_t writeOffset = b > 0 ? 0 : radius;
-			buf.fill(inrast.nodata());
-			#pragma omp critical(__crowns_in)
-			inrast.readBlock(0, readOffset, buf, 0, writeOffset);
+				Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
+					inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
 
-			blk.fill(0);
-			std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
+				std::vector<Point*> tops;
+				#pragma omp critical(__crowns_db)
+				db.getPoints(tops, bounds);
+				if(tops.empty())
+					continue;
 
-			if (m_callbacks)
-				m_callbacks->statusCallback("Delineating crowns...");
+				status += tops.size();
 
-			// Run through the queue.
-			while (!*cancel && q.size()) {
-				Node *n = q.front();
-				q.pop();
-
-				blk.set(n->c, n->r - b + radius, (uint32_t) n->id);
-
-				for(size_t i = 0; i < offsetCount; ++i) {
-					int c = n->c + offsets[i][0];
-					int r = n->r + offsets[i][1];
-
-					if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= buf.rows() || c >= buf.cols())
-						continue;
-
-					uint32_t idx = (uint64_t) (r - b + radius) * inrast.cols() + c;
-					if (visited[idx])
-						continue;
-
-					double v = buf.get(idx);
-					if (v != nodata           												// is not nodata
-						&& v < n->z		      												// is less than the neighbouring pixel
-						&& v >= config.crownsMinHeight 										// is greater than the min height
-						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
-						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
-					) {
-						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-						blk.set(idx, n->id);
-						visited[idx] = true;
-					}
+				// Convert the Tops to Nodes.
+				std::queue<Node*> q;
+				for (Point *p : tops) {
+					q.push(new Node(p));
+					delete p;
 				}
-				delete n;
+
+				if (*cancel)
+					continue;
+
+				if (m_callbacks)
+					m_callbacks->statusCallback("Loading raster...");
+
+				uint16_t readOffset = b > 0 ? b - radius : 0;
+				uint16_t writeOffset = b > 0 ? 0 : radius;
+				buf.fill(inrast.nodata());
+				#pragma omp critical(__crowns_in)
+				inrast.readBlock(0, readOffset, buf, 0, writeOffset);
+
+				blk.fill(0);
+				std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
+
+				if (m_callbacks)
+					m_callbacks->statusCallback("Delineating crowns...");
+
+				// Run through the queue.
+				while (!*cancel && q.size()) {
+					Node *n = q.front();
+					q.pop();
+
+					int c = n->c;
+					int r = n->r - b + radius;
+					if(!(c >= 0 && r >= 0 && c < blk.cols() && r < blk.rows()))
+						continue;
+
+					blk.set(n->c, n->r - b + radius, (uint32_t) n->id);
+
+					for(size_t i = 0; i < offsetCount; ++i) {
+						c = n->c + offsets[i][0];
+						r = n->r + offsets[i][1];
+
+						if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= buf.rows() || c >= buf.cols())
+							continue;
+
+						uint32_t idx = (uint64_t) (r - b + radius) * inrast.cols() + c;
+						if (visited[idx])
+							continue;
+
+						double v = buf.get(idx);
+						if (v != nodata           												// is not nodata
+							&& v < n->z		      												// is less than the neighbouring pixel
+							&& v >= config.crownsMinHeight 										// is greater than the min height
+							&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
+							&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+						) {
+							q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+							blk.set(idx, n->id);
+							visited[idx] = true;
+						}
+					}
+					delete n;
+				}
+
+				if(m_callbacks)
+					m_callbacks->statusCallback("Writing output...");
+				#pragma omp critical(__crowns_out)
+				outrast.writeBlock(0, b, blk, 0, radius, inrast.cols(), bufSize);
+
+				if(m_callbacks)
+					m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
+
 			}
-
-			if(m_callbacks)
-				m_callbacks->statusCallback("Writing output...");
-			#pragma omp critical(__crowns_out)
-			outrast.writeBlock(0, b, blk, 0, radius, inrast.cols(), bufSize);
-
-			if(m_callbacks)
-				m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
-
 		}
+	}
+
+	Raster<uint32_t> outrast(config.crownsCrownsRaster);
+
+	{
+		if(m_callbacks)
+			m_callbacks->statusCallback("Finding true maxima...");
+
+		std::unordered_map<uint32_t, std::tuple<double, double, double> > maxHeights;
+		Raster<float> chm(config.crownsOriginalCHM);
+		_findCrownMax(chm, outrast, maxHeights);
+
+		if(m_callbacks)
+			m_callbacks->statusCallback("Saving true maxima...");
+		std::map<std::string, double> data;
+		db.begin();
+		for(const auto &it : maxHeights) {
+			data["originalX"] = std::get<0>(it.second);
+			data["originalY"] = std::get<1>(it.second);
+			data["originalZ"] = std::get<2>(it.second);
+			db.updateRow("id", it.first, data);
+		}
+		// TODO: This updates the geometry to use the values from the original raster.
+		// This is problematic.
+		//std::string q = "UPDATE data SET geom=GeomFromText('POINTZ(' || originalX || ' ' || originalY || ' ' || originalZ || ')', SRID(geom))";
+		//db.execute(q);
+		db.commit();
 	}
 
 	// TODO: Filter out isolated pixels if D8 is used. See DTOOLS-22
