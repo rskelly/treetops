@@ -333,8 +333,9 @@ void TreetopsForm::smoothOriginalCHMClicked() {
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
 	m_config.topsOriginalCHM = m_config.smoothOriginalCHM;
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
+	m_config.crownsOriginalCHM = m_config.smoothOriginalCHM;
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	checkRun();
-	updateView();
 }
 
 void TreetopsForm::smoothSmoothedCHMClicked() {
@@ -358,6 +359,8 @@ void TreetopsForm::topsSmoothedCHMClicked() {
 void TreetopsForm::topsOriginalCHMClicked() {
 	getInputFile(m_form, "Original CHM for Treetops", m_last, RASTER_PATTERN, m_config.topsOriginalCHM);
 	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
+	m_config.crownsOriginalCHM = m_config.smoothOriginalCHM;
+	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	checkRun();
 }
 

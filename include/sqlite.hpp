@@ -295,7 +295,7 @@ namespace geotools {
             void begin() {
                 m_trans = true;
                 char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "BEGIN TRANSACTION", NULL, NULL, &err))
+                if (SQLITE_OK != sqlite3_exec(m_db, "BEGIN IMMEDIATE TRANSACTION", NULL, NULL, &err))
                     handleError("Failed to start transaction: ", err);
             }
 

@@ -356,6 +356,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	fields["originalX"] = 2;
 	fields["originalY"] = 2;
 	fields["originalZ"] = 2;
+	
 	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
 	db.makeFast();
 	db.dropGeomIndex();
