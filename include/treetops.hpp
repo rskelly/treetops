@@ -51,6 +51,8 @@ namespace geotools {
                 std::string smoothOriginalCHM;
                 std::string smoothSmoothedCHM;
 
+                int smoothOriginalCHMBand;
+
                 // If true, treetop location will be performed.
                 bool doTops;
 

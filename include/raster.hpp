@@ -200,7 +200,7 @@ namespace geotools {
             GridStats stats();
 
             // Returns the grid properties
-            const GridProps &props() const;
+            virtual const GridProps &props() const = 0;
 
             // Fill the entire dataset with the given value.
             virtual void fillFloat(double value, int band = 1) = 0;
@@ -313,6 +313,8 @@ namespace geotools {
             // Return a pointer to the allocated memory.
             void *grid();
 
+            const GridProps& props() const;
+
             // Initialize with the given number of cols and rows.
             // (Re)allocates memory for the internal grid.
             void init(const GridProps &props, bool mapped = false);
@@ -334,19 +336,18 @@ namespace geotools {
             void setFloat(int col, int row, double value, int band = 1);
 
             // Read data into Grid instance.
-            void readBlock(Grid &grd,
-            		int cols = 0, int rows = 0,
-            		int srcCol = 0, int srcRow = 0,
+			void readBlock(Grid &grd,
+					int cols = 0, int rows = 0,
+					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
 
-            // Write data from Grid instance.
-            void writeBlock(Grid &grd,
-            		int cols = 0, int rows = 0,
-            		int srcCol = 0, int srcRow = 0,
+			// Write data from Grid instance.
+			void writeBlock(Grid &grd,
+					int cols = 0, int rows = 0,
+					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-
 
             // Convert the grid to matrix.
             void toMatrix(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> &mtx, int band = 1);
@@ -390,27 +391,39 @@ namespace geotools {
             void fillInt(int value, int band = 1);
             void fillFloat(double value, int band = 1);
 
-            // Read the block at the given band and position into the given grid.
+            // Read data into Grid instance.
+			void readBlock(Grid &grd,
+					int cols = 0, int rows = 0,
+					int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
             void readBlock(MemRaster &grd,
-            		int cols = 0, int rows = 0, int dstBand = 1,
+            		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0);
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
             void readBlock(Raster &grd,
             		int cols = 0, int rows = 0,
-					int srcBand = 1, int dstBand = 1,
             		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0);
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
 
-            // Write the block at the given band and position from the given grid.
+			// Write data from Grid instance.
+			void writeBlock(Grid &grd,
+					int cols = 0, int rows = 0,
+					int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
             void writeBlock(MemRaster &grd,
-            		int cols = 0, int rows = 0, int srcBand = 1,
+            		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0);
+					int dstCol = 0, int dstRow = 0,
+            		int srcBand = 1, int dstBand = 1);
             void writeBlock(Raster &grd,
             		int cols = 0, int rows = 0,
-					int srcBand = 1, int dstBand = 1,
             		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0);
+					int dstCol = 0, int dstRow = 0,
+					int srcBand = 1, int dstBand = 1);
 
             // Returns a pixel value.
             int getInt(double x, double y, int band = 1);

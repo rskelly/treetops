@@ -76,7 +76,7 @@ namespace geotools {
 
 			// Returns true if the pixel at the center of the given circular window is
 			// the maximum value in the window.
-			bool isMaxCenter(Grid<double> &raster, int col, int row, int window, double *max) {
+			bool isMaxCenter(Grid &raster, int col, int row, int window, double *max, int band) {
 				*max = 0;
 				int mc = 0, mr = 0;
 				float v;
@@ -84,7 +84,7 @@ namespace geotools {
 				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
 					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
-						if (d0 <= d && (v = raster.get(c, r)) > *max) {
+						if (d0 <= d && (v = raster.getFloat(c, r, band)) > *max) {
 							*max = v;
 							mc = c;
 							mr = r;
@@ -95,15 +95,15 @@ namespace geotools {
 			}
 
 			// Returns the max value of pixels in the kernel.
-			void getKernelMax(Grid<double> &raster, int col, int row, int window,
-				double *max, uint16_t *mc, uint16_t *mr) {
+			void getKernelMax(Grid &raster, int col, int row, int window,
+				double *max, uint16_t *mc, uint16_t *mr, int band) {
 				*max = G_DBL_MAX_NEG;
 				float v;
 				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
 				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
 					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
-						if (d0 <= d && (v = raster.get(c, r)) > *max) {
+						if (d0 <= d && (v = raster.getFloat(c, r, band)) > *max) {
 							*max = v;
 							*mc = c;
 							*mr = r;
@@ -113,13 +113,15 @@ namespace geotools {
 			}
 
 			// Set all cells in the circular kernel to zero except the center.
-			void zeroKernel(Grid<uint8_t> &raster, int col, int row, int window) {
+			void zeroKernel(Grid &raster, int col, int row, int window, int band) {
+				int cols = raster.props().cols();
+				int rows = raster.props().rows();
 				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
-				for (int r = g_max(0, row - window / 2); r < g_min(raster.rows(), row + window / 2 + 1); ++r) {
-					for (int c = g_max(0, col - window / 2); c < g_min(raster.cols(), col + window / 2 + 1); ++c) {
+				for (int r = g_max(0, row - window / 2); r < g_min(rows, row + window / 2 + 1); ++r) {
+					for (int c = g_max(0, col - window / 2); c < g_min(cols, col + window / 2 + 1); ++c) {
 						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
 						if (d0 <= d && c != col && r != row)
-							raster.set(c, r, 0);
+							raster.setInt(c, r, 0, band);
 					}
 				}
 			}
@@ -166,6 +168,7 @@ TreetopsConfig::TreetopsConfig() :
 	doSmoothing(false),
 	smoothWindowSize(3),
 	smoothSigma(0.8),
+	smoothOriginalCHMBand(1),
 	doTops(false),
 	doCrowns(false),
 	crownsRadius(10.0),
@@ -304,9 +307,11 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 		cancel = &__tt_cancel;
 
 	Raster in(config.smoothOriginalCHM);
-	GridProps props = new GridProps(in.props());
-	Raster out(config.smoothSmoothedCHM, in.props());
-	in.smooth(out, config.smoothSigma, config.smoothWindowSize, m_callbacks, cancel);
+	GridProps pr = GridProps(in.props());
+	pr.setWritable(true);
+	Raster out(config.smoothSmoothedCHM, pr);
+	in.smooth(out, config.smoothSigma, config.smoothWindowSize,
+			config.smoothOriginalCHMBand, m_callbacks, cancel);
 }
 
 void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
@@ -361,15 +366,18 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
-	MemRaster<uint8_t> topsWindowGrid(original.cols(), original.rows(), true);
-	topsWindowGrid.fill(0);
+	GridProps pr = GridProps(original.props());
+	pr.setDataType(DataType::Byte);
+	MemRaster topsWindowGrid(pr, true);
+	topsWindowGrid.fillInt(0);
 
-	MemRaster<uint64_t> topsIDGrid(original.cols(), original.rows(), true);
-	topsIDGrid.fill(0);
+	pr.setDataType(DataType::UInt32);
+	MemRaster topsIDGrid(pr, true);
+	topsIDGrid.fillInt(0);
 
 	uint64_t topId = 0;
 
-	uint64_t total = config.topsThresholds.size() * topsWindowGrid.rows();
+	uint64_t total = config.topsThresholds.size() * topsWindowGrid.props().rows();
 	std::atomic<uint64_t> status(0);
 
 	uint16_t bufSize = 1024;
@@ -383,11 +391,12 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		#pragma omp parallel
 		{
 
-			MemRaster<double> smooth(smoothed.cols(), bufSize + window, true);
-			smooth.setNodata(smoothed.nodata());
+			GridProps pr = GridProps(smoothed.props());
+			pr.setDataType(DataType::Float64);
+			MemRaster smooth(pr, true);
 
 			#pragma omp for
-			for(uint16_t j = 0; j < smoothed.rows() / bufSize + 1; ++j) {
+			for(uint16_t j = 0; j < smoothed.props().rows() / bufSize + 1; ++j) {
 				if (*cancel) continue;
 
 				int32_t b = j * bufSize;
@@ -397,9 +406,10 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 				uint16_t readOffset = b > 0 ? b - window / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
 				uint16_t writeOffset = b > 0 ? 0 : window / 2;     // If this is the first row, write to (size / 2), otherwise 0.
-				smooth.fill(smoothed.nodata());
+				smooth.fillFloat(smooth.props().nodata());
 				#pragma omp critical(__tops_read)
-				smoothed.readBlock(0, readOffset, smooth, 0, writeOffset);
+				smoothed.readBlock(smooth, smooth.props().cols(), smooth.props().rows(),
+						0, readOffset, 0, writeOffset);
 
 				std::list<std::tuple<int32_t, int32_t, uint8_t> > tops;
 
@@ -407,14 +417,14 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					m_callbacks->statusCallback("Processing...");
 
 				// Iterate over the raster, applying the kernel to find the maxium at the centre.
-				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.rows() - b) - window / 2; ++row) {
-					for (int32_t col = window / 2; col < smooth.cols() - window / 2; ++col) {
+				for (int32_t row = window / 2; row < g_min(bufSize, smoothed.props().rows() - b) - window / 2; ++row) {
+					for (int32_t col = window / 2; col < smooth.props().cols() - window / 2; ++col) {
 
-						double v = smooth.get(col, row);
+						double v = smooth.getFloat(col, row);
 						if(v < threshold) continue;
 
 						double max;
-						if (isMaxCenter(smooth, col, row, window, &max))
+						if (isMaxCenter(smooth, col, row, window, &max, 1))
 							tops.push_back(std::make_tuple(col, b + row - window / 2, window));
 					}
 					if (m_callbacks)
@@ -428,32 +438,33 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				#pragma omp critical(__tops_write)
 				{
 					for (const auto &top : tops) {
-						topsWindowGrid.set(std::get<0>(top), std::get<1>(top), std::get<2>(top));
-						topsIDGrid.set(std::get<0>(top), std::get<1>(top), ++topId);
+						topsWindowGrid.setInt(std::get<0>(top), std::get<1>(top), std::get<2>(top));
+						topsIDGrid.setInt(std::get<0>(top), std::get<1>(top), ++topId);
 					}
 				}
 			}
 		}
 	}
 
-	MemRaster<uint64_t> topsParentGrid(original.cols(), original.rows(), true);
-	topsParentGrid.fill(0);
+	pr = GridProps(original.props());
+	MemRaster topsParentGrid(pr, true);
+	topsParentGrid.fillInt(0);
 
 	uint8_t minWindow = config.topsThresholds.begin()->second;
 
-	for(uint16_t row = 0; row < original.rows(); ++row) {
-		for(uint16_t col = 0; col < original.cols(); ++col) {
+	for(uint16_t row = 0; row < original.props().rows(); ++row) {
+		for(uint16_t col = 0; col < original.props().cols(); ++col) {
 
-			uint8_t window = topsWindowGrid.get(col, row);
+			uint8_t window = topsWindowGrid.getInt(col, row);
 			if(window <= minWindow) continue;
 
-			for(int32_t r = g_max(0, row - window / 2); r < g_min(original.rows(), row + window / 2 + 1); ++r) {
-				for(int32_t c = g_max(0, col - window / 2); c < g_min(original.cols(), col + window / 2 + 1); ++c) {
+			for(int32_t r = g_max(0, row - window / 2); r < g_min(original.props().rows(), row + window / 2 + 1); ++r) {
+				for(int32_t c = g_max(0, col - window / 2); c < g_min(original.props().cols(), col + window / 2 + 1); ++c) {
 					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) continue;
 
-					uint8_t window0 = topsWindowGrid.get(c, r);
-					if(window0 < window && !topsParentGrid.get(c, r))
-						topsParentGrid.set(c, r, topsIDGrid.get(col, row)); //  Save the ID of the parent.
+					uint8_t window0 = topsWindowGrid.getInt(c, r);
+					if(window0 < window && !topsParentGrid.getInt(c, r))
+						topsParentGrid.setInt(c, r, topsIDGrid.getInt(col, row)); //  Save the ID of the parent.
 				}
 			}
 		}
@@ -462,7 +473,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
 	//tmp.writeBlock(topsGrid);
 
-	total = topsIDGrid.rows();
+	total = topsIDGrid.props().rows();
 	status = 0;
 
 	#pragma omp parallel
@@ -471,23 +482,23 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		std::list<Top*> tops;
 
 		#pragma omp for
-		for(int32_t row = 0; row < topsIDGrid.rows(); ++row) {
+		for(int32_t row = 0; row < topsIDGrid.props().rows(); ++row) {
 			if(*cancel) continue;
 			if (m_callbacks)
 				m_callbacks->statusCallback("Processing...");
-			for(int32_t col = 0; col < topsIDGrid.cols(); ++col) {
+			for(int32_t col = 0; col < topsIDGrid.props().cols(); ++col) {
 
-				uint8_t window = topsWindowGrid.get(col, row);
+				uint8_t window = topsWindowGrid.getInt(col, row);
 				if(!window) continue;
 
-				Top * pt = new Top(topsIDGrid.get(col, row),
-					topsParentGrid.get(col, row),
+				Top * pt = new Top(topsIDGrid.getInt(col, row),
+					topsParentGrid.getInt(col, row),
 					0, // original.toCentroidX(col),
 					0, // original.toCentroidY(row),
 					0, // original.get(col, row),
-					original.toCentroidX(col),
-					original.toCentroidY(row),
-					smoothed.get(col, row),
+					original.props().toCentroidX(col),
+					original.props().toCentroidY(row),
+					smoothed.getInt(col, row),
 					col, row
 				);
 				tops.push_back(pt);
@@ -548,13 +559,15 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	Raster inrast(config.crownsSmoothedCHM);
 	double nodata = inrast.props().nodata();
-	GridProps props = new GridProps(inrast.props());
-	props.setBands(1);
-	props.setNoData(0);
-	Raster<uint32_t> outrast(config.crownsCrownsRaster, props);
+	GridProps pr = GridProps(inrast.props());
+	pr.setBands(1);
+	pr.setNoData(0);
+	Raster outrast(config.crownsCrownsRaster, pr);
 
-	MemRaster<uint32_t> blk(inrast.props().cols(), inrast.props()rows(), 1);
-	blk.fill(0);
+	pr = GridProps(inrast.props());
+	pr.setDataType(DataType::UInt32);
+	MemRaster blk(pr, 1);
+	blk.fillInt(0);
 
 	if (*cancel)
 		return;
@@ -582,17 +595,22 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	uint64_t geomCount = db.getGeomCount();
 	std::atomic<uint64_t> status(0);
 	uint32_t bufSize = 128;
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
 
 	#pragma omp parallel
 	{
 
 		// To keep track of visited cells.
-		MemRaster<double> buf(inrast.cols(), bufSize + radius * 2 + 1);
-		MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
+		GridProps pr = GridProps(inrast.props());
+		pr.setDataType(DataType::Float64);
+		pr.setSize(pr.cols(), bufSize + radius * 2 + 1);
+		MemRaster buf(pr);
+		pr.setDataType(DataType::UInt32);
+		MemRaster blk(pr);
 
+		const GridProps &iprops = inrast.props();
 		#pragma omp for
-		for(uint32_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+		for(uint32_t i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
 			if (*cancel) continue;
 
 			if (m_callbacks)
@@ -600,8 +618,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 			int b = i * bufSize;
 
-			Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
-				inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
+			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
+					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
 
 			std::vector<Point*> tops;
 			#pragma omp critical(__crowns_db)
@@ -625,12 +643,13 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 			uint16_t readOffset = b > 0 ? b - radius : 0;
 			uint16_t writeOffset = b > 0 ? 0 : radius;
-			buf.fill(inrast.nodata());
+			buf.fillFloat(iprops.nodata());
 			#pragma omp critical(__crowns_in)
-			inrast.readBlock(0, readOffset, buf, 0, writeOffset);
+			inrast.readBlock(buf, buf.props().cols(), buf.props().rows(),
+					0, readOffset, 0, writeOffset);
 
-			blk.fill(0);
-			std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
+			blk.fillInt(0);
+			std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Delineating crowns...");
@@ -640,20 +659,21 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				Node *n = q.front();
 				q.pop();
 
-				blk.set(n->c, n->r - b + radius, (uint32_t) n->id);
+				blk.setInt(n->c, n->r - b + radius, (uint32_t) n->id);
 
 				for(size_t i = 0; i < offsetCount; ++i) {
 					int c = n->c + offsets[i][0];
 					int r = n->r + offsets[i][1];
 
-					if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= buf.rows() || c >= buf.cols())
+					if ((r - b + radius) < 0 || c < 0 ||
+							(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
 						continue;
 
-					uint32_t idx = (uint64_t) (r - b + radius) * inrast.cols() + c;
+					uint32_t idx = (uint64_t) (r - b + radius) * iprops.cols() + c;
 					if (visited[idx])
 						continue;
 
-					double v = buf.get(idx);
+					double v = buf.getFloat(idx);
 					if (v != nodata           												// is not nodata
 						&& v < n->z		      												// is less than the neighbouring pixel
 						&& v >= config.crownsMinHeight 										// is greater than the min height
@@ -661,7 +681,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 					) {
 						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-						blk.set(idx, n->id);
+						blk.setInt(idx, n->id);
 						visited[idx] = true;
 					}
 				}
@@ -671,7 +691,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			if(m_callbacks)
 				m_callbacks->statusCallback("Writing output...");
 			#pragma omp critical(__crowns_out)
-			outrast.writeBlock(0, b, blk, 0, radius, inrast.cols(), bufSize);
+			outrast.writeBlock(blk, iprops.cols(), bufSize, 0, b, 0, radius);
 
 			if(m_callbacks)
 				m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
