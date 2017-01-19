@@ -584,12 +584,12 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 	#pragma omp parallel
 	{
 
-		int bufSize = g_max(size, 1024);
+		int bufSize = g_max(size, 512);
 
 		GridProps pr;
 		pr.setSize(cols, bufSize + size);
 		pr.setNoData(nd);
-		pr.setDataType(DataType::Float64);
+		pr.setDataType(props().dataType());
 		MemRaster buf(pr, false);
 		buf.fillFloat(nd);
 
@@ -610,8 +610,9 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 
 			int readOffset = b > 0 ? b - size / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
 			int writeOffset = b > 0 ? 0 : size / 2;     // If this is the first row, write to (size / 2), otherwise 0.
+			std::cerr << "read buf\n";
 			#pragma omp critical(__smooth_read)
-			readBlock(buf, pr.cols(), pr.rows(), 1, 0, readOffset, 0, writeOffset);
+			readBlock(buf, pr.cols(), pr.rows(), 0, readOffset, 0, writeOffset, band);
 
 			if(status)
 				status->statusCallback("Processing...");
@@ -644,6 +645,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 				status->statusCallback("Writing...");
 			}
 
+			std::cerr << "write smooth\n";
 			#pragma omp critical(__smooth_write)
 			smoothed.writeBlock(smooth, cols, g_min(bufSize, rows - b - size), 0, b, 0, size / 2); // Always write to b and read from (size / 2)
 		}
@@ -725,21 +727,33 @@ void MemRaster::init(const GridProps &pr, bool mapped) {
 
 void MemRaster::fillFloat(double value, int band) {
 	checkInit();
-	for(long i = 0; i < props().size(); ++i)
-		*(((double *) m_grid) + i) = value;
+	if(props().isInt()) {
+		for(long i = 0; i < props().size(); ++i)
+			*(((double *) m_grid) + i) = value;
+	} else {
+		fillInt((int) value, band);
+	}
 }
 
 void MemRaster::fillInt(int value, int band) {
 	checkInit();
-	for(long i = 0; i < props().size(); ++i)
-		*(((int *) m_grid) + i) = value;
+	if(props().isInt()) {
+		for(long i = 0; i < props().size(); ++i)
+			*(((int *) m_grid) + i) = value;
+	} else {
+		fillFloat((double) value, band);
+	}
 }
 
 double MemRaster::getFloat(long idx, int band) {
 	checkInit();
 	if (idx < 0 || idx >= props().size())
 		g_argerr("Index out of bounds: " << idx << "; size: " << props().size());
-	return *(((double *) m_grid) + idx);
+	if(props().isInt()) {
+		return (double) getInt(idx, band);
+	} else {
+		return *(((double *) m_grid) + idx);
+	}
 }
 
 double MemRaster::getFloat(int col, int row, int band) {
@@ -751,7 +765,11 @@ int MemRaster::getInt(long idx, int band) {
 	checkInit();
 	if (idx < 0 || idx >= props().size())
 		g_argerr("Index out of bounds: " << idx << "; size: " << props().size());
-	return *(((int *) m_grid) + idx);
+	if(props().isInt()) {
+		return *(((int *) m_grid) + idx);
+	} else {
+		return (int) getInt(idx, band);
+	}
 }
 
 int MemRaster::getInt(int col, int row, int band) {
@@ -770,7 +788,11 @@ void MemRaster::setFloat(long idx, double value, int band) {
 		g_argerr("Index out of bounds: " << idx << "; size: " << props().size()
 						<< "; value: " << value << "; col: " << (idx % props().cols())
 						<< "; row: " << (idx / props().cols()));
-	*(((double *) m_grid) + idx) = value;
+	if(props().isInt()) {
+		setInt(idx, (int) value, band);
+	} else {
+		*(((double *) m_grid) + idx) = value;
+	}
 }
 
 void MemRaster::setInt(int col, int row, int value, int band) {
@@ -784,7 +806,11 @@ void MemRaster::setInt(long idx, int value, int band) {
 		g_argerr("Index out of bounds: " << idx << "; size: " << props().size()
 						<< "; value: " << value << "; col: " << (idx % props().cols())
 						<< "; row: " << (idx / props().cols()));
-	*(((int *) m_grid) + idx) = value;
+	if(props().isInt()) {
+		*(((int *) m_grid) + idx) = value;
+	} else {
+		setFloat(idx, (double) value, band);
+	}
 }
 
 void MemRaster::toMatrix(
@@ -909,12 +935,13 @@ Raster::Raster(const std::string &filename, bool writable) :
 	if (m_ds == NULL)
 		g_runerr("Failed to open raster.");
 
+	m_type = m_ds->GetRasterBand(1)->GetRasterDataType();
 	// Save some raster properties
 	double trans[6];
 	m_ds->GetGeoTransform(trans);
 	m_props.setTrans(trans);
 	m_props.setSize(m_ds->GetRasterXSize(), m_ds->GetRasterYSize());
-	m_props.setDataType(_gdt2DataType(m_ds->GetRasterBand(1)->GetRasterDataType()));
+	m_props.setDataType(_gdt2DataType(m_type));
 	m_props.setBands(m_ds->GetRasterCount());
 	m_props.setWritable(writable);
 	m_props.setProjection(std::string(m_ds->GetProjectionRef()));
@@ -964,7 +991,7 @@ void Raster::fillFloat(double value, int band) {
 	}
 }
 
-void Raster::readBlock(Raster &grd, int cols, int rows,
+void Raster::readBlockRaster(Raster &grd, int cols, int rows,
 		int srcBand, int dstBand,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow) {
@@ -988,39 +1015,50 @@ void Raster::readBlock(Raster &grd, int cols, int rows,
 			buf.buf, cols, rows, _dataType2GDT(props().dataType()), 0, 0, 0))
 		g_runerr("Failed to read from: " << filename());
 	if(CPLE_None != grd.m_ds->GetRasterBand(dstBand)->RasterIO(GF_Write, dstCol, dstRow, cols, rows,
-			buf.buf, cols, rows, _dataType2GDT(props().dataType()), 0, 0, 0))
+			buf.buf, cols, rows, _dataType2GDT(grd.props().dataType()), 0, 0, 0))
 		g_runerr("Failed to write to: " << grd.filename());
 }
 
 
-void Raster::readBlock(MemRaster &grd,
+void Raster::readBlockMemRaster(MemRaster &grd,
             		int cols, int rows,
             		int srcCol, int srcRow,
 					int dstCol, int dstRow,
 					int srcBand, int dstBand) {
 
-	if(props().dataType() != grd.props().dataType())
-		g_runerr("Rasters must have the same data type. Use convert if different.");
+	//if(props().dataType() != grd.props().dataType())
+	//	g_runerr("Rasters must have the same data type. Use convert if different.");
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 
 	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
 	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
-
+	std::cerr << cols << ", " << rows << "\n";
+	std::cerr << srcCol << ", " << srcRow << "\n";
+	std::cerr << dstCol << ", " << dstRow << "\n";
+	std::cerr << grd.props().cols() << ", " << grd.props().rows() << "\n";
 	if(CPLE_None != m_ds->GetRasterBand(srcBand)->RasterIO(GF_Read, srcCol, srcRow, cols, rows,
-			grd.grid(), dstCol, dstRow, _dataType2GDT(props().dataType()), 0, 0, 0))
+			((char *) grd.grid()) + (dstRow * grd.props().cols() + dstCol) * _getTypeSize(grd.props().dataType()), 
+			grd.props().cols(), grd.props().rows(), _dataType2GDT(grd.props().dataType()), 0, 0, 0))
 		g_runerr("Failed to read from: " << filename());
 }
 
 void Raster::readBlock(Grid &grd,
-            		int cols, int rows,
-            		int srcCol, int srcRow,
-					int dstCol, int dstRow,
-					int srcBand, int dstBand) {
-	readBlock(grd, cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+		int cols, int rows,
+		int srcCol, int srcRow,
+		int dstCol, int dstRow,
+		int srcBand, int dstBand) {
+	if(dynamic_cast<MemRaster*>(&grd)) {
+		readBlockMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+	} else if(dynamic_cast<Raster*>(&grd)) {
+		readBlockRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+	} else {
+		g_runerr("readBlock not implemented to handle this type of grid.");
+	}
 }
 
-void Raster::writeBlock(Raster &grd,
+
+void Raster::writeBlockRaster(Raster &grd,
 			int cols, int rows,
 			int srcCol, int srcRow,
 			int dstCol, int dstRow,
@@ -1028,8 +1066,8 @@ void Raster::writeBlock(Raster &grd,
 
 	if (&grd == this)
 		g_runerr("Recursive call to readBlock.");
-	if(props().dataType() != grd.props().dataType())
-		g_runerr("Rasters must have the same data type. Use convert if different.");
+	//if(props().dataType() != grd.props().dataType())
+	//	g_runerr("Rasters must have the same data type. Use convert if different.");
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 	if(dstBand < 1 || dstBand > grd.props().bands())
@@ -1046,11 +1084,11 @@ void Raster::writeBlock(Raster &grd,
 			buf.buf, cols, rows, _dataType2GDT(props().dataType()), 0, 0, 0))
 		g_runerr("Failed to read from: " << grd.filename());
 	if(CPLE_None != m_ds->GetRasterBand(srcBand)->RasterIO(GF_Write, dstCol, dstRow, cols, rows,
-			buf.buf, cols, rows, _dataType2GDT(props().dataType()), 0, 0, 0))
+			buf.buf, cols, rows, _dataType2GDT(grd.props().dataType()), 0, 0, 0))
 		g_runerr("Failed to write to: " << filename());
 }
 
-void Raster::writeBlock(MemRaster &grd,
+void Raster::writeBlockMemRaster(MemRaster &grd,
 		int cols, int rows,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
@@ -1064,8 +1102,14 @@ void Raster::writeBlock(MemRaster &grd,
 	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
 	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
 
+	std::cerr << cols << ", " << rows << "\n";
+	std::cerr << srcCol << ", " << srcRow << "\n";
+	std::cerr << dstCol << ", " << dstRow << "\n";
+	std::cerr << grd.props().cols() << ", " << grd.props().rows() << "\n";
+
 	if(CPLE_None != m_ds->GetRasterBand(srcBand)->RasterIO(GF_Write, dstCol, dstRow, cols, rows,
-			grd.grid(), srcCol, srcRow, _dataType2GDT(props().dataType()), 0, 0, 0))
+			((char *) grd.grid()) + (dstRow * grd.props().cols() + dstCol) * _getTypeSize(grd.props().dataType()), 
+			grd.props().cols(), grd.props().rows(), _dataType2GDT(grd.props().dataType()), 0, 0, 0))
 		g_runerr("Failed to write to: " << filename());
 }
 
@@ -1074,7 +1118,13 @@ void Raster::writeBlock(Grid &grd,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
 		int srcBand, int dstBand) {
-	writeBlock(grd, cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+	if(dynamic_cast<MemRaster*>(&grd)) {
+		writeBlockMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+	} else if(dynamic_cast<Raster*>(&grd)) {
+		writeBlockRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+	} else {
+		g_runerr("writeBlock not implemented to handle this type of grid.");
+	}
 }
 
 void _readFromBlock(void *block, GDALDataType type, double *value, int idx) {

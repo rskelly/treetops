@@ -33,7 +33,7 @@ namespace geotools {
     namespace raster {
 
 		enum DataType {
-			Float64, Float32, UInt32, UInt16, Byte, Int32, Int16, None
+			Float64 = 7, Float32 = 6, UInt32 = 5, UInt16 = 4, Byte = 3, Int32 = 2, Int16 = 1, None = 0
 		};
 
 
@@ -397,12 +397,12 @@ namespace geotools {
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void readBlock(MemRaster &grd,
+            void readBlockMemRaster(MemRaster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void readBlock(Raster &grd,
+            void readBlockRaster(Raster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
@@ -414,12 +414,12 @@ namespace geotools {
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void writeBlock(MemRaster &grd,
+            void writeBlockMemRaster(MemRaster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
             		int srcBand = 1, int dstBand = 1);
-            void writeBlock(Raster &grd,
+            void writeBlockRaster(Raster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
