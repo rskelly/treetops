@@ -365,6 +365,8 @@ namespace geotools {
             std::string m_filename;     // Raster filename
             GridProps m_props;
             GDALDataType m_type;        // GDALDataType -- limits the possible template types.
+            int m_bcol, m_brow;
+            int m_band;
 
             GDALDataType getGDType() const;
 

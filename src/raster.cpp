@@ -821,8 +821,14 @@ void MemRaster::readBlock(Grid &grd,
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	g_runerr("Not implemented.");
 }
@@ -839,8 +845,14 @@ void MemRaster::writeBlock(Grid &grd,
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	g_runerr("Not implemented.");
 }
@@ -853,7 +865,9 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 		m_ds(nullptr),
 		m_bcols(0), m_brows(0),
 		m_block(nullptr),
-		m_type(GDT_Unknown) {
+		m_type(GDT_Unknown),
+		m_bcol(-1), m_brow(-1),
+		m_band(1) {
 
 	if (props.resolutionX() == 0 || props.resolutionY() == 0)
 		g_argerr("Resolution must not be zero.");
@@ -895,7 +909,9 @@ Raster::Raster(const std::string &filename, bool writable) :
 		m_ds(nullptr),
 		m_bcols(0), m_brows(0),
 		m_block(nullptr),
-		m_type(GDT_Unknown) {
+		m_type(GDT_Unknown),
+		m_bcol(-1), m_brow(-1),
+		m_band(1) {
 
 	if (filename.empty())
 		g_argerr("Filename must be given.");
@@ -977,8 +993,14 @@ void Raster::readBlock(Raster &grd, int cols, int rows,
 	if(dstBand < 1 || dstBand > grd.props().bands())
 		g_argerr("Invalid destination band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	// A buffer for the entire copy.
 	int typeSize = _getTypeSize(props().dataType());
@@ -1004,8 +1026,14 @@ void Raster::readBlock(MemRaster &grd,
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	if(CPLE_None != m_ds->GetRasterBand(srcBand)->RasterIO(GF_Read, srcCol, srcRow, cols, rows,
 			grd.grid(), dstCol, dstRow, _dataType2GDT(props().dataType()), 0, 0, 0))
@@ -1035,8 +1063,14 @@ void Raster::writeBlock(Raster &grd,
 	if(dstBand < 1 || dstBand > grd.props().bands())
 		g_argerr("Invalid destination band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	// A buffer for the entire copy.
 	int typeSize = _getTypeSize(props().dataType());
@@ -1061,8 +1095,14 @@ void Raster::writeBlock(MemRaster &grd,
 	if(srcBand < 1 || srcBand > props().bands())
 		g_argerr("Invalid source band: " << srcBand);
 
-	cols = g_min(g_min(cols, props().cols() - srcCol), grd.props().cols() - dstCol);
-	rows = g_min(g_min(rows, props().rows() - srcRow), grd.props().rows() - dstRow);
+	cols = g_abs(cols);
+	rows = g_abs(rows);
+	if(cols == 0) cols = grd.props().cols();
+	if(rows == 0) rows = grd.props().rows();
+	cols = g_min(props().cols() - dstCol, cols);
+	rows = g_min(props().rows() - dstRow, rows);
+	cols = g_min(grd.props().cols() - srcCol, cols);
+	rows = g_min(grd.props().rows() - srcRow, rows);
 
 	if(CPLE_None != m_ds->GetRasterBand(srcBand)->RasterIO(GF_Write, dstCol, dstRow, cols, rows,
 			grd.grid(), srcCol, srcRow, _dataType2GDT(props().dataType()), 0, 0, 0))
@@ -1253,10 +1293,14 @@ void Raster::setInt(int col, int row, int v, int band) {
 	int bcol = col / m_bcols;
 	int brow = row / m_brows;
 	GDALRasterBand *rb = m_ds->GetRasterBand(band);
-	if(!rb)
-		g_argerr("No such band: " << band);
-	if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
-		g_runerr("Failed to read from: " << filename());
+	if(bcol != m_bcol || brow != m_brow || band != m_band) {
+		if(!rb)
+			g_argerr("No such band: " << band);
+		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
+			g_runerr("Failed to read from: " << filename());
+		m_bcol = bcol;
+		m_brow = brow;
+	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	_writeToBlock(m_block, getGDType(), v, idx);
 	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
@@ -1278,10 +1322,14 @@ void Raster::setFloat(int col, int row, double v, int band) {
 	int bcol = col / m_bcols;
 	int brow = row / m_brows;
 	GDALRasterBand *rb = m_ds->GetRasterBand(band);
-	if(!rb)
-		g_argerr("No such band: " << band);
-	if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
-		g_runerr("Failed to read from: " << filename());
+	if(bcol != m_bcol || brow != m_brow || band != m_band) {
+		if(!rb)
+			g_argerr("No such band: " << band);
+		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
+			g_runerr("Failed to read from: " << filename());
+		m_bcol = bcol;
+		m_brow = brow;
+	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	_writeToBlock(m_block, getGDType(), v, idx);
 	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
