@@ -388,14 +388,14 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		uint8_t window = it.second;
 		double threshold = it.first;
 
-		#pragma omp parallel
+		//#pragma omp parallel
 		{
 
 			GridProps pr = GridProps(smoothed.props());
 			pr.setDataType(DataType::Float64);
 			MemRaster smooth(pr, true);
 
-			#pragma omp for
+			//#pragma omp for
 			for(uint16_t j = 0; j < smoothed.props().rows() / bufSize + 1; ++j) {
 				if (*cancel) continue;
 
@@ -408,7 +408,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				uint16_t writeOffset = b > 0 ? 0 : window / 2;     // If this is the first row, write to (size / 2), otherwise 0.
 				smooth.fillFloat(smooth.props().nodata());
 				#pragma omp critical(__tops_read)
-				smoothed.readBlock(smooth, smooth.props().cols(), smooth.props().rows(),
+				smoothed.writeToBlock(smooth, smooth.props().cols(), smooth.props().rows(),
 						0, readOffset, 0, writeOffset);
 
 				std::list<std::tuple<int32_t, int32_t, uint8_t> > tops;
@@ -470,18 +470,15 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	//Raster<uint8_t> tmp("/tmp/tmp.tif", 1, original);
-	//tmp.writeBlock(topsGrid);
-
 	total = topsIDGrid.props().rows();
 	status = 0;
 
-	#pragma omp parallel
+	//#pragma omp parallel
 	{
 
 		std::list<Top*> tops;
 
-		#pragma omp for
+		//#pragma omp for
 		for(int32_t row = 0; row < topsIDGrid.props().rows(); ++row) {
 			if(*cancel) continue;
 			if (m_callbacks)
@@ -645,7 +642,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			uint16_t writeOffset = b > 0 ? 0 : radius;
 			buf.fillFloat(iprops.nodata());
 			#pragma omp critical(__crowns_in)
-			inrast.readBlock(buf, buf.props().cols(), buf.props().rows(),
+			inrast.writeToBlock(buf, buf.props().cols(), buf.props().rows(),
 					0, readOffset, 0, writeOffset);
 
 			blk.fillInt(0);
@@ -690,8 +687,9 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 			if(m_callbacks)
 				m_callbacks->statusCallback("Writing output...");
+
 			#pragma omp critical(__crowns_out)
-			outrast.writeBlock(blk, iprops.cols(), bufSize, 0, b, 0, radius);
+			blk.writeToBlock(outrast, iprops.cols(), bufSize, 0, b, 0, radius);
 
 			if(m_callbacks)
 				m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);

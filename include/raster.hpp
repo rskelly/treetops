@@ -33,7 +33,7 @@ namespace geotools {
     namespace raster {
 
 		enum DataType {
-			Float64, Float32, UInt32, UInt16, Byte, Int32, Int16, None
+			Float64 = 7, Float32 = 6, UInt32 = 5, UInt16 = 4, Byte = 3, Int32 = 2, Int16 = 1, None = 0
 		};
 
 
@@ -218,15 +218,8 @@ namespace geotools {
             virtual void setFloat(long idx, double value, int band = 1) = 0;
             virtual void setFloat(int col, int row, double value, int band = 1) = 0;
 
-            // Read data into Grid instance.
-            virtual void readBlock(Grid &grd,
-            		int cols = 0, int rows = 0,
-            		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0,
-					int srcBand = 1, int dstBand = 1) = 0;
-
             // Write data from Grid instance.
-            virtual void writeBlock(Grid &grd,
+            virtual void writeToBlock(Grid &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
@@ -287,6 +280,8 @@ namespace geotools {
 
         };
 
+        class Raster;
+
         // A convenience class for managing a grid of values.
         // Handles allocation and deallocation of memory.
         class G_DLL_EXPORT MemRaster : public Grid {
@@ -335,17 +330,20 @@ namespace geotools {
             void setFloat(long idx, double value, int band = 1);
             void setFloat(int col, int row, double value, int band = 1);
 
-            // Read data into Grid instance.
-			void readBlock(Grid &grd,
+			// Write data from Grid instance.
+			void writeToBlock(Grid &grd,
 					int cols = 0, int rows = 0,
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-
-			// Write data from Grid instance.
-			void writeBlock(Grid &grd,
-					int cols = 0, int rows = 0,
-					int srcCol = 0, int srcRow = 0,
+            void writeToBlockMemRaster(MemRaster &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
+					int dstCol = 0, int dstRow = 0,
+            		int srcBand = 1, int dstBand = 1);
+            void writeToBlockRaster(Raster &grd,
+            		int cols = 0, int rows = 0,
+            		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
 
@@ -358,6 +356,7 @@ namespace geotools {
         };
 
         class G_DLL_EXPORT Raster : public Grid {
+        	friend class MemRaster;
         private:
             GDALDataset *m_ds;          // GDAL dataset
             int m_bcols, m_brows;
@@ -369,6 +368,9 @@ namespace geotools {
             int m_band;
 
             GDALDataType getGDType() const;
+
+        protected:
+            GDALDataset* ds() const;
 
         public:
 
@@ -393,35 +395,18 @@ namespace geotools {
             void fillInt(int value, int band = 1);
             void fillFloat(double value, int band = 1);
 
-            // Read data into Grid instance.
-			void readBlock(Grid &grd,
-					int cols = 0, int rows = 0,
-					int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0,
-					int srcBand = 1, int dstBand = 1);
-            void readBlock(MemRaster &grd,
-            		int cols = 0, int rows = 0,
-            		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0,
-					int srcBand = 1, int dstBand = 1);
-            void readBlock(Raster &grd,
-            		int cols = 0, int rows = 0,
-            		int srcCol = 0, int srcRow = 0,
-					int dstCol = 0, int dstRow = 0,
-					int srcBand = 1, int dstBand = 1);
-
 			// Write data from Grid instance.
-			void writeBlock(Grid &grd,
+			void writeToBlock(Grid &grd,
 					int cols = 0, int rows = 0,
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void writeBlock(MemRaster &grd,
+            void writeToBlockMemRaster(MemRaster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
             		int srcBand = 1, int dstBand = 1);
-            void writeBlock(Raster &grd,
+            void writeToBlockRaster(Raster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
