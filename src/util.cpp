@@ -602,9 +602,9 @@ std::string Util::getDriverForFilename(const std::string &filename) {
 		return "SQLite";
 	} else if(ex == ".shp") {
 		return "ESRI Shapefile";
-	} else if(ex == ".tif" or ex == ".tiff") {
+	} else if(ex == ".tif" || ex == ".tiff") {
 		return "GTiff";
-	} else if(ex == "" or ex == ".dat") {
+	} else if(ex == "" || ex == ".dat") {
 		return "ENVI";
 	} else {
 		g_runerr("Driver lookup for extension " << ex << " not implemented.");
