@@ -30,14 +30,12 @@
 #include <boost/algorithm/string/join.hpp>
 
 #include "geotools.hpp"
-#include "sqlite.hpp"
 #include "util.hpp"
 #include "raster.hpp"
 #include "treetops.hpp"
 
 using namespace geotools::raster;
 using namespace geotools::util;
-using namespace geotools::db;
 
 using namespace geotools::treetops::config;
 using namespace geotools::treetops::util;
@@ -64,12 +62,14 @@ namespace geotools {
 						id(id), c(c), r(r), tc(tc), tr(tr), z(z), tz(tz) {
 				}
 
-				Node(Point *p) :
-					id(0), c(0), r(0), tc(0), tr(0), z(0), tz(0) {
-					id = atoi(p->fields["id"].c_str());
-					c = tc = atoi(p->fields["smoothedCol"].c_str());
-					r = tr = atoi(p->fields["smoothedRow"].c_str());
-					z = tz = atof(p->fields["smoothedZ"].c_str());
+				Node(Top *p) :
+					id(p->id), 
+					c(p->sc), 
+					r(p->sr), 
+					tc(p->sc), 
+					tr(p->sr), 
+					z(p->sz), 
+					tz(p->sz) {
 				}
 
 			};
@@ -131,28 +131,13 @@ namespace geotools {
 				}
 			}
 
-			void savePoints(std::list<Top*> &tops, SQLite &db) {
-				std::vector<Point*> points(tops.size());
-				int i = 0;
-				for (Top *t : tops) {
-					std::map<std::string, std::string> fields;
-					fields["id"] = std::to_string(t->id);
-					fields["parentID"] = std::to_string(t->parentID);
-					fields["originalX"] = std::to_string(t->ox);
-					fields["originalY"] = std::to_string(t->oy);
-					fields["originalZ"] = std::to_string(t->oz);
-					fields["smoothedX"] = std::to_string(t->sx);
-					fields["smoothedY"] = std::to_string(t->sy);
-					fields["smoothedZ"] = std::to_string(t->sz);
-					fields["smoothedCol"] = std::to_string(t->sc);
-					fields["smoothedRow"] = std::to_string(t->sr);
-					points[i++] = new Point(t->sx, t->sy, t->oz, fields);
-					delete t;
+			void findCrownMax(Raster<float> &chm, Raster<uint32_t> &crowns, std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights) {
+				for(size_t i = 0; i < crowns.size(); ++i) {
+					uint32_t id = crowns.get(i);
+					double v = chm.get(i);
+					if(heights.find(id) == heights.end() || v > std::get<2>(heights[id]))
+						heights[id] = std::make_tuple(chm.toCentroidX(i % chm.cols()), chm.toCentroidY(i / chm.rows()), v);
 				}
-				tops.clear();
-				db.begin();
-				db.addPoints(points);
-				db.commit();
 			}
 
 		} // util
@@ -348,16 +333,16 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	std::unordered_map<std::string, FieldType> fields;
 	fields["id"] = FieldType::FTInt;
 	fields["parentID"] = FieldType::FTInt;
+	fields["originalX"] = FieldType::FTDouble;
+	fields["originalY"] = FieldType::FTDouble;
+	fields["originalZ"] = FieldType::FTDouble;
 	fields["smoothedX"] = FieldType::FTDouble;
 	fields["smoothedY"] = FieldType::FTDouble;
 	fields["smoothedZ"] = FieldType::FTDouble;
 	fields["smoothedCol"] = FieldType::FTInt;
 	fields["smoothedRow"] = FieldType::FTInt;
-	fields["originalX"] = FieldType::FTDouble;
-	fields["originalY"] = FieldType::FTDouble;
-	fields["originalZ"] = FieldType::FTDouble;
 	
-	SQLite db(config.topsTreetopsDatabase, "data", "geom", fields, GeomType::GTPoint, config.srid, true);
+	TTDB db(config.topsTreetopsDatabase, "data", fields, GeomType::GTPoint, config.srid, true);
 	db.dropGeomIndex();
 	db.setCacheSize(config.tableCacheSize);
 
@@ -509,13 +494,28 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				if (m_callbacks)
 					m_callbacks->statusCallback("Inserting points...");
 				#pragma omp critical(__save_points)
-				savePoints(tops, db);
+				{
+					db.begin();
+					db.addTops(tops);
+					db.commit();
+					for(Top *t : tops)
+						delete t;
+					tops.clear();
+				}
+
 			}
 		}
 		if (m_callbacks)
 			m_callbacks->statusCallback("Inserting points...");
 		#pragma omp critical(__save_points)
-		savePoints(tops, db);
+		{
+			db.begin();
+			db.addTops(tops);
+			db.commit();
+			for(Top *t : tops)
+				delete t;
+			tops.clear();
+		}
 	}
 
 	if (m_callbacks)
@@ -536,15 +536,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 }
 
-void _findCrownMax(Raster<float> &chm, Raster<uint32_t> &crowns, std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights) {
-	for(size_t i = 0; i < crowns.size(); ++i) {
-		uint32_t id = crowns.get(i);
-		double v = chm.get(i);
-		if(heights.find(id) == heights.end() || v > std::get<2>(heights[id]))
-			heights[id] = std::make_tuple(chm.toCentroidX(i % chm.cols()), chm.toCentroidY(i / chm.rows()), v);
-	}
-}
-
 void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	config.checkCrowns();
 
@@ -563,12 +554,15 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	double nodata = inrast.nodata();
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
-	SQLite db(config.crownsTreetopsDatabase, "data");
+	TTDB db(config.crownsTreetopsDatabase, "data");
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.03f);
 		m_callbacks->statusCallback("Processing crowns...");
 	}
+
+	uint32_t bufSize = 256;
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
 
 	{
 
@@ -586,8 +580,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 		uint64_t geomCount = db.getGeomCount();
 		std::atomic<uint64_t> status(0);
-		uint32_t bufSize = 128;
-		int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
 
 		#pragma omp parallel
 		{
@@ -608,9 +600,9 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
 					inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
 
-				std::vector<Point*> tops;
+				std::vector<Top*> tops;
 				#pragma omp critical(__crowns_db)
-				db.getPoints(tops, bounds);
+				db.getTops(tops, bounds);
 				if(tops.empty())
 					continue;
 
@@ -618,9 +610,9 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 				// Convert the Tops to Nodes.
 				std::queue<Node*> q;
-				for (Point *p : tops) {
-					q.push(new Node(p));
-					delete p;
+				for (Top *t : tops) {
+					q.push(new Node(t));
+					delete t;
 				}
 
 				if (*cancel)
@@ -665,6 +657,8 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 							continue;
 
 						double v = buf.get(idx);
+						//std::cerr << v << ", " << n->z << ", " << config.crownsMinHeight << ", " << ((n->tz - v) / n->tz) << ", " << (g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius)) << "\n";
+
 						if (v != nodata           												// is not nodata
 							&& v < n->z		      												// is less than the neighbouring pixel
 							&& v >= config.crownsMinHeight 										// is greater than the min height
@@ -695,31 +689,51 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	{
 		if(m_callbacks)
-			m_callbacks->statusCallback("Finding true maxima...");
+			m_callbacks->statusCallback("Finding tops from original CHM...");
 
-		std::unordered_map<uint32_t, std::tuple<double, double, double> > maxHeights;
+		std::unordered_map<uint32_t, std::tuple<double, double, double> > heights;
 		Raster<float> chm(config.crownsOriginalCHM);
-		_findCrownMax(chm, outrast, maxHeights);
+		findCrownMax(chm, outrast, heights);
 
-		if(m_callbacks)
-			m_callbacks->statusCallback("Saving true maxima...");
+		for(int i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+			if (*cancel) continue;
 
-		std::unordered_map<std::string, void*> data;
-		db.begin();
-		for(const auto &it : maxHeights) {
-			double x = std::get<0>(it.second);
-			double y = std::get<1>(it.second);
-			double z = std::get<2>(it.second);
-			data["originalX"] = &x;
-			data["originalY"] = &y;
-			data["originalZ"] = &z;
-			db.updateRow("id", it.first, data);
+			int b = i * bufSize;
+
+			Bounds bounds(inrast.toX(0), inrast.toY(b - radius),
+				inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Loading tops...");
+
+			std::vector<Top*> tops;
+			#pragma omp critical(__crowns_db)
+			db.getTops(tops, bounds);
+			if(tops.empty())
+				continue;
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Updating tops...");
+
+			auto end = heights.end();
+			for(Top *t : tops) {
+				if(heights.find(t->id) != end) {
+					auto tup = heights[t->id];
+					t->ox = std::get<0>(tup);
+					t->oy = std::get<1>(tup);
+					t->oz = std::get<2>(tup);
+				}
+			}
+
+			if(m_callbacks)
+				m_callbacks->statusCallback("Saving tops...");
+
+			db.begin();
+			db.updateTops(tops);
+			db.commit();
+			for(Top *t : tops)
+				delete t;
 		}
-		// TODO: This updates the geometry to use the values from the original raster.
-		// This is problematic.
-		//std::string q = "UPDATE data SET geom=GeomFromText('POINTZ(' || originalX || ' ' || originalY || ' ' || originalZ || ')', SRID(geom))";
-		//db.execute(q);
-		db.commit();
 	}
 
 	// TODO: Filter out isolated pixels if D8 is used. See DTOOLS-22
@@ -730,7 +744,11 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)
 			m_callbacks->statusCallback("Polygonizing...");
-		outrast.polygonize(config.crownsCrownsDatabase, db.srid(), 1, m_callbacks, cancel);
+		outrast.polygonize(config.crownsCrownsDatabase, "crowns", db.srid(), 1, m_callbacks, cancel);
+		TTDB db(config.crownsCrownsDatabase, "crowns");
+		db.begin();
+		db.deleteFeature("id", 0);
+		db.commit();
 	}
 
 	if (m_callbacks) {

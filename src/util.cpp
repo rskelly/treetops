@@ -532,10 +532,14 @@ void Util::status(int step, int of, const std::string &message, bool end) {
 	}
 }
 
+bool Util::exists(const std::string &name) {
+	boost::filesystem::path p(name);
+	return boost::filesystem::exists(p);
+}
+
 bool Util::pathExists(const std::string &name) {
-	using namespace boost::filesystem;
-	path p(name);
-	return exists(p.remove_filename());
+	boost::filesystem::path p(name);
+	return boost::filesystem::exists(p.remove_filename());
 }
 
 bool Util::rm(const std::string &name) {
@@ -547,7 +551,7 @@ bool Util::rm(const std::string &name) {
 bool Util::mkdir(const std::string &dir) {
 	using namespace boost::filesystem;
 	path bdir(dir);
-	if (!exists(bdir))
+	if (!boost::filesystem::exists(bdir))
 		return create_directory(bdir);
 	return true;
 }
@@ -573,6 +577,39 @@ size_t Util::dirlist(const std::string &dir, std::vector<std::string> &files,
 		}
 	}
 	return files.size();
+}
+
+std::string& Util::lower(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+}
+
+std::string& Util::upper(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+	return str;
+}
+
+std::string Util::ext(const std::string &filename) {
+	using namespace boost::filesystem;
+	path p(filename);
+	return p.extension().string();
+}
+
+std::string Util::getDriverForFilename(const std::string &filename) {
+	std::string ex = Util::ext(filename);
+	Util::lower(ex);
+	if(ex == ".sqlite") {
+		return "SQLite";
+	} else if(ex == ".shp") {
+		return "ESRI Shapefile";
+	} else if(ex == ".tif" or ex == ".tiff") {
+		return "GTiff";
+	} else if(ex == "" or ex == ".dat") {
+		return "ENVI";
+	} else {
+		g_runerr("Driver lookup for extension " << ex << " not implemented.");
+	}
+
 }
 
 const std::string Util::tmpFile() {

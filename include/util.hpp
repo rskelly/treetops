@@ -234,11 +234,28 @@ namespace geotools {
 
             static const std::string tmpFile();
 
+            // Returns true if the file exists.
+            static bool exists(const std::string &name);
+
+            // Returns true if the path exists, even if the file does not.
             static bool pathExists(const std::string &name);
             
             static bool rm(const std::string &name);
 
             static bool mkdir(const std::string &dir);
+
+            // Lowercase a string. Return a reference to the original string, edited in place.
+            static std::string& lower(std::string &str);
+
+            // Uppercase a string. Return a reference to the original string, edited in place.
+            static std::string& upper(std::string &str);
+
+            // Return the file extension.
+            static std::string ext(const std::string &filename);
+
+            // Returns the GDAL/OGR driver that best matches the given filename, or 
+            // an exception if it can't be figured out.
+            static std::string getDriverForFilename(const std::string &filename);
 
             // Populates the vector with the files contained in dir. If ext is specified, filters
             // the files by that extension (case-insensitive). If dir is a file, it is added to the list.
