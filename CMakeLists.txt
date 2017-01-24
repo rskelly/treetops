@@ -11,7 +11,7 @@ set (Boost_DEBUG OFF)
 set (Boost_USE_STATIC_LIBS OFF)
 set (Boost_USE_STATIC_RUNTIME OFF)
 
-set (SQLITE3_LIBRARY sqlite3)
+#set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 set (GEOS_LIBRARY geos_c)
 
@@ -44,8 +44,8 @@ elseif(${WIN32})
 	# 7) download eigen -- extract to c:\opt\include -- rename folder to eigen3
 	
 	# No finder for sqlite or spatialite. Just hack it.
-	set (SQLITE3_LIBRARY sqlite3_i)
-	set (SPATIALITE_LIBRARY spatialite_i)
+	#set (SQLITE3_LIBRARY sqlite3_i)
+	#set (SPATIALITE_LIBRARY spatialite_i)
 
 	# Configure boost.
 	set (Boost_COMPILER -vc140)
