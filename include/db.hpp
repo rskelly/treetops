@@ -22,119 +22,46 @@ namespace geotools {
 
     namespace db {
 
-    	enum GeomType {
-    		GTUnknown = 0,
-    		GTPoint = 1,
-			GTLine = 2,
-			GTPolygon = 3,
-			GTMultiPoint = 4,
-			GTMultiLine = 5,
-			GTMultiPolygon = 6
-    	};
+        enum GeomType {
+            GTUnknown = 0,
+            GTPoint = 1,
+            GTLine = 2,
+            GTPolygon = 3,
+            GTMultiPoint = 4,
+            GTMultiLine = 5,
+            GTMultiPolygon = 6
+        };
 
-    	enum FieldType {
-    		FTUnknown = 0,
-    		FTInt = 1,
-			FTDouble = 2,
-			FTString = 3,
-			FTBlob = 4
-    	};
+        enum FieldType {
+            FTUnknown = 0,
+            FTInt = 1,
+            FTDouble = 2,
+            FTString = 3,
+            FTBlob = 4
+        };
 
-        GeomType _geomType(OGRwkbGeometryType type) {
-        	switch(type) {
-        	case wkbPoint: return GeomType::GTPoint;
-        	case wkbLineString: return GeomType::GTLine;
-        	case wkbPolygon: return GeomType::GTPolygon;
-        	case wkbMultiPoint: return GeomType::GTMultiPoint;
-        	case wkbMultiLineString: return GeomType::GTMultiLine;
-        	case wkbMultiPolygon: return GeomType::GTMultiPolygon;
-        	default: return GeomType::GTUnknown;
-        	}
+
+        namespace util {
+
+            GeomType geomType(OGRwkbGeometryType type);
+
+            OGRwkbGeometryType geomType(GeomType type);
+
+            FieldType fieldType(OGRFieldType type);
+
+            OGRFieldType fieldType(FieldType type);
+
+            void addFields(OGRFeature *feat, geotools::util::Point *pt, OGRFeatureDefn *ftdef);
+
+            void updateFields(OGRFeature *feat, std::unordered_map<std::string, void*> &values, OGRFeatureDefn *ftdef);
+
         }
 
-        OGRwkbGeometryType _geomType(GeomType type) {
-        	switch(type) {
-        	case GeomType::GTPoint: return wkbPoint;
-        	case GeomType::GTLine: return wkbLineString;
-        	case GeomType::GTPolygon: return wkbPolygon;
-        	case GeomType::GTMultiPoint: return wkbMultiPoint;
-        	case GeomType::GTMultiLine: return wkbMultiLineString;
-        	case GeomType::GTMultiPolygon: return wkbMultiPolygon;
-        	default: return wkbUnknown;
-        	}
-        }
-
-        FieldType _fieldType(OGRFieldType type) {
-        	switch(type) {
-        	case OFTInteger:
-        	case OFTInteger64: return FieldType::FTInt;
-        	case OFTString: return FieldType::FTString;
-        	case OFTReal: return FieldType::FTDouble;
-        	case OFTBinary: return FieldType::FTBlob;
-        	default: return FieldType::FTUnknown;
-        	}
-        }
-
-        OGRFieldType _fieldType(FieldType type) {
-        	switch(type) {
-        	case FieldType::FTInt: return OFTInteger64;
-        	case FieldType::FTString: return OFTString;
-        	case FieldType::FTDouble: return OFTReal;
-        	case FieldType::FTBlob: return OFTBinary;
-        	default:
-        		g_argerr("Unknown or unimplemented type: " << type);
-        	}
-        }
-
-        void _addFields(OGRFeature *feat, geotools::util::Point *pt, OGRFeatureDefn *ftdef) {
-    		for(int i = 0; i < feat->GetFieldCount(); ++i) {
-    			OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
-    			OGRField *fld = feat->GetRawFieldRef(i);
-    			switch(fdef->GetType()) {
-    			case OFTInteger:
-    			case OFTInteger64:
-    				pt->fields[fdef->GetNameRef()] = fld->Integer64;
-    				break;
-    			case OFTReal:
-    				pt->fields[fdef->GetNameRef()] = fld->Real;
-    				break;
-    			case OFTString:
-    				pt->fields[fdef->GetNameRef()] = fld->String;
-    				break;
-    			case OFTBinary:
-    				g_runerr("Binary fields not implemented.");
-    				break;
-    			}
-    		}
-        }
-
-        void _updateFields(OGRFeature *feat, std::unordered_map<std::string, void*> &values, OGRFeatureDefn *ftdef) {
-    		for(int i = 0; i < feat->GetFieldCount(); ++i) {
-    			OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
-    			OGRField *fld = feat->GetRawFieldRef(i);
-    			std::string *v;
-    			switch(fdef->GetType()) {
-    			case OFTInteger:
-    			case OFTInteger64:
-    				fld->Integer64 = *((int *) values[fdef->GetNameRef()]);
-    				break;
-    			case OFTReal:
-    				fld->Real = *((double *) values[fdef->GetNameRef()]);
-    				break;
-    			case OFTString:
-    				v = (std::string *) values[fdef->GetNameRef()];
-    				std::strcpy(fld->String, v->c_str());
-    				break;
-    			case OFTBinary:
-    				g_runerr("Binary fields not implemented.");
-    				break;
-    			}
-    		}
-        }
+        using namespace geotools::db::util;
 
         // Provides some easy database read/write methods.
         class SQLite {
-        private:
+        protected:
             GeomType m_type;
             int m_srid;
             std::string m_file;
@@ -148,34 +75,43 @@ namespace geotools {
         public:
 
             SQLite(const std::string &file, const std::string &layer,
-            		const std::string &geomField, const std::unordered_map<std::string, FieldType> &fields,
+            		const std::unordered_map<std::string, FieldType> &fields,
             		GeomType type, int srid = 0, bool replace = false) :
                 m_type(type),
                 m_srid(srid),
                 m_file(file),
 				m_layerName(layer),
-				m_geomName(geomField),
 				m_fieldTypes(fields),
 				m_ds(nullptr),
 				m_layer(nullptr),
 				m_fdef(nullptr) {
 
-            	m_ds = (GDALDataset *) GDALOpen(m_file.c_str(), GA_Update);
+                if(replace && Util::exists(file))
+                    Util::rm(file);
+
+                GDALAllRegister();
+                std::string drvName = Util::getDriverForFilename(m_file);
+                GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
+                if(!drv)
+                    g_runerr("Driver not found for " << m_file << " (" << drvName << ")");
+                m_ds = drv->Create(m_file.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+                if(!m_ds)
+                    g_runerr("Failed to create data set for " << m_file);
             	if(m_layerName.empty())
             		m_layerName = "data";
             	char **options = nullptr;
             	OGRSpatialReference sr;
             	sr.importFromEPSG(m_srid);
-				m_layer = m_ds->CreateLayer(m_layerName.c_str(), &sr, _geomType(m_type), options);
+				m_layer = m_ds->CreateLayer(m_layerName.c_str(), &sr, geomType(m_type), options);
 				if(!m_layer)
 					g_runerr("Failed to create layer, " << m_layerName << ".");
             	m_fdef = m_layer->GetLayerDefn();
             	for(const auto &it : m_fieldTypes) {
-            		OGRFieldDefn def(it.first.c_str(), _fieldType(it.second));
+            		OGRFieldDefn def(it.first.c_str(), fieldType(it.second));
             		m_fdef->AddFieldDefn(&def);
             	}
-            	OGRGeomFieldDefn gdef(m_geomName.c_str(), _geomType(m_type));
-            	m_fdef->AddGeomFieldDefn(&gdef, 1);
+                OGRGeomFieldDefn *gdef = m_layer->GetLayerDefn()->GetGeomFieldDefn(0);
+                m_geomName = std::string(gdef->GetNameRef());
             }
 
             SQLite(const std::string &file, const std::string &layer) :
@@ -187,7 +123,10 @@ namespace geotools {
 				m_layer(nullptr),
 				m_fdef(nullptr) {
 
-            	m_ds = (GDALDataset *) GDALOpen(m_file.c_str(), GA_ReadOnly);
+                GDALAllRegister();
+            	m_ds = (GDALDataset *) GDALOpenEx(m_file.c_str(), GDAL_OF_VECTOR|GDAL_OF_UPDATE, NULL, NULL, NULL);
+                if(!m_ds)
+                    g_runerr("Failed to open data set for " << m_file);
             	if(m_layerName.empty()) {
             		m_layer = m_ds->GetLayer(1);
                 	if(!m_layer)
@@ -197,23 +136,24 @@ namespace geotools {
                 	if(!m_layer)
                 		g_runerr("No layer, " << m_layerName << " was found on this data set.");
             	}
-            	m_type = _geomType(m_layer->GetGeomType());
-            	OGRGeomFieldDefn *gdef = m_layer->GetLayerDefn()->GetGeomFieldDefn(1);
+            	m_type = geomType(m_layer->GetGeomType());
+            	OGRGeomFieldDefn *gdef = m_layer->GetLayerDefn()->GetGeomFieldDefn(0);
             	m_geomName = std::string(gdef->GetNameRef());
             	m_fdef = m_layer->GetLayerDefn();
             	for(int i = 0; i < m_fdef->GetFieldCount(); ++i) {
             		OGRFieldDefn *def = m_fdef->GetFieldDefn(i);
-            		m_fieldTypes[std::string(def->GetNameRef())] = _fieldType(def->GetType());
+            		m_fieldTypes[std::string(def->GetNameRef())] = fieldType(def->GetType());
             	}
             }
 
             ~SQLite() {
             	GDALClose(m_ds);
             }
+
             void clear();
 
             void addPoint(double x, double y, double z, const std::unordered_map<std::string, std::string> &fields) {
-            	if(!m_type == GeomType::GTPoint)
+            	if(m_type != GeomType::GTPoint)
             		g_runerr("This dataset is not a point dataset.");
             	OGRFeature feat(m_fdef);
             	for(const auto &it : fields) {
@@ -234,6 +174,8 @@ namespace geotools {
             	}
             	OGRPoint geom(x, y, z);
             	feat.SetGeometry(&geom);
+                if(CPLE_None != m_layer->CreateFeature(&feat))
+                    g_runerr("Failed to add feature to " << m_file << ".");
             }
 
             void addPoints(std::vector<geotools::util::Point*> &points) {
@@ -253,34 +195,34 @@ namespace geotools {
 
             void getPoints(std::vector<geotools::util::Point*> &points,
                     const geotools::util::Bounds &bounds) {
-            	if(!m_type == GeomType::GTPoint)
+            	if(m_type != GeomType::GTPoint)
             		g_runerr("This dataset is not a point dataset.");
             	m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
             	OGRFeature *feat;
-            	int gidx = m_fdef->GetGeomFieldIndex(m_geomName.c_str());
             	while((feat = m_layer->GetNextFeature())) {
             		OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
             		geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
-            		_addFields(feat, pt, m_fdef);
+            		addFields(feat, pt, m_fdef);
             		points.push_back(pt);
+                    OGRFeature::DestroyFeature(feat);
             	}
             	m_layer->SetSpatialFilter(NULL);
             }
 
             void getPoints(std::vector<geotools::util::Point*> &points,
                     int count, int offset = 0) {
-            	if(!m_type == GeomType::GTPoint)
+            	if(m_type != GeomType::GTPoint)
             		g_runerr("This dataset is not a point dataset.");
             	long total = m_layer->GetFeatureCount(1);
             	if(offset > total) return;
             	if(count > total - offset) count = total - offset;
-            	int gidx = this->m_fdef->GetGeomFieldIndex(m_geomName.c_str());
             	for(long i = offset; i < offset + count; ++i) {
                 	OGRFeature *feat = m_layer->GetFeature(i);
 					OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
 					geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
-            		_addFields(feat, pt, m_fdef);
+            		addFields(feat, pt, m_fdef);
 					points.push_back(pt);
+                    OGRFeature::DestroyFeature(feat);
             	}
             }
 
@@ -298,7 +240,7 @@ namespace geotools {
 					while((feat = m_layer->GetNextFeature())) {
 						OGRPoint *opt = feat->GetGeometryRef();
 						geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
-						_addFields(feat, pt);
+						SQLite::addFields(feat, pt);
 						points.push_back(pt);
 					}
 					rad *= 2;
@@ -311,17 +253,29 @@ namespace geotools {
             	return m_layer->GetFeatureCount(1);
             }
 
-            void updateRow(const std::string &idField, uint64_t id, std::unordered_map<std::string, void*> &values) {
+            void updateFeature(const std::string &idField, uint64_t id, std::unordered_map<std::string, void*> &values) {
             	std::stringstream ss;
             	ss << "\"" << idField << "\"=" << id;
             	m_layer->SetAttributeFilter(ss.str().c_str());
             	OGRFeature *feat;
-            	int gidx = this->m_fdef->GetGeomFieldIndex(m_geomName.c_str());
             	if((feat = m_layer->GetNextFeature())) {
-            		_updateFields(feat, values, m_fdef);
+            	   updateFields(feat, values, m_fdef);
+                   if(CPLE_None != m_layer->SetFeature(feat))
+                        g_runerr("Failed to update feature on " << m_file << ".");
             	} else {
             		g_runerr("Failed to find feature with ID: " << idField << "=" << id);
             	}
+            }
+
+            void deleteFeature(const std::string &idField, uint64_t id) {
+                std::stringstream ss;
+                ss << "\"" << idField << "\"=" << id;
+                m_layer->SetAttributeFilter(ss.str().c_str());
+                OGRFeature *feat;
+                while((feat = m_layer->GetNextFeature())) {
+                    if(CPLE_None != m_layer->DeleteFeature(feat->GetFID()))
+                        g_runerr("Failed to delete feature with ID: " << idField << "=" << id << ". Deletion may not be implemented for this file type.");
+                }
             }
 
             /*
@@ -333,15 +287,19 @@ namespace geotools {
 			*/
 
             void begin() {
-                m_layer->StartTransaction();
+                if(CPLE_None != m_layer->StartTransaction())
+                    g_warn("Failed to start transaction.");
             }
 
             void rollback() {
-            	m_layer->RollbackTransaction();
+                if(CPLE_None != m_layer->RollbackTransaction())
+                    g_warn("Failed to roll back transaction.");
             }
 
             void commit() {
-            	m_layer->CommitTransaction();
+                if(CPLE_None != m_layer->CommitTransaction())
+                    g_warn("Failed to commit transaction.");
+                m_layer->SyncToDisk();
             }
 
             int srid() {

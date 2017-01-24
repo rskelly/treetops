@@ -114,6 +114,9 @@ target_link_libraries (cellstats gmp CGAL boost_system las geotools)
 add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
 target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
 
+add_library (db STATIC src/db.cpp)
+target_link_libraries (db ${GDAL_LIBRARY} geotools raster)
+
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/apps/ui_util.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
@@ -143,7 +146,7 @@ endif()
 
 
 add_library (treetops SHARED src/treetops.cpp)
-target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools)
+target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
 
 if(${WITH_GUI})
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp src/apps/crs_selector_ui.cpp src/apps/tops_thresholds_ui.cpp)
