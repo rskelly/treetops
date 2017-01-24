@@ -8,6 +8,10 @@
 #include <iomanip>
 #include <vector>
 
+#include <ogr_core.h>
+#include <ogr_feature.h>
+#include <gdal_priv.h>
+#include <ogrsf_frmts.h>
 
 #include "geotools.hpp"
 #include "util.hpp"
@@ -18,91 +22,218 @@ namespace geotools {
 
     namespace db {
 
+    	enum GeomType {
+    		GTUnknown = 0,
+    		GTPoint = 1,
+			GTLine = 2,
+			GTPolygon = 3,
+			GTMultiPoint = 4,
+			GTMultiLine = 5,
+			GTMultiPolygon = 6
+    	};
+
+    	enum FieldType {
+    		FTUnknown = 0,
+    		FTInt = 1,
+			FTDouble = 2,
+			FTString = 3,
+			FTBlob = 4
+    	};
+
+        GeomType _geomType(OGRwkbGeometryType type) {
+        	switch(type) {
+        	case wkbPoint: return GeomType::GTPoint;
+        	case wkbLineString: return GeomType::GTLine;
+        	case wkbPolygon: return GeomType::GTPolygon;
+        	case wkbMultiPoint: return GeomType::GTMultiPoint;
+        	case wkbMultiLineString: return GeomType::GTMultiLine;
+        	case wkbMultiPolygon: return GeomType::GTMultiPolygon;
+        	default: return GeomType::GTUnknown;
+        	}
+        }
+
+        OGRwkbGeometryType _geomType(GeomType type) {
+        	switch(type) {
+        	case GeomType::GTPoint: return wkbPoint;
+        	case GeomType::GTLine: return wkbLineString;
+        	case GeomType::GTPolygon: return wkbPolygon;
+        	case GeomType::GTMultiPoint: return wkbMultiPoint;
+        	case GeomType::GTMultiLine: return wkbMultiLineString;
+        	case GeomType::GTMultiPolygon: return wkbMultiPolygon;
+        	default: return wkbUnknown;
+        	}
+        }
+
+        FieldType _fieldType(OGRFieldType type) {
+        	switch(type) {
+        	case OFTInteger:
+        	case OFTInteger64: return FieldType::FTInt;
+        	case OFTString: return FieldType::FTString;
+        	case OFTReal: return FieldType::FTDouble;
+        	case OFTBinary: return FieldType::FTBlob;
+        	default: return FieldType::FTUnknown;
+        	}
+        }
+
+        OGRFieldType _fieldType(FieldType type) {
+        	switch(type) {
+        	case FieldType::FTInt: return OFTInteger64;
+        	case FieldType::FTString: return OFTString;
+        	case FieldType::FTDouble: return OFTReal;
+        	case FieldType::FTBlob: return OFTBinary;
+        	default:
+        		g_argerr("Unknown or unimplemented type: " << type);
+        	}
+        }
+
+        void _addFields(OGRFeature *feat, geotools::util::Point *pt, OGRFeatureDefn *ftdef) {
+    		for(int i = 0; i < feat->GetFieldCount(); ++i) {
+    			OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
+    			OGRField *fld = feat->GetRawFieldRef(i);
+    			switch(fdef->GetType()) {
+    			case OFTInteger:
+    			case OFTInteger64:
+    				pt->fields[fdef->GetNameRef()] = fld->Integer64;
+    				break;
+    			case OFTReal:
+    				pt->fields[fdef->GetNameRef()] = fld->Real;
+    				break;
+    			case OFTString:
+    				pt->fields[fdef->GetNameRef()] = fld->String;
+    				break;
+    			case OFTBinary:
+    				g_runerr("Binary fields not implemented.");
+    				break;
+    			}
+    		}
+        }
+
+        void _updateFields(OGRFeature *feat, std::unordered_map<std::string, void*> &values, OGRFeatureDefn *ftdef) {
+    		for(int i = 0; i < feat->GetFieldCount(); ++i) {
+    			OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
+    			OGRField *fld = feat->GetRawFieldRef(i);
+    			std::string *v;
+    			switch(fdef->GetType()) {
+    			case OFTInteger:
+    			case OFTInteger64:
+    				fld->Integer64 = *((int *) values[fdef->GetNameRef()]);
+    				break;
+    			case OFTReal:
+    				fld->Real = *((double *) values[fdef->GetNameRef()]);
+    				break;
+    			case OFTString:
+    				v = (std::string *) values[fdef->GetNameRef()];
+    				std::strcpy(fld->String, v->c_str());
+    				break;
+    			case OFTBinary:
+    				g_runerr("Binary fields not implemented.");
+    				break;
+    			}
+    		}
+        }
+
         // Provides some easy database read/write methods.
         class SQLite {
         private:
-            int m_type;
+            GeomType m_type;
             int m_srid;
-            bool m_trans;
             std::string m_file;
-            std::map<std::string, int> m_fields;
-
-            sqlite3 *m_db;
-            sqlite3_stmt *m_stmt;
-            void *m_cache;
-
-            bool exists(const std::string& name) {
-                struct stat buffer;
-                return (stat(name.c_str(), &buffer) == 0);
-            }
+            std::string m_layerName;
+            std::string m_geomName;
+            std::unordered_map<std::string, FieldType> m_fieldTypes;
+            GDALDataset *m_ds;
+            OGRLayer *m_layer;
+            OGRFeatureDefn *m_fdef;
 
         public:
-            const static int INTEGER = 1;
-            const static int DOUBLE = 2;
-            const static int STRING = 3;
-            const static int BLOB = 4;
 
-            const static int POINT = 1;
-            const static int LINESTRING = 2;
-            const static int POLYGON = 3;
-
-            SQLite(const std::string &file, int type, int srid,
-                    const std::map<std::string, int> &fields, bool replace = false) :
-                m_type(type),
-                m_srid(srid),
-                m_trans(false),
-                m_file(file),
-                m_fields(fields),
-                m_db(nullptr), m_stmt(nullptr), m_cache(nullptr) {
-                init(replace);
-            }
-
-            SQLite(const std::string &file, int type, int srid, bool replace = false) :
+            SQLite(const std::string &file, const std::string &layer,
+            		const std::string &geomField, const std::unordered_map<std::string, FieldType> &fields,
+            		GeomType type, int srid = 0, bool replace = false) :
                 m_type(type),
                 m_srid(srid),
                 m_file(file),
-                m_fields(std::map<std::string, int>()) {
-                init(replace);
+				m_layerName(layer),
+				m_geomName(geomField),
+				m_fieldTypes(fields),
+				m_ds(nullptr),
+				m_layer(nullptr),
+				m_fdef(nullptr) {
+
+            	m_ds = (GDALDataset *) GDALOpen(m_file.c_str(), GA_Update);
+            	if(m_layerName.empty())
+            		m_layerName = "data";
+            	char **options = nullptr;
+            	OGRSpatialReference sr;
+            	sr.importFromEPSG(m_srid);
+				m_layer = m_ds->CreateLayer(m_layerName.c_str(), &sr, _geomType(m_type), options);
+				if(!m_layer)
+					g_runerr("Failed to create layer, " << m_layerName << ".");
+            	m_fdef = m_layer->GetLayerDefn();
+            	for(const auto &it : m_fieldTypes) {
+            		OGRFieldDefn def(it.first.c_str(), _fieldType(it.second));
+            		m_fdef->AddFieldDefn(&def);
+            	}
+            	OGRGeomFieldDefn gdef(m_geomName.c_str(), _geomType(m_type));
+            	m_fdef->AddGeomFieldDefn(&gdef, 1);
             }
 
-            SQLite(const std::string &file, bool replace = false) :
-                m_type(-1),
-                m_srid(-1),
+            SQLite(const std::string &file, const std::string &layer) :
+                m_type(GeomType::GTUnknown),
+                m_srid(0),
                 m_file(file),
-                m_fields(std::map<std::string, int>()) {
-                init(replace);
+				m_layerName(layer),
+				m_ds(nullptr),
+				m_layer(nullptr),
+				m_fdef(nullptr) {
+
+            	m_ds = (GDALDataset *) GDALOpen(m_file.c_str(), GA_ReadOnly);
+            	if(m_layerName.empty()) {
+            		m_layer = m_ds->GetLayer(1);
+                	if(!m_layer)
+                		g_runerr("No layer was found on this data set.");
+            	} else {
+            		m_layer = m_ds->GetLayerByName(m_layerName.c_str());
+                	if(!m_layer)
+                		g_runerr("No layer, " << m_layerName << " was found on this data set.");
+            	}
+            	m_type = _geomType(m_layer->GetGeomType());
+            	OGRGeomFieldDefn *gdef = m_layer->GetLayerDefn()->GetGeomFieldDefn(1);
+            	m_geomName = std::string(gdef->GetNameRef());
+            	m_fdef = m_layer->GetLayerDefn();
+            	for(int i = 0; i < m_fdef->GetFieldCount(); ++i) {
+            		OGRFieldDefn *def = m_fdef->GetFieldDefn(i);
+            		m_fieldTypes[std::string(def->GetNameRef())] = _fieldType(def->GetType());
+            	}
             }
 
+            ~SQLite() {
+            	GDALClose(m_ds);
+            }
             void clear();
 
-            void addPoint(double x, double y, double z, const std::map<std::string, std::string> &fields) {
-
-                std::stringstream ss;
-                ss << std::setprecision(12) << "POINTZ(" << x << " " << y << " " << z << ")";
-                std::string q = ss.str();
-
-                sqlite3_reset(m_stmt);
-                sqlite3_clear_bindings(m_stmt);
-                sqlite3_bind_text(m_stmt, 1, q.c_str(), (int) q.size(), SQLITE_STATIC);
-                int i = 1;
-                for (auto it = fields.begin(); it != fields.end(); ++it) {
-                    ++i;
-                    switch (m_fields[it->first]) {
-                        case SQLite::INTEGER:
-                            sqlite3_bind_int(m_stmt, i, atoi(it->second.c_str()));
-                            break;
-                        case SQLite::DOUBLE:
-                            sqlite3_bind_double(m_stmt, i, atof(it->second.c_str()));
-                            break;
-                        case SQLite::STRING:
-                            sqlite3_bind_text(m_stmt, i, it->second.c_str(), (int) it->second.size(), SQLITE_STATIC);
-                            break;
-                    }
-                }
-
-                int ret = sqlite3_step(m_stmt);
-                if (!(ret == SQLITE_DONE || ret == SQLITE_ROW))
-                    handleError("Failed to insert row: ");
+            void addPoint(double x, double y, double z, const std::unordered_map<std::string, std::string> &fields) {
+            	if(!m_type == GeomType::GTPoint)
+            		g_runerr("This dataset is not a point dataset.");
+            	OGRFeature feat(m_fdef);
+            	for(const auto &it : fields) {
+            		switch(m_fieldTypes[it.first]) {
+            		//case FieldType::Blob:
+            		case FieldType::FTDouble:
+                		feat.SetField(it.first.c_str(), atof(it.second.c_str()));
+						break;
+            		case FieldType::FTInt:
+                		feat.SetField(it.first.c_str(), atoi(it.second.c_str()));
+						break;
+            		case FieldType::FTString:
+                		feat.SetField(it.first.c_str(), it.second.c_str());
+						break;
+            		default:
+            			g_runerr("Field type " << m_fieldTypes[it.first] << " is not currently supported.");
+            		}
+            	}
+            	OGRPoint geom(x, y, z);
+            	feat.SetGeometry(&geom);
             }
 
             void addPoints(std::vector<geotools::util::Point*> &points) {
@@ -110,382 +241,114 @@ namespace geotools {
                     addPoint(pt->x, pt->y, pt->z, pt->fields);
             }
 
-            /**
-             * Returns the number of points that can be added at one time by 
-             * addPoints. This is computed from the parameter limit and the 
-             * number of fields.
-             */
-            uint64_t maxAddPointCount() {
-                uint64_t c = (uint64_t) (sqlite3_limit(m_db, SQLITE_LIMIT_VARIABLE_NUMBER, -1) / (m_fields.size() + 1));
-                return c;
-            }
-
-            void makeFast() {
-                char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA synchronous = OFF", NULL, NULL, &err))
-                    handleError("Failed to set synchronous: ", err);
-                if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA journal_mode = MEMORY", NULL, NULL, &err))
-                    handleError("Failed to set journal mode: ", err);
-            }
-
-            void makeSlow() {
-                char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA synchronous = ON", NULL, NULL, &err))
-                    handleError("Failed to set synchronous: ", err);
-                if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA journal_mode = DELETE", NULL, NULL, &err))
-                    handleError("Failed to set journal mode: ", err);
-            }
 
             void setCacheSize(size_t size) {
-                char *err;
-                std::stringstream ss;
-                ss << "PRAGMA cache_size = " << size;
-                if (SQLITE_OK != sqlite3_exec(m_db, ss.str().c_str(), NULL, NULL, &err))
-                    handleError("Failed to set cache size: ", err);
             }
 
             void dropGeomIndex() {
-                char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "SELECT DisableSpatialIndex('data', 'geom')", NULL, NULL, &err))
-                    handleError("Failed to drop geometry index: ", err);
             }
 
             void createGeomIndex() {
-                char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "SELECT CreateSpatialIndex('data', 'geom'); VACUUM data", NULL, NULL, &err))
-                    handleError("Failed to drop geometry index: ", err);
-            }
-
-            static int getPointsCallback(void *resultPtr, int cols, char **values, char **colnames) {
-                using namespace geotools::util;
-                std::vector<Point*> *result = (std::vector<Point*> *) resultPtr;
-                Point *pt = new Point();
-                for (int i = 0; i < cols; ++i) {
-                    if(values[i] == NULL) continue;
-                    std::string colname(colnames[i]);
-                    if (colname == "geomx") {
-                        pt->x = atof(values[i]);
-                    } else if (colname == "geomy") {
-                        pt->y = atof(values[i]);
-                    } else if (colname == "geomz") {
-                        pt->z = atof(values[i]);
-                    } else {
-                        pt->fields[colname] = std::string(values[i]);
-                    }
-                }
-                result->push_back(pt);
-                return 0;
             }
 
             void getPoints(std::vector<geotools::util::Point*> &points,
                     const geotools::util::Bounds &bounds) {
-
-                std::stringstream ss;
-                ss << std::setprecision(12);
-                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
-                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
-                    ss << ", " << it->first;
-                ss << " FROM data WHERE Within(geom, GeomFromText('POLYGON((";
-                ss << bounds.minx() << " " << bounds.miny() << ",";
-                ss << bounds.maxx() << " " << bounds.miny() << ",";
-                ss << bounds.maxx() << " " << bounds.maxy() << ",";
-                ss << bounds.minx() << " " << bounds.maxy() << ",";
-                ss << bounds.minx() << " " << bounds.miny();
-                ss << "))', SRID(geom)))";
-
-                std::string q = ss.str();
-                char *err;
-                begin();
-                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
-                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
-                    rollback();
-                    handleError("Failed to get points for bounds: ", err);
-                }
-                rollback();
+            	if(!m_type == GeomType::GTPoint)
+            		g_runerr("This dataset is not a point dataset.");
+            	m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
+            	OGRFeature *feat;
+            	int gidx = m_fdef->GetGeomFieldIndex(m_geomName.c_str());
+            	while((feat = m_layer->GetNextFeature())) {
+            		OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
+            		geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
+            		_addFields(feat, pt, m_fdef);
+            		points.push_back(pt);
+            	}
+            	m_layer->SetSpatialFilter(NULL);
             }
 
             void getPoints(std::vector<geotools::util::Point*> &points,
                     int count, int offset = 0) {
-
-                std::stringstream ss;
-                ss << std::setprecision(12);
-                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
-                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
-                    ss << ", " << it->first;
-                ss << " FROM data ORDER BY id LIMIT " << count << " OFFSET " << offset;
-
-                std::string q = ss.str();
-                char *err;
-                begin();
-                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
-                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
-                    rollback();
-                    handleError("Failed to get points for limit and offset: ", err);
-                }
-                rollback();
+            	if(!m_type == GeomType::GTPoint)
+            		g_runerr("This dataset is not a point dataset.");
+            	long total = m_layer->GetFeatureCount(1);
+            	if(offset > total) return;
+            	if(count > total - offset) count = total - offset;
+            	int gidx = this->m_fdef->GetGeomFieldIndex(m_geomName.c_str());
+            	for(long i = offset; i < offset + count; ++i) {
+                	OGRFeature *feat = m_layer->GetFeature(i);
+					OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
+					geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
+            		_addFields(feat, pt, m_fdef);
+					points.push_back(pt);
+            	}
             }
 
+            /*
             void getNearestPoints(const geotools::util::Point &target, int count,
             		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
-
-                std::stringstream ss;
-                ss << std::setprecision(12);
-                ss << "SELECT X(geom) AS geomx, Y(geom) AS geomy, Z(geom) AS geomz";
-                for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
-                    ss << ", " << it->first;
-                ss << " FROM data ORDER BY ST_Distance(geom, GeomFromText(POINTZ("
-                		<< target.x << " " << target.y << " " << target.z
-						<< "), " << "SRID(geom)) LIMIT " << count;
-
-                std::string q = ss.str();
-                char *err;
-                begin();
-                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(),
-                        geotools::db::SQLite::getPointsCallback, &points, &err)) {
-                    rollback();
-                    handleError("Failed to get nearest points:", err);
-                }
-                rollback();
+            	if(!m_type == GeomType::Point)
+            		g_runerr("This dataset is not a point dataset.");
+            	double rad = 1.0;
+            	std::unordered_set<geotools::util::Point*>
+            	while(points.size() < count) {
+					m_layer->SetSpatialFilterRect(target.x - rad, target.y - rad, target.x + rad, target.y + rad);
+					OGRFeature *feat;
+					int gidx = this->m_fdef->GetGeomFieldIndex(m_geomName.c_str());
+					while((feat = m_layer->GetNextFeature())) {
+						OGRPoint *opt = feat->GetGeometryRef();
+						geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
+						_addFields(feat, pt);
+						points.push_back(pt);
+					}
+					rad *= 2;
+            	}
+            	m_layer->SetSpatialFilter(NULL);
             }
-
-            static int countCallback(void *resultPtr, int cols, char **values, char **colnames) {
-                uint64_t *result = (uint64_t *) resultPtr;
-                *result = atoi(values[0]);
-                return 0;
-            }
+			*/
 
             uint64_t getGeomCount() {
-            	uint64_t count;
-                char *err;
-                begin();
-                if (SQLITE_OK != sqlite3_exec(m_db, "SELECT COUNT(*) FROM data",
-                        SQLite::countCallback, &count, &err)) {
-                    rollback();
-                    handleError("Failed to retrieve record count: ", err);
-                }
-                rollback();
-                return count;
+            	return m_layer->GetFeatureCount(1);
             }
 
-            void updateRow(const std::string &idField, uint64_t id, std::map<std::string, double> &values) {
-                std::stringstream ss;
-                ss << std::setprecision(12) << "UPDATE data SET ";
-                size_t d = values.size();
-                for(const auto &it : values) { 
-                    ss << "\"" << it.first << "\"=" << it.second;
-                    if(--d)
-                        ss << ",";
-                }
-                ss << " WHERE " << idField << "=" << id;
-                char *err;
-                if(SQLITE_OK != sqlite3_exec(m_db, ss.str().c_str(), NULL, NULL, &err))
-                    handleError("Failed to update: ", err);
+            void updateRow(const std::string &idField, uint64_t id, std::unordered_map<std::string, void*> &values) {
+            	std::stringstream ss;
+            	ss << "\"" << idField << "\"=" << id;
+            	m_layer->SetAttributeFilter(ss.str().c_str());
+            	OGRFeature *feat;
+            	int gidx = this->m_fdef->GetGeomFieldIndex(m_geomName.c_str());
+            	if((feat = m_layer->GetNextFeature())) {
+            		_updateFields(feat, values, m_fdef);
+            	} else {
+            		g_runerr("Failed to find feature with ID: " << idField << "=" << id);
+            	}
             }
 
+            /*
             void execute(std::string &sql) {
                 char *err;
                 if(SQLITE_OK != sqlite3_exec(m_db, sql.c_str(), NULL, NULL, &err))
                     handleError("Failed to update: ", err);
             }
+			*/
 
             void begin() {
-                m_trans = true;
-                char *err;
-                if (SQLITE_OK != sqlite3_exec(m_db, "BEGIN IMMEDIATE TRANSACTION", NULL, NULL, &err))
-                    handleError("Failed to start transaction: ", err);
+                m_layer->StartTransaction();
             }
 
             void rollback() {
-                if (m_trans) {
-                    m_trans = false;
-                    char *err;
-                    if (SQLITE_OK != sqlite3_exec(m_db, "ROLLBACK TRANSACTION", NULL, NULL, &err))
-                        handleError("Failed to start transaction: ", err);
-                }
+            	m_layer->RollbackTransaction();
             }
 
             void commit() {
-                if (m_trans) {
-                    m_trans = false;
-                    char *err;
-                    if (SQLITE_OK != sqlite3_exec(m_db, "COMMIT TRANSACTION", NULL, NULL, &err))
-                        handleError("Failed to commit transaction: ", err);
-                }
-            }
-
-            ~SQLite() {
-                commit();
-                sqlite3_finalize(m_stmt);
-                sqlite3_close(m_db);
+            	m_layer->CommitTransaction();
             }
 
             int srid() {
                 return m_srid;
             }
 
-            void handleError(const std::string &msg, char *err = 0);
-            void init(bool replace);
-
         };
-
-
-        void SQLite::handleError(const std::string &msg, char *err) {
-            if (!err)
-                err = (char *) sqlite3_errmsg(m_db);
-            const std::string msg0(err);
-            sqlite3_free(err);
-            g_runerr(msg << msg0);
-        }
-
-        static int tableInfoCallback(void *resultPtr, int cols, char **values, char **colnames) {
-            std::map<std::string, int> *fields = (std::map<std::string, int> *) resultPtr;
-            std::pair<std::string, int> kv;
-            for (int i = 0; i < cols; ++i) {
-                std::string name(colnames[i]);
-                if (name == "name") {
-                    kv.first = std::string(values[i]);
-                } else if (name == "type") {
-                    const std::string type(values[i]);
-                    if (type == "REAL") {
-                        kv.second = SQLite::DOUBLE;
-                    } else if (type == "TEXT") {
-                        kv.second = SQLite::STRING;
-                    } else if (type == "BLOB") {
-                        kv.second = SQLite::BLOB;
-                    } else if (type == "INTEGER") {
-                        kv.second = SQLite::INTEGER;
-                    } else {
-                        kv.second = 0;
-                    }
-                }
-            }
-            if (kv.first != "geom" && kv.first != "gid")
-                fields->insert(kv);
-            return 0;
-        }
-
-        static int sridCallback(void *resultPtr, int cols, char **values, char **colnames) {
-            int *srid = (int *) resultPtr;
-            *srid = atoi(values[0]);
-            return 0;
-        }
-
-        void SQLite::init(bool replace) {
-
-            if(!Util::pathExists(m_file))
-                g_argerr("The parent path of the file " << m_file << " does not exist and cannot be created.");
-
-            bool dbExists = exists(m_file);
-            if(dbExists && replace) {
-                Util::rm(m_file);
-                dbExists = false;
-            }
-
-            char *err;
-            if (SQLITE_OK != sqlite3_open_v2(m_file.c_str(), &m_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
-                handleError("Failed to open DB: ");
-
-            m_cache = spatialite_alloc_connection();
-            spatialite_init_ex(m_db, m_cache, 0);
-
-            if (dbExists) {
-                g_debug("DB exists so collecting metadata.");
-                if (SQLITE_OK != sqlite3_exec(m_db, "PRAGMA table_info('data')",
-                        tableInfoCallback, &m_fields, &err))
-                    handleError("Failed to read table info from database. Formatted incorrectly? ", err);
-                g_debug(" -- get srid");
-                if (SQLITE_OK != sqlite3_exec(m_db, "SELECT SRID(geom) AS geomsrid FROM data LIMIT 1",
-                        sridCallback, &m_srid, &err))
-                    handleError("Failed to read table info from database. Formatted incorrectly? ", err);
-                g_debug("SRID: " << m_srid);
-            } else {
-                g_debug("Table is new, so initializing as spatial.");
-                if (SQLITE_OK != sqlite3_exec(m_db, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err))
-                    handleError("Failed to initialize DB: ", err);
-            }
-
-            std::stringstream ss;
-            std::stringstream fn;
-            std::stringstream fp;
-
-            ss << "CREATE TABLE data(gid INTEGER PRIMARY KEY,";
-            bool com = false;
-            for (const auto &it : m_fields) {
-                if (com) {
-                    ss << ",";
-                    fn << ",";
-                    fp << ",";
-                } else {
-                    com = true;
-                }
-
-                fn << it.first;
-                ss << it.first;
-                fp << "?";
-
-                switch (it.second) {
-                    case SQLite::INTEGER:
-                        ss << " integer";
-                        break;
-                    case SQLite::DOUBLE:
-                        ss << " double";
-                        break;
-                    case SQLite::STRING:
-                        ss << " text";
-                        break;
-                }
-            }
-            ss << ")";
-
-            std::string q;
-
-            if (!dbExists) {
-                q.assign(ss.str());
-                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(), NULL, NULL, &err))
-                    handleError("Failed to create table: ", err);
-                ss.str(std::string());
-                ss.clear();
-                ss << "SELECT AddGeometryColumn('data', 'geom', " << m_srid << ", '";
-                switch (m_type) {
-                    case POINT:
-                        ss << "POINT";
-                        break;
-                    case LINESTRING:
-                        ss << "LINESTRING";
-                        break;
-                    case POLYGON:
-                        ss << "POLYGON";
-                        break;
-                }
-                ss << "', 'XYZ')";
-                q.assign(ss.str());
-
-                if (SQLITE_OK != sqlite3_exec(m_db, q.c_str(), NULL, NULL, &err))
-                    handleError("Failed to create geometry: ", err);
-            }
-
-            ss.str(std::string());
-            ss.clear();
-            ss << "INSERT INTO data (geom, " << fn.str() << ") VALUES (GeomFromText(?, "
-                    << m_srid << "), " << fp.str() << ")";
-
-            q.assign(ss.str());
-            if (SQLITE_OK != sqlite3_prepare_v2(m_db, q.c_str(), (int) q.size(), &m_stmt, NULL))
-                handleError("Failed to prepare insert statement.");
-
-        }
-
-        void SQLite::clear() {
-            char *err;
-            begin();
-            dropGeomIndex();
-            if (SQLITE_OK != sqlite3_exec(m_db, "DELETE FROM data", NULL, NULL, &err)) {
-                rollback();
-                handleError("Failed to clear data table: ", err);
-            }
-            commit();
-        }
-
 
     } // db
 

@@ -345,20 +345,19 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing database...");
 
-	std::map<std::string, int> fields;
-	fields["id"] = 1;
-	fields["parentID"] = 1;
-	fields["smoothedX"] = 2;
-	fields["smoothedY"] = 2;
-	fields["smoothedZ"] = 2;
-	fields["smoothedCol"] = 1;
-	fields["smoothedRow"] = 1;
-	fields["originalX"] = 2;
-	fields["originalY"] = 2;
-	fields["originalZ"] = 2;
+	std::unordered_map<std::string, FieldType> fields;
+	fields["id"] = FieldType::FTInt;
+	fields["parentID"] = FieldType::FTInt;
+	fields["smoothedX"] = FieldType::FTDouble;
+	fields["smoothedY"] = FieldType::FTDouble;
+	fields["smoothedZ"] = FieldType::FTDouble;
+	fields["smoothedCol"] = FieldType::FTInt;
+	fields["smoothedRow"] = FieldType::FTInt;
+	fields["originalX"] = FieldType::FTDouble;
+	fields["originalY"] = FieldType::FTDouble;
+	fields["originalZ"] = FieldType::FTDouble;
 	
-	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
-	db.makeFast();
+	SQLite db(config.topsTreetopsDatabase, "data", "geom", fields, GeomType::GTPoint, config.srid, true);
 	db.dropGeomIndex();
 	db.setCacheSize(config.tableCacheSize);
 
@@ -529,7 +528,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			m_callbacks->statusCallback("Building index...");
 		db.createGeomIndex();
 	}
-	db.makeSlow();
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);
@@ -539,7 +537,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 }
 
 void _findCrownMax(Raster<float> &chm, Raster<uint32_t> &crowns, std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights) {
-	for(int i = 0; i < crowns.size(); ++i) {
+	for(size_t i = 0; i < crowns.size(); ++i) {
 		uint32_t id = crowns.get(i);
 		double v = chm.get(i);
 		if(heights.find(id) == heights.end() || v > std::get<2>(heights[id]))
@@ -565,7 +563,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	double nodata = inrast.nodata();
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
-	SQLite db(config.crownsTreetopsDatabase);
+	SQLite db(config.crownsTreetopsDatabase, "data");
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.03f);
@@ -706,12 +704,15 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		if(m_callbacks)
 			m_callbacks->statusCallback("Saving true maxima...");
 
-		std::map<std::string, double> data;
+		std::unordered_map<std::string, void*> data;
 		db.begin();
 		for(const auto &it : maxHeights) {
-			data["originalX"] = std::get<0>(it.second);
-			data["originalY"] = std::get<1>(it.second);
-			data["originalZ"] = std::get<2>(it.second);
+			double x = std::get<0>(it.second);
+			double y = std::get<1>(it.second);
+			double z = std::get<2>(it.second);
+			data["originalX"] = &x;
+			data["originalY"] = &y;
+			data["originalZ"] = &z;
 			db.updateRow("id", it.first, data);
 		}
 		// TODO: This updates the geometry to use the values from the original raster.
