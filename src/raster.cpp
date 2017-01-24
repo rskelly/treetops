@@ -1632,22 +1632,21 @@ int __polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg
 }
 
 template<class T>
-void Raster<T>::polygonize(const std::string &filename, uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
+void Raster<T>::polygonize(const std::string &filename, const std::string &layerName, 
+		uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
-	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
+	std::string drvName = Util::getDriverForFilename(filename);
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
-	ds->SetProjection(m_ds->GetProjectionRef());
-	double trans[6];
-	m_ds->GetGeoTransform(trans);
-	ds->SetGeoTransform(trans);
 	char **opts = nullptr;
-	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
-	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
-	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	if(drvName == "SQLite") {
+		opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
+		opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	}
 	OGRSpatialReference sr;
 	sr.importFromEPSG(srid);
-	OGRLayer *layer = ds->CreateLayer("boundary", &sr, wkbMultiPolygon, opts);
+	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 	if (callbacks) {
