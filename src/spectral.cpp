@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "sqlite.hpp"
+#include "db.hpp"
 #include "geotools.hpp"
 #include "raster.hpp"
 #include "spectral.hpp"
@@ -45,8 +45,8 @@ public:
 		out << std::endl;
 	}
 
-	void save(SQLite &db) {
-		std::map<std::string, std::string> fields;
+	void save(DB &db) {
+		std::unordered_map<std::string, std::string> fields;
 		fields["id"] = std::to_string(id);
 		for (const auto &it : dn)
 			fields[std::to_string(it.first)] = std::to_string(it.second);
@@ -98,7 +98,7 @@ Bounds computeOverlapBounds(Raster<unsigned int> &idxRaster,
  */
 void processSpectralFile(const SpectralConfig &config,
 		const std::vector<int> &bands, const std::string &specFilename,
-		SQLite &db) {
+		DB &db) {
 
 	g_debug("processSpectralFile [config] [raster] " << specFilename);
 
@@ -210,26 +210,26 @@ bool __spec_cancel = false;
 
 void Spectral::extractSpectra(const SpectralConfig &config,
 		Callbacks *callbacks, bool *cancel) {
-
 	// Check the config for problems.
 	config.check();
 
+	using namespace geotools::db;
+
 	m_cancel = cancel == nullptr ? &__spec_cancel : cancel;
 	m_callbacks = callbacks;
-
 
 	// Check the bands list; fill it if necessary.
 	std::vector<int> bands = computeBandList(config.bands,
 			config.spectralFilenames[0]);
 
 	// Develop the fields list for the DB.
-	std::map<std::string, int> fields;
-	fields["id"] = SQLite::INTEGER;
+	std::unordered_map<std::string, FieldType> fields;
+	fields["id"] = FieldType::FTInt;
 	for (const int &band : bands)
-		fields["b" + std::to_string(band)] = SQLite::INTEGER;
+		fields["b" + std::to_string(band)] = FieldType::FTInt;
 
 	// Initialize the SQLite table.
-	SQLite db(config.outputFilename, SQLite::POINT, config.srid, fields);
+	DB db(config.outputFilename, "spectra", fields, GeomType::GTPoint, config.srid, true);
 
 	// Do the work.
 	for (const std::string &specFilename : config.spectralFilenames) {

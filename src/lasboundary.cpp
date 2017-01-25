@@ -89,7 +89,7 @@ namespace geotools {
 			out.writeBlock(rast);
 			if(!polyFile.empty()) {
 				g_debug("polygonizing");
-				out.polygonize(polyFile, 1);
+				out.polygonize(polyFile, "data", 26912, 1);
 			}
 		}
 

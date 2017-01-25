@@ -547,9 +547,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Starting crowns...");
 	}
 
-	if (*cancel)
-		return;
-
 	Raster<float> inrast(config.crownsSmoothedCHM);
 	double nodata = inrast.nodata();
 
@@ -565,7 +562,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.resolutionX()));
 
 	{
-
 		Raster<uint32_t> outrast(config.crownsCrownsRaster, 1, inrast);
 		outrast.setNodata(0);
 
@@ -575,8 +571,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		// Build the list of offsets for D8 or D4 search.
 		size_t offsetCount = 8;
 		int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-		//size_t offsetCount = 4;
-		//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
 
 		uint64_t geomCount = db.getGeomCount();
 		std::atomic<uint64_t> status(0);
@@ -589,7 +583,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			MemRaster<uint32_t> blk(inrast.cols(), bufSize + radius * 2 + 1);
 
 			#pragma omp for
-			for(int i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+			for(size_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
 				if (*cancel) continue;
 
 				if (m_callbacks)
@@ -601,6 +595,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 					inrast.toX(inrast.cols()), inrast.toY(b + bufSize + radius));
 
 				std::vector<Top*> tops;
+
 				#pragma omp critical(__crowns_db)
 				db.getTops(tops, bounds);
 				if(tops.empty())
@@ -621,14 +616,14 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				if (m_callbacks)
 					m_callbacks->statusCallback("Loading raster...");
 
+				std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
 				uint16_t readOffset = b > 0 ? b - radius : 0;
 				uint16_t writeOffset = b > 0 ? 0 : radius;
+				blk.fill(0);
 				buf.fill(inrast.nodata());
+
 				#pragma omp critical(__crowns_in)
 				inrast.readBlock(0, readOffset, buf, 0, writeOffset);
-
-				blk.fill(0);
-				std::vector<bool> visited((size_t) inrast.cols() * (bufSize + radius * 2 + 1));
 
 				if (m_callbacks)
 					m_callbacks->statusCallback("Delineating crowns...");
@@ -673,14 +668,13 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 					delete n;
 				}
 
-				if(m_callbacks)
+				if(m_callbacks) {
 					m_callbacks->statusCallback("Writing output...");
+					m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
+				}
+
 				#pragma omp critical(__crowns_out)
 				outrast.writeBlock(0, b, blk, 0, radius, inrast.cols(), bufSize);
-
-				if(m_callbacks)
-					m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
-
 			}
 		}
 	}
@@ -695,7 +689,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		Raster<float> chm(config.crownsOriginalCHM);
 		findCrownMax(chm, outrast, heights);
 
-		for(int i = 0; i < inrast.rows() / bufSize + 1; ++i) {
+		for(size_t i = 0; i < inrast.rows() / bufSize + 1; ++i) {
 			if (*cancel) continue;
 
 			int b = i * bufSize;
@@ -707,7 +701,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 				m_callbacks->statusCallback("Loading tops...");
 
 			std::vector<Top*> tops;
-			#pragma omp critical(__crowns_db)
 			db.getTops(tops, bounds);
 			if(tops.empty())
 				continue;
@@ -736,15 +729,15 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	// TODO: Filter out isolated pixels if D8 is used. See DTOOLS-22
-
 	if(m_callbacks)
-		m_callbacks->stepCallback(1.0f);
+		m_callbacks->stepCallback(0.99f);
 
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)
 			m_callbacks->statusCallback("Polygonizing...");
 		outrast.polygonize(config.crownsCrownsDatabase, "crowns", db.srid(), 1, m_callbacks, cancel);
+		if(m_callbacks)
+			m_callbacks->statusCallback("Deleting invalid polygons...");
 		TTDB db(config.crownsCrownsDatabase, "crowns");
 		db.begin();
 		db.deleteFeature("id", 0);

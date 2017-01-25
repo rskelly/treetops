@@ -60,7 +60,7 @@ namespace geotools {
         using namespace geotools::db::util;
 
         // Provides some easy database read/write methods.
-        class SQLite {
+        class DB {
         protected:
             GeomType m_type;
             int m_srid;
@@ -74,7 +74,7 @@ namespace geotools {
 
         public:
 
-            SQLite(const std::string &file, const std::string &layer,
+            DB(const std::string &file, const std::string &layer,
             		const std::unordered_map<std::string, FieldType> &fields,
             		GeomType type, int srid = 0, bool replace = false) :
                 m_type(type),
@@ -114,7 +114,7 @@ namespace geotools {
                 m_geomName = std::string(gdef->GetNameRef());
             }
 
-            SQLite(const std::string &file, const std::string &layer) :
+            DB(const std::string &file, const std::string &layer) :
                 m_type(GeomType::GTUnknown),
                 m_srid(0),
                 m_file(file),
@@ -146,7 +146,7 @@ namespace geotools {
             	}
             }
 
-            ~SQLite() {
+            ~DB() {
             	GDALClose(m_ds);
             }
 

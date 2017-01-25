@@ -11,9 +11,7 @@ set (Boost_DEBUG OFF)
 set (Boost_USE_STATIC_LIBS OFF)
 set (Boost_USE_STATIC_RUNTIME OFF)
 
-#set (SQLITE3_LIBRARY sqlite3)
-set (SPATIALITE_LIBRARY spatialite)
-set (GEOS_LIBRARY geos_c)
+set (GEOS_LIBRARY geos)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
 
@@ -43,10 +41,6 @@ elseif(${WIN32})
 	# --- 6) checkout liblas from git
 	# 7) download eigen -- extract to c:\opt\include -- rename folder to eigen3
 	
-	# No finder for sqlite or spatialite. Just hack it.
-	#set (SQLITE3_LIBRARY sqlite3_i)
-	#set (SPATIALITE_LIBRARY spatialite_i)
-
 	# Configure boost.
 	set (Boost_COMPILER -vc140)
 	set (Boost_NO_SYSTEM_PATHS  ON)
@@ -158,7 +152,7 @@ endif()
 
 
 add_library (spectral SHARED src/spectral.cpp)
-target_link_libraries (spectral ${GDAL_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools)
+target_link_libraries (spectral ${GDAL_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
 add_executable (spectral-app src/apps/spectral.cpp)
 target_link_libraries (spectral-app PUBLIC spectral)
 
@@ -193,8 +187,8 @@ add_executable (lasvalidate-app src/apps/lasvalidate.cpp)
 target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 
 
-#add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
-#target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
+add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
+target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
 
 add_executable (rasternormalize src/rasternormalize.cpp)
 target_link_libraries (rasternormalize raster)

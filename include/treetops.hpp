@@ -138,16 +138,16 @@ namespace geotools {
 
             using namespace geotools::db;
 
-            class TTDB : public SQLite {
+            class TTDB : public DB {
             public:
 
                 TTDB(const std::string &file, const std::string &layer,
                     const std::unordered_map<std::string, FieldType> &fields,
                     GeomType type, int srid = 0, bool replace = false) : 
-                    SQLite(file, layer, fields, type, srid, replace) {}
+                    DB(file, layer, fields, type, srid, replace) {}
 
                 TTDB(const std::string &file, const std::string &layer) :
-                    SQLite(file, layer) {}
+                    DB(file, layer) {}
 
                 void addTop(Top *top) {
                     if(m_type != GeomType::GTPoint)
