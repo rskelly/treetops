@@ -66,7 +66,8 @@ void lasclip(std::string &outfile, std::string &shapefile,
 	gg::GeometryCollection *geomColl;
 	gg::Geometry *geom;
 
-	OGRDataSource *ds = OGRSFDriverRegistrar::Open(shapefile.c_str(), FALSE);
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("ESRI Shapefile");
+	GDALDataset *ds = drv->Create(shapefile.c_str(), 0, 0, 0, GDT_Unknown, NULL);
 	if (ds == nullptr)
 		g_runerr("Couldn't open shapefile.");
 	if (layername.empty()) {

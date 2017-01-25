@@ -200,12 +200,12 @@ add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
 target_link_libraries (lasmerge las laszip ${Boost_LIBRARIES} util geotools)
 
 
-#add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
-#target_link_libraries (lasreclass las laszip ${Boost_LIBRARIES} util geotools)
+add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
+target_link_libraries (lasreclass las laszip ${Boost_LIBRARIES} util geotools)
 
 
-#add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
-#target_link_libraries (lasclip ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} util geotools)
+add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
+target_link_libraries (lasclip ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} util geotools)
 
 
 add_executable (las2csrs src/las2csrs.cpp src/lasutil.cpp)
@@ -214,7 +214,7 @@ target_link_libraries (las2csrs ${GDAL_LIBRARY} las laszip proj ${Boost_LIBRARIE
 
 # Install ###########################################################################################################
 
-#install (TARGETS flood DESTINATION bin)
+install (TARGETS flood DESTINATION bin)
 install (TARGETS pointgrid DESTINATION bin)
 
 install (TARGETS treetops DESTINATION lib)
@@ -237,13 +237,13 @@ install (TARGETS lasvalidate DESTINATION lib)
 install (TARGETS lasvalidate-app DESTINATION bin)
 install (FILES include/lasvalidate.hpp DESTINATION include)
 
-#install (TARGETS pointzonalstats DESTINATION bin)
+install (TARGETS pointzonalstats DESTINATION bin)
 
 install (TARGETS lasmerge DESTINATION bin)
 
-#install (TARGETS lasreclass DESTINATION bin)
+install (TARGETS lasreclass DESTINATION bin)
 
-#install (TARGETS lasclip DESTINATION bin)
+install (TARGETS lasclip DESTINATION bin)
 
 install (TARGETS las2csrs DESTINATION bin)
 install (DIRECTORY share/ DESTINATION share PATTERN "share/*")
