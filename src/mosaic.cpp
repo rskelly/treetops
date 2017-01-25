@@ -158,7 +158,7 @@ namespace geotools {
 					if (cols <= 0 || rows <= 0)
 						return false;
 
-					input.readBlock(buf, cols, rows, col, row, cOff, rOff);
+					input.writeToBlock(buf, cols, rows, col, row, cOff, rOff);
 					return true;
 				}
 
@@ -181,13 +181,13 @@ namespace geotools {
 					}
 					if (cols <= 0 || rows <= 0)
 						return false;
-					output.readBlock(buf, cols, rows, col, row, cOff, rOff);
+					buf.writeToBlock(output, cols, rows, col, row, cOff, rOff);
 					return true;
 				}
 
 				void writeOutput(MemRaster &buf, Raster &output) const {
 					if (!(oCol >= output.props().cols() || oRow >= output.props().rows()))
-						output.writeBlock(buf, tileSize, tileSize, oCol, oRow, buffer, buffer);
+						buf.writeToBlock(output, tileSize, tileSize, oCol, oRow, buffer, buffer);
 				}
 
 				void print() const {
@@ -265,8 +265,8 @@ namespace geotools {
 				// Copy by block to avoid memory problems on big rasters.
 				// TODO: Configurable block size.
 				for (int r = 0; r < base.props().rows(); r += pr.rows()) {
-					base.readBlock(buf, 0, r);
-					output.writeBlock(buf, 0, r);
+					base.writeToBlock(buf, 0, 0, 0, r);
+					buf.writeToBlock(output, 0, 0, 0, r);
 				}
 			}
 

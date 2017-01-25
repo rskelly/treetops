@@ -204,55 +204,59 @@ namespace geotools {
 			std::map<std::string, std::map<std::string, std::map<int, Stat> > > stats;
 			std::set<int> classes;
 
-			Raster<unsigned char> clsrast(clsfile);
+			Raster clsrast(clsfile);
 
 			// Loop over every pair of files.
 			for (size_t f0 = 0; f0 < files.size(); ++f0) {
 				for (size_t f1 = f0 + 1; f1 < files.size(); ++f1) {
 
-					Raster<float> frast0(files[f0]);
-					Raster<float> frast1(files[f1]);
+					Raster frast0(files[f0]);
+					Raster frast1(files[f1]);
+					const GridProps& props0 = frast0.props();
+					const GridProps& props1 = frast1.props();
 
-					if (frast0.resolutionX() != frast1.resolutionX()
-							|| frast0.resolutionY() != frast1.resolutionY())
+					if (props0.resolutionX() != props1.resolutionX()
+							|| props0.resolutionY() != props1.resolutionY())
 						g_runerr("Rasters must have the same resolution.");
 
-					int f0nodata = frast0.nodata();
-					int f1nodata = frast1.nodata();
+					double f0nodata = props0.nodata();
+					double f1nodata = props1.nodata();
 
-					double minx = g_max(frast0.minx(), frast1.minx());
-					double miny = g_max(frast0.miny(), frast1.miny());
-					double maxx = g_min(frast0.maxx(), frast1.maxx());
-					double maxy = g_min(frast0.maxy(), frast1.maxy());
+					Bounds bounds0 = props0.bounds();
+					Bounds bounds1 = props1.bounds();
+					double minx = g_max(bounds0.minx(), bounds1.minx());
+					double miny = g_max(bounds0.miny(), bounds1.miny());
+					double maxx = g_min(bounds0.maxx(), bounds1.maxx());
+					double maxy = g_min(bounds0.maxy(), bounds1.maxy());
 
 					for (double y = miny; y < maxy;
-							y += std::abs(frast0.resolutionY())) {
+							y += std::abs(props0.resolutionY())) {
 						for (double x = minx; x < maxx;
-								x += std::abs(frast0.resolutionX())) {
+								x += std::abs(props0.resolutionX())) {
 
-							int c0 = frast0.toCol(x);
-							int r0 = frast0.toRow(y);
-							int c1 = frast1.toCol(x);
-							int r1 = frast1.toRow(y);
-							int cc = clsrast.toCol(x);
-							int cr = clsrast.toRow(y);
+							int c0 = props0.toCol(x);
+							int r0 = props0.toRow(y);
+							int c1 = props1.toCol(x);
+							int r1 = props1.toRow(y);
+							int cc = clsrast.props().toCol(x);
+							int cr = clsrast.props().toRow(y);
 
 							// If any of the indices are out of bands, skip.
 							if (c0 < 0 || c1 < 0 || cc < 0 || r0 < 0 || r1 < 0 || cr < 0
-									|| c0 >= frast0.cols() || c1 >= frast1.cols()
-									|| cc >= clsrast.cols() || r0 >= frast0.rows()
-									|| r1 >= frast1.rows() || cr >= clsrast.rows())
+									|| c0 >= props0.cols() || c1 >= props1.cols()
+									|| cc >= clsrast.props().cols() || r0 >= props0.rows()
+									|| r1 >= props1.rows() || cr >= clsrast.props().rows())
 								continue;
 
-							float v0 = frast0.get(c0, r0);
-							float v1 = frast1.get(c1, r1);
+							double v0 = frast0.getFloat(c0, r0);
+							double v1 = frast1.getFloat(c1, r1);
 
 							// If either pixel is nodata, skip.
 							if (v0 == f0nodata || v1 == f1nodata)
 								continue;
 
 							// Add the difference to the Stat object for the pair/class
-							int cls = clsrast.get(cc, cr);
+							int cls = clsrast.getInt(cc, cr);
 							classes.insert(cls);
 							stats[files[f0]][files[f1]][cls].add(v0 - v1);
 						}
@@ -287,16 +291,16 @@ namespace geotools {
 			}
 		}
 
-		double median(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double median(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			int size = values.size();
-			if(!size) return rast.nodata(band);
+			if(!size) return rast.props().nodata();
 			std::sort(values.begin(), values.end());
 			return size % 2 == 0 ? (values[size / 2 - 1] + values[size / 2]) / 2.0 : values[size / 2];
 		}
 
-		double mean(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double mean(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			double sum = 0.0;
-			double nodata = rast.nodata(band);
+			double nodata = rast.props().nodata();
 			uint16_t count = 0;
 			for(const double &v : values) {
 				if(v != nodata) {
@@ -307,9 +311,9 @@ namespace geotools {
 			return values.size() ? sum / count : nodata;
 		}
 
-		double variance(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double variance(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			double sum = 0.0;
-			double nodata = rast.nodata(band);
+			double nodata = rast.props().nodata();
 			uint16_t count = 0;
 			for(const double &v : values) {
 				if(v != nodata) {
@@ -327,17 +331,17 @@ namespace geotools {
 			return sum2;
 		}
 
-		double stddev(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double stddev(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			double var = variance(values, band, rast);
-			double nodata = rast.nodata(band);
+			double nodata = rast.props().nodata();
 			return var == nodata ? nodata : std::sqrt(var);
 		}
 
 		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
-		double aspect(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double aspect(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
-			double nodata = rast.nodata(band);
+			double nodata = rast.props().nodata();
 			if(values[4] == nodata)
 				return nodata;
 			double a = ((values[2] + 2.0 * values[5] + values[8]) - (values[0] + 2.0 * values[3] + values[6])) / 8.0;
@@ -353,12 +357,12 @@ namespace geotools {
 		}
 
 		// Shamelessly stolen from http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-aspect-works.htm#ESRI_SECTION1_4198691F8852475A9F4BC71246579FAA
-		double slope(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double slope(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for slope.");
 			double centre = values[4];
 			double dif = 0.0;
-			double nodata = rast.nodata(band);
+			double nodata = rast.props().nodata();
 			if(centre == nodata)
 				return nodata;
 			for(uint16_t i = 0; i < 9; ++i) {
@@ -366,17 +370,17 @@ namespace geotools {
 				if(v != nodata)
 					dif = g_max(dif, g_abs(v - centre));
 			}
-			return std::atan2(dif, g_sq(rast.resolutionX()) + g_sq(rast.resolutionY()));
+			return std::atan2(dif, g_sq(rast.props().resolutionX()) + g_sq(rast.props().resolutionY()));
 		}
 
-		void normalize(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		void normalize(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			double sd = stddev(values, band, rast);
 			double mn = mean(values, band, rast);
 			for(size_t i = 0; i < values.size(); ++i)
-				values[i] = sd == 0 ? rast.nodata(band) : (values[i] - mn) / sd;
+				values[i] = sd == 0 ? rast.props().nodata() : (values[i] - mn) / sd;
 		}
 
-		double linearity(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double linearity(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
 			normalize(values, band, rast);
@@ -399,7 +403,7 @@ namespace geotools {
 			return maxIdx;
 		}
 
-		double linearity2(std::vector<double> &values, uint16_t band, const Raster<float> &rast) {
+		double linearity2(std::vector<double> &values, uint16_t band, const Raster &rast) {
 			if(values.size() != 9)
 				g_argerr("Kernel must have 9 elements for aspect.");
 			normalize(values, band, rast);
@@ -425,10 +429,10 @@ namespace geotools {
 			return var;
 		}
 
-		typedef double (*statFunc)(std::vector<double>&, uint16_t, const Raster<float>&);
+		typedef double (*statFunc)(std::vector<double>&, uint16_t, const Raster&);
 
-		void process(MemRaster<float> &inrast, MemRaster<float> &outrast,
-				const Raster<float> &writerast,
+		void process(MemRaster &inrast, MemRaster &outrast,
+				const Raster &writerast,
 				uint16_t kernelSize, uint16_t band, statFunc fn) {
 
 			if(kernelSize % 2 == 0) {
@@ -440,19 +444,22 @@ namespace geotools {
 
 			bool circle = true;
 
-			MemRaster<float> kernel(kernelSize, kernelSize);
-			for(uint16_t row = 0; row < inrast.rows() - kernelSize; ++row) {
-				for(uint16_t col = 0; col < inrast.cols() - kernelSize; ++col) {
-					inrast.readBlock(col, row, kernel);
+			GridProps pr;
+			pr.setSize(kernelSize, kernelSize);
+			pr.setDataType(DataType::Float64);
+			MemRaster kernel(pr);
+			for(uint16_t row = 0; row < inrast.props().rows() - kernelSize; ++row) {
+				for(uint16_t col = 0; col < inrast.props().cols() - kernelSize; ++col) {
+					inrast.writeToBlock(kernel, 0, 0, col, row);
 					std::vector<double> values;
 					for(uint16_t r = 0; r < kernelSize; ++r) {
 						for(uint16_t c = 0; c < kernelSize; ++c) {
 							if(circle && g_max(1, g_sq(r) + g_sq(c)) <= g_sq(kernelSize))
-								values.push_back(kernel.get(c, r));
+								values.push_back(kernel.getFloat(c, r));
 						}
 					}
 					double value = fn(values, band, writerast);
-					outrast.set(col + kernelSize / 2, row + kernelSize / 2, value);
+					outrast.setFloat(col + kernelSize / 2, row + kernelSize / 2, value);
 				}
 			}
 		}
@@ -489,44 +496,47 @@ namespace geotools {
 			Bounds bounds;
 			bounds.collapse();
 			for(const std::string &file : config.sourceFiles) {
-				Raster<float> rast(file);
-				bounds.extend(rast.bounds());
-				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
+				Raster rast(file);
+				bounds.extend(rast.props().bounds());
+				if((resX != 0.0 && resX != rast.props().resolutionX()) || (resY != 0.0 && rast.props().resolutionY()))
 					g_argerr("All rasters must have the same resolution.");
-				if(bands > 0 && bands != rast.bandCount())
+				if(bands > 0 && bands != rast.props().bands())
 					g_argerr("All rasters must have the same number of bands.");
-				bands = rast.bandCount();
-				resX = rast.resolutionX();
-				resY = rast.resolutionY();
+				bands = rast.props().bands();
+				resX = rast.props().resolutionX();
+				resY = rast.props().resolutionY();
 				if(nodata.empty()) {
 					for(uint16_t band = 1; band <= bands; ++band)
-						nodata.push_back(rast.nodata(band));
+						nodata.push_back(rast.props().nodata());
 				}
 			}
 
-			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
-			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
+			GridProps pr;
+			pr.setSize(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1);
+			pr.setDataType(DataType::Float64);
+			pr.setNoData(-9999.0);
+			MemRaster inrast(pr, true);
+			MemRaster outrast(pr, true);
 
-			GridProps props;
-			props.setTopLeft(bounds.minx(), bounds.maxy());
-			props.setBands(bands);
-			props.setResolution(resX, resY);
-			props.setSrid(0);
-			Raster<float> writerast(config.destFile, props);
+			double trans[6] = {bounds.minx(), resX, 0, bounds.maxy(), 0, resY};
+			pr.setTrans(trans);
+			pr.setBands(bands);
+			pr.setSrid(0);
+			Raster writerast(config.destFile, pr);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
-				inrast.fill(nodata[band - 1]);
-				writerast.setNodata(nodata[band - 1]);
+				inrast.fillFloat(nodata[band - 1]);
+				writerast.props().setNoData(nodata[band - 1]);
 				
 				for(const std::string &file : config.sourceFiles) {
-					Raster<float> rast(file);
-					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
+					Raster rast(file);
+					rast.writeToblock(inrast, 0, 0, writerast.props().toCol(rast.props().tlx()), writerast.props().toRow(rast.props().tly()));
 				}
 
 				process(inrast, outrast, writerast, config.kernelSize, band, fn);
 
-				writerast.writeBlock(band, outrast);
+				writerast.writeToBlock(outrast);
 			}
 
 		}
@@ -541,7 +551,7 @@ namespace geotools {
 			Bounds bounds;
 			bounds.collapse();
 			for(const std::string &file : config.sourceFiles) {
-				Raster<float> rast(file);
+				Raster rast(file);
 				bounds.extend(rast.bounds());
 				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
 					g_argerr("All rasters must have the same resolution.");
@@ -556,15 +566,15 @@ namespace geotools {
 				}
 			}
 
-			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
-			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 
 			GridProps props;
 			props.setTopLeft(bounds.minx(), bounds.maxy());
 			props.setBands(bands);
 			props.setResolution(resX, resY);
 			props.setSrid(0);
-			Raster<float> writerast(config.destFile, props);
+			Raster writerast(config.destFile, props);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
@@ -574,7 +584,7 @@ namespace geotools {
 				writerast.setNodata(nodata[band - 1]);
 				
 				for(const std::string &file : config.sourceFiles) {
-					Raster<float> rast(file);
+					Raster rast(file);
 					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
 				}
 
@@ -582,12 +592,12 @@ namespace geotools {
 				#pragma omp parallel
 				{
 					#pragma omp for
-					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+					for(uint16_t row = 1; row < inrast.props().rows() - 1; ++row) {
 						std::cerr << "row " << row << "\n";
-						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
-							if(inrast.get(col, row) > 0.0) {
+						for(uint16_t col = 1; col < inrast.props().cols() - 1; ++col) {
+							if(inrast.getFloat(col, row) > 0.0) {
 								#pragma omp critical
-								outrast.set(col, row, inrast.get(col, row));
+								outrast.setFloat(col, row, inrast.getFloat(col, row));
 								continue;
 							}
 							double rad = 0;
@@ -595,15 +605,15 @@ namespace geotools {
 							double v;
 							while(!found) {
 								rad += 1;
-								if(rad > g_min(inrast.cols(), inrast.rows()))
+								if(rad > g_min(inrast.props().cols(), inrast.props().rows()))
 									break;
 								double mind = 99999999.9;
-								for(int r = g_max(0, row - rad); r < g_min(inrast.rows() - 1, row + rad + 1); ++r) {
-									for(int c = g_max(0, col - rad); c < g_min(inrast.cols() - 1, col + rad + 1); ++c) {
+								for(int r = g_max(0, row - rad); r < g_min(inrast.props().rows() - 1, row + rad + 1); ++r) {
+									for(int c = g_max(0, col - rad); c < g_min(inrast.props().cols() - 1, col + rad + 1); ++c) {
 										double d = g_sq(row - r) + g_sq(col - c);
-										if(d <= g_sq(rad) && d < mind && inrast.get(c, r) > 0.0) {
+										if(d <= g_sq(rad) && d < mind && inrast.getFloat(c, r) > 0.0) {
 											mind = d;
-											v = inrast.get(c, r);
+											v = inrast.getFloat(c, r);
 											found = true;
 										}
 									}
@@ -611,12 +621,12 @@ namespace geotools {
 							}
 							if(found) {
 								#pragma omp critical
-								outrast.set(col, row, v);
+								outrast.setFloat(col, row, v);
 							}
 						}
 					}
 				}
-				writerast.writeBlock(band, outrast);
+				writerast.writeToBlock(outrast);
 			}
 
 		}
@@ -633,7 +643,7 @@ namespace geotools {
 			Bounds bounds;
 			bounds.collapse();
 			for(const std::string &file : config.sourceFiles) {
-				Raster<float> rast(file);
+				Raster rast(file);
 				bounds.extend(rast.bounds());
 				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
 					g_argerr("All rasters must have the same resolution.");
@@ -648,15 +658,15 @@ namespace geotools {
 				}
 			}
 
-			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
-			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
+			MemRaster outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, false);
 
 			GridProps props;
 			props.setTopLeft(bounds.minx(), bounds.maxy());
 			props.setBands(bands);
 			props.setResolution(resX, resY);
 			props.setSrid(0);
-			Raster<float> writerast(config.destFile, props);
+			Raster writerast(config.destFile, props);
 
 			TargetOperator<float> op(2.0f);
 
@@ -667,22 +677,22 @@ namespace geotools {
 				writerast.setNodata(nodata[band - 1]);
 				
 				for(const std::string &file : config.sourceFiles) {
-					Raster<float> rast(file);
+					Raster rast(file);
 					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
 				}
 
 
 				// Hack: the corners are bogus fills.
 				inrast.floodFill(0, 0, 1.0f, 0.0f);
-				inrast.floodFill(inrast.cols()-1, 0, 1.0f, 0.0f);
+				inrast.floodFill(inrast.props().cols()-1, 0, 1.0f, 0.0f);
 
 	//			#pragma omp parallel
 				{
 					uint32_t area;
 	//				#pragma omp for
-					for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+					for(uint16_t row = 1; row < inrast.props().rows() - 1; ++row) {
 						std::cerr << "row " << row << "\n";
-						for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
+						for(uint16_t col = 1; col < inrast.props().cols() - 1; ++col) {
 							inrast.floodFill(col, row, 1.0f, 2.0f, true, nullptr, nullptr, nullptr, nullptr, &area);
 							if(area == 0) {
 								continue;
@@ -712,7 +722,7 @@ namespace geotools {
 			Bounds bounds;
 			bounds.collapse();
 			for(const std::string &file : config.sourceFiles) {
-				Raster<float> rast(file);
+				Raster rast(file);
 				bounds.extend(rast.bounds());
 				if((resX != 0.0 && resX != rast.resolutionX()) || (resY != 0.0 && rast.resolutionY()))
 					g_argerr("All rasters must have the same resolution.");
@@ -727,69 +737,68 @@ namespace geotools {
 				}
 			}
 
-			MemRaster<float> inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
-			MemRaster<float> outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
+			MemRaster inrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
+			MemRaster outrast(bounds.maxCol(resX) + 1, bounds.maxRow(resY) + 1, true);
 
 			GridProps props;
-			props.setTopLeft(bounds.minx(), bounds.maxy());
+			double trans[6] = {bounds.minx(), resX, 0, bounds.maxy(), 0, resY};
+			props.setTrans(trans);
 			props.setBands(bands);
-			props.setResolution(resX, resY);
 			props.setSrid(0);
-			Raster<float> writerast(config.destFile, props);
+			Raster writerast(config.destFile, props);
 
 			for(uint32_t band = 1; band <= bands; ++band) {
 				
-				inrast.fill(nodata[band - 1]);
-				writerast.setNodata(nodata[band - 1]);
+				inrast.fillFloat(nodata[band - 1]);
+				writerast.props().setNoData(nodata[band - 1]);
 				
 				for(const std::string &file : config.sourceFiles) {
-					Raster<float> rast(file);
-					rast.readBlock(band, 0, 0, inrast, writerast.toCol(rast.leftx()), writerast.toRow(rast.topy()));
+					Raster rast(file);
+					inrast.writeToBlock(rast, 0, 0, 0, 0, writerast.props().toCol(rast.props().tlx()), writerast.props().toRow(rast.props().tly()) )
 				}
 
 				static int16_t px[8][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-				for(uint16_t row = 1; row < inrast.rows() - 1; ++row) {
+				for(uint16_t row = 1; row < inrast.props().rows() - 1; ++row) {
 					std::cerr << "row " << row << "\n";
-					for(uint16_t col = 1; col < inrast.cols() - 1; ++col) {
-						float v = inrast.get(col, row);
+					for(uint16_t col = 1; col < inrast.props().cols() - 1; ++col) {
+						float v = inrast.getFloat(col, row);
 						bool fill = true;
 						for(size_t i = 0; i < 8; ++i) {
-							if(inrast.get(col + px[i][0], row + px[i][1]) == v) {
+							if(inrast.getFloat(col + px[i][0], row + px[i][1]) == v) {
 								fill = false;
 								break;
 							}
 						}
 						if(fill)
-							outrast.set(col, row, inrast.get(col - 1, row - 1));
+							outrast.setFloat(col, row, inrast.getFloat(col - 1, row - 1));
 					}
 				}
 			}
 
 		}
 
-		template<class T>
-		class GTFillOperator: public FillOperator<T> {
+		class GTFillOperator: public FillOperator {
 		private:
-			T m_elevation;
+			double m_elevation;
 		public:
 
-			GTFillOperator(T elevation) :
+			GTFillOperator(double elevation) :
 				m_elevation(elevation) {
 			}
 
-			bool fill(T value) const {
+			bool fill(double value) const {
 				return value > m_elevation;
 			}
 		};
 
-		bool isEdgePixel(uint16_t col, uint16_t row, MemRaster<float> &inrast, MemRaster<uint8_t> &flood, double *min) {
-			if(col == 0 || row == 0 || col == (flood.cols() - 1) || row == (flood.rows() - 1))
+		bool isEdgePixel(uint16_t col, uint16_t row, MemRaster &inrast, MemRaster &flood, double *min) {
+			if(col == 0 || row == 0 || col == (flood.props().cols() - 1) || row == (flood.props().rows() - 1))
 				return true;
 			*min = G_DBL_MAX_POS;
 			for(uint16_t r = row - 1; r < row + 2; ++r) {
 				for(uint16_t c = col - 1; c < col + 2; ++c) {
-					if(flood.get(c, r) == 0) {
-						*min = g_min(*min, inrast.get(c, r));
+					if(flood.getInt(c, r) == 0) {
+						*min = g_min(*min, inrast.getFloat(c, r));
 						return true;
 					}
 				}
@@ -797,7 +806,7 @@ namespace geotools {
 			return false;
 		}
 
-		void findLowPoint(MemRaster<float> &inrast, MemRaster<uint32_t> &outrast, MemRaster<uint8_t> &flood,
+		void findLowPoint(MemRaster &inrast, MemRaster &outrast, MemRaster &flood,
 				uint16_t minc, uint16_t minr, uint16_t maxc, uint16_t maxr,
 				uint16_t *lc, uint16_t *lr, double *low) {
 			// Find edge;
@@ -808,17 +817,17 @@ namespace geotools {
 					int v;
 					bool edge;
 					try{
-						v = inrast.get(col, row);
+						v = inrast.getFloat(col, row);
 						edge  = isEdgePixel(col, row, inrast, flood, &minTmp);
 					}catch(const std::exception &e) {
-						std::cerr << col << ", " << row << ", " << maxc << ", " << maxr << ", " << inrast.cols() << ", " << inrast.rows() << "\n";
+						std::cerr << col << ", " << row << ", " << maxc << ", " << maxr << ", " << inrast.props().cols() << ", " << inrast.props().rows() << "\n";
 						throw e;
 					}
 					if(v == 1 && edge) {
 						*lc = col;
 						*lr = row;
 						*low = g_min(*low, minTmp);
-						outrast.set(col, row, outrast.get(col, row) + 1);
+						outrast.setInt(col, row, outrast.getInt(col, row) + 1);
 					}
 				}
 			}
@@ -830,13 +839,13 @@ namespace geotools {
 
 			g_loglevel(G_LOG_DEBUG);
 
-			Raster<float> source(config.sourceFiles[0]);
+			Raster source(config.sourceFiles[0]);
 
-			MemRaster<float> inrast(source.cols(), source.rows(), true);
-			inrast.writeBlock(source);
+			MemRaster inrast(source.props(), true);
+			source.writeToBlock(inrast);
 
-			MemRaster<float> outrast(source.cols(), source.rows(), true);
-			outrast.fill(0);
+			MemRaster outrast(source.props(), true);
+			outrast.fillFloat(0);
 
 			g_debug("Starting");
 
@@ -846,16 +855,16 @@ namespace geotools {
 				typedef std::tuple<uint16_t, uint16_t> rtuple ;
 				std::queue<rtuple> q;
 
-				std::vector<bool> visited(inrast.cols() * inrast.rows());
+				std::vector<bool> visited(inrast.props().cols() * inrast.props().rows());
 
 				#pragma omp for
-				for(int row = 1; row < inrast.rows() - 1; ++row) {
+				for(int row = 1; row < inrast.props().rows() - 1; ++row) {
 					g_debug("Row: " << row);
-					for(int col = 1; col < inrast.cols() - 1; ++col) {
+					for(int col = 1; col < inrast.props().cols() - 1; ++col) {
 
 						std::fill(visited.begin(), visited.end(), false);
 
-						double v = inrast.get(col, row);
+						double v = inrast.getFloat(col, row);
 						q.push(std::make_tuple(col, row));
 
 						while(!q.empty()) {
@@ -865,18 +874,18 @@ namespace geotools {
 							int qr = std::get<1>(cell);
 
 							#pragma omp critical(__writeout)
-							outrast.set(qc, qr, outrast.get(qc, qr) + 1);
+							outrast.setInt(qc, qr, outrast.getInt(qc, qr) + 1);
 
 							double min = G_DBL_MAX_POS;
 							int mc, mr;
 							for(int r = qr - 1; r < qr + 2; ++r) {
 								for(int c = qc - 1; c < qc + 2; ++c) {
 									if((c == qc && r == qr)
-											|| c < 0 || r < 0 || c >= inrast.cols() || r >= inrast.rows()
-											|| inrast.isNoData(c, r))
+											|| c < 0 || r < 0 || c >= inrast.props().cols() || r >= inrast.props().rows()
+											|| inrast.getFloat(c, r) == inrast.props().nodata())
 										continue;
-									double dif = v - inrast.get(c, r);
-									long idx = r * inrast.cols() + c;
+									double dif = v - inrast.getFloat(c, r);
+									long idx = r * inrast.props().cols() + c;
 									if(dif < min && !visited[idx]) {
 										min = dif;
 										mc = c;
@@ -892,16 +901,16 @@ namespace geotools {
 				}
 			}
 			g_debug("Writing out.");
-			Raster<float> dest(config.destFile, source.props());
-			dest.writeBlock(outrast);
+			Raster dest(config.destFile, source.props());
+			outrast.writeToBlock(dest);
 			dest.normalize();
 		}
 
 
 		void normalize(RasterStatsConfig &config, Callbacks *callbacks = nullptr, bool *cancel = nullptr) {
-			Raster<float> source(config.sourceFiles[0]);			
-			Raster<float> dest(config.destFile, source.props());
-			dest.writeBlock(source);
+			Raster source(config.sourceFiles[0]);
+			Raster dest(config.destFile, source.props());
+			source.writeToBlock(dest);
 			dest.normalize();
 		}
 
@@ -911,28 +920,28 @@ namespace geotools {
 
 			g_loglevel(G_LOG_DEBUG);
 
-			Raster<float> source(config.sourceFiles[0]);
+			Raster source(config.sourceFiles[0]);
 
-			double nodata = source.nodata();
+			double nodata = source.props().nodata();
 			g_debug(nodata);
 
-			MemRaster<float> input(source.cols(), source.rows(), false);
-			input.writeBlock(source);
+			MemRaster input(source.props(), false);
+			source.writeToBlock(input);
 
-			MemRaster<float> accum(source.cols(), source.rows(), false);
-			accum.fill(0);
+			MemRaster accum(source.props(), false);
+			accum.fillFloat(0);
 
 			g_debug("Starting");
 
 			typedef std::tuple<uint16_t, uint16_t, double, double> rtuple ;
 			std::queue<rtuple> q;
-			std::vector<bool> visited(source.cols() * source.rows());
+			std::vector<bool> visited(source.props().cols() * source.props().rows());
 
-			for(int row = 1; row < source.rows() - 1; ++row) {
-					std::cerr << "row " << row << " of " << source.rows() << "\n";
-				for(int col = 1; col < source.cols() - 1; ++col) {
+			for(int row = 1; row < source.props().rows() - 1; ++row) {
+					std::cerr << "row " << row << " of " << source.props().rows() << "\n";
+				for(int col = 1; col < source.props().cols() - 1; ++col) {
 
-					double v = source.get(col, row);
+					double v = source.getFloat(col, row);
 					q.push(std::make_tuple(col, row, 0.0, v));
 					std::fill(visited.begin(), visited.end(), false);
 
@@ -946,7 +955,7 @@ namespace geotools {
 						double count = std::get<2>(cell);
 						double v = std::get<3>(cell);
 
-						accum.set(sc, sr, accum.get(sc, sr) + count);
+						accum.setInt(sc, sr, accum.getFloat(sc, sr) + count);
 
 						double min = v;
 						int found = 0;
@@ -954,10 +963,10 @@ namespace geotools {
 						for(int r = sr - 1; r < sr + 2; ++r) {
 							for(int c = sc - 1; c < sc + 2; ++c) {
 								double v0;
-								size_t idx = r * input.cols() + c;
+								size_t idx = r * input.props().cols() + c;
 								if((c == sc && r == sc)
-										|| c < 0 || r < 0 || c >= input.cols() || r >= input.rows()
-										|| visited[idx] || (v0 = input.get(c, r)) == nodata)
+										|| c < 0 || r < 0 || c >= input.props().cols() || r >= input.props().rows()
+										|| visited[idx] || (v0 = input.getFloat(c, r)) == nodata)
 									continue;
 								//std::cerr << " -- " << c << ", " << r << ", " << v << ", " << v0 << "\n";
 								if(v0 <= min) {
@@ -972,8 +981,8 @@ namespace geotools {
 							for(int c = sc - 1; c < sc + 2; ++c) {
 								double v0;
 								if((c == sc && r == sc)
-										|| c < 0 || r < 0 || c >= input.cols() || r >= input.rows()
-										|| (v0 = input.get(c, r)) == nodata)
+										|| c < 0 || r < 0 || c >= input.props().cols() || r >= input.props().rows()
+										|| (v0 = input.getFloat(c, r)) == nodata)
 									continue;
 								//std::cerr << " -- " << c << ", " << r << ", " << v << ", " << v0 << "\n";
 								if(v0 == min)
@@ -985,8 +994,8 @@ namespace geotools {
 			}
 			g_debug("Writing out.");
 			accum.logNormalize();
-			Raster<float> dest(config.destFile, source.props());
-			dest.writeBlock(1, accum);
+			Raster dest(config.destFile, source.props());
+			accum.writeToBlock(dest);
 			//dest.writeBlock(2, direction);
 		}
 

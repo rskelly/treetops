@@ -332,6 +332,7 @@ std::string GridProps::projection() const {
 void GridProps::setTrans(double trans[6]) {
 	for(int i = 0; i < 6; ++i)
 		m_trans[i] = trans[i];
+	setResolution(m_trans[1], m_trans[5]);
 }
 
 void GridProps::trans(double trans[6]) const {

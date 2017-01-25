@@ -13,7 +13,7 @@ set (Boost_USE_STATIC_RUNTIME OFF)
 
 set (SQLITE3_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
-set (GEOS_LIBRARY geos_c)
+set (GEOS_LIBRARY geos)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
 
@@ -79,9 +79,11 @@ set (CMAKE_AUTOMOC ON)
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 set (CMAKE_AUTOMOC_OPTIONS "-Iinclude")
 
-find_package (OpenMP)
-find_package (Boost COMPONENTS system filesystem date_time)
-find_package (GDAL)
+find_package (OpenMP REQUIRED)
+find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
+find_package (GDAL 2.1 REQUIRED)
+find_package (libLAS 1.8 REQUIRED)
+
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
 endif()
@@ -190,14 +192,14 @@ add_executable (lasvalidate-app src/apps/lasvalidate.cpp)
 target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
 
 
-#add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
-#target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
+add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
+target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
 
 add_executable (pointgrid src/pointgrid.cpp)
-target_link_libraries (pointgrid ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools lasreader)
+target_link_libraries (pointgrid ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${Boost_LIBRARIES} las laszip raster util geotools lasreader)
 
 add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
-target_link_libraries (lasmerge las laszip ${Boost_LIBRARIES} util geotools)
+target_link_libraries (lasmerge ${GDAL_LIBRARY} ${Boost_LIBRARIES} las laszip util geotools)
 
 
 #add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
