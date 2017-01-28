@@ -548,6 +548,25 @@ bool Util::mkdir(const std::string &dir) {
 	return true;
 }
 
+std::string& Util::lower(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+}
+
+std::string& Util::upper(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+}
+
+std::string Util::extension(const std::string &filename) {
+	using namespace boost::filesystem;
+	path p(filename);
+	std::string ext = p.extension().string().substr(1);
+	lower(ext);
+	return ext;
+
+}
+
 size_t Util::dirlist(const std::string &dir, std::vector<std::string> &files,
 		const std::string &ext) {
 	using namespace boost::filesystem;

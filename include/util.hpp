@@ -217,6 +217,10 @@ namespace geotools {
             // TODO: Use back inserter.
             static void splitString(const std::string &str, std::vector<std::string> &lst);
 
+            static std::string& lower(std::string &str);
+
+            static std::string& upper(std::string &str);
+
             // Prints out a status message; a percentage representing current
             // of total steps.
             static void status(int current, int total);
@@ -237,6 +241,8 @@ namespace geotools {
             static bool rm(const std::string &name);
 
             static bool mkdir(const std::string &dir);
+
+            static std::string extension(const std::string &filename);
 
             // Populates the vector with the files contained in dir. If ext is specified, filters
             // the files by that extension (case-insensitive). If dir is a file, it is added to the list.
