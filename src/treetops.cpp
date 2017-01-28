@@ -312,6 +312,7 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	Raster out(config.smoothSmoothedCHM, pr);
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize,
 			config.smoothOriginalCHMBand, m_callbacks, cancel);
+	out.flush();
 }
 
 void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
@@ -380,7 +381,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	uint64_t total = config.topsThresholds.size() * topsWindowGrid.props().rows();
 	std::atomic<uint64_t> status(0);
 
-	uint16_t bufSize = 1024;
+	uint16_t bufSize = 256;
 
 	// Iterate over the thresholds from lowest height to highest.
 	for(const auto &it : config.topsThresholds) {
@@ -388,14 +389,14 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		uint8_t window = it.second;
 		double threshold = it.first;
 
-		//#pragma omp parallel
+		#pragma omp parallel
 		{
 
 			GridProps pr = GridProps(smoothed.props());
 			pr.setDataType(DataType::Float64);
 			MemRaster smooth(pr, true);
 
-			//#pragma omp for
+			#pragma omp for
 			for(uint16_t j = 0; j < smoothed.props().rows() / bufSize + 1; ++j) {
 				if (*cancel) continue;
 
@@ -473,12 +474,12 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	total = topsIDGrid.props().rows();
 	status = 0;
 
-	//#pragma omp parallel
+	#pragma omp parallel
 	{
 
 		std::list<Top*> tops;
 
-		//#pragma omp for
+		#pragma omp for
 		for(int32_t row = 0; row < topsIDGrid.props().rows(); ++row) {
 			if(*cancel) continue;
 			if (m_callbacks)
