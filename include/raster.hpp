@@ -388,6 +388,12 @@ namespace geotools {
             // with the given filename.
             static DataType getFileDataType(const std::string &filename);
 
+            // Return a map containing the raster driver short name and extension.
+            static std::map<std::string, std::string> extensions();
+
+            // Return a map containing the raster driver short name and long name.
+            static std::map<std::string, std::string> drivers();
+
             // Return the filename for this raster.
             std::string filename() const;
 
