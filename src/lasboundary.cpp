@@ -92,8 +92,10 @@ namespace geotools {
 			p.setSrid(0);
 			Raster<uint16_t> out(dstFile, p);
 			out.writeBlock(rast);
-			if(!polyFile.empty())
-				out.polygonize(polyFile, 1);
+			if(!polyFile.empty()) {
+				g_debug("polygonizing");
+				out.polygonize(polyFile, "data", 26912, 1);
+			}
 		}
 
 	} // las

@@ -1056,6 +1056,7 @@ std::map<std::string, std::string> Raster::drivers() {
 	GDALDriverManager *mgr = GetGDALDriverManager();
 	for(int i = 0; i < mgr->GetDriverCount(); ++i) {
 		GDALDriver *drv = mgr->GetDriver(i);
+		const char* cap = drv->GetMetadataItem(GDAL_DCAP_RASTER);
 		const char* name = drv->GetMetadataItem(GDAL_DMD_LONGNAME);
 		const char* desc = drv->GetDescription();
 		if(name != NULL && desc != NULL) {
@@ -1064,6 +1065,14 @@ std::map<std::string, std::string> Raster::drivers() {
 		}
 	}
 	return drivers;
+}
+
+std::string Raster::getDriverForFilename(const std::string &filename) {
+	std::string ext = Util::extension(filename);
+	std::map<std::string, std::string> drivers = extensions();
+	if(drivers.find(ext) == drivers.end())
+		g_runerr("Could not find a driver for file extension: " << ext);
+	return drivers[ext];
 }
 
 Raster::Raster(const std::string &filename, const GridProps &props) :
@@ -1094,11 +1103,8 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 		opts = CSLSetNameValue(opts, "BIGTIFF", "YES");
 	*/
 	GDALAllRegister();
-	std::string ext = Util::extension(filename);
-	std::map<std::string, std::string> drivers = extensions();
-	if(drivers.find(ext) == drivers.end())
-		g_runerr("Could not find a driver for file extension: " << ext);
-	m_ds = GetGDALDriverManager()->GetDriverByName(drivers[ext].c_str())->Create(
+	std::string drvName = getDriverForFilename(filename);
+	m_ds = GetGDALDriverManager()->GetDriverByName(drvName.c_str())->Create(
 			filename.c_str(), m_props.cols(), m_props.rows(), m_props.bands(),
 			_dataType2GDT(m_props.dataType()), opts);
 	if (!m_ds)
@@ -1442,23 +1448,21 @@ void Raster::setFloat(double x, double y, double v, int band) {
 	setFloat(props().toCol(x), props().toRow(y), v, band);
 }
 
-void Raster::polygonize(const std::string &filename, int srid, int band,
-		Callbacks *callbacks, bool *cancel) {
+void Raster::polygonize(const std::string &filename, const std::string &layerName,
+		uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
-	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("SQLite");
+	std::string drvName = Raster::getDriverForFilename(filename);
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
-	ds->SetProjection(m_ds->GetProjectionRef());
-	double trans[6];
-	m_ds->GetGeoTransform(trans);
-	ds->SetGeoTransform(trans);
 	char **opts = nullptr;
-	opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
-	opts = CSLSetNameValue(opts, "GEOMETRY_NAME", "geom");
-	opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	if(drvName == "SQLite") {
+		opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
+		opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
+	}
 	OGRSpatialReference sr;
 	sr.importFromEPSG(srid);
-	OGRLayer *layer = ds->CreateLayer("boundary", &sr, wkbMultiPolygon, opts);
+	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, opts);
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 	if (callbacks) {

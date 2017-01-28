@@ -30,14 +30,12 @@
 #include <boost/algorithm/string/join.hpp>
 
 #include "geotools.hpp"
-#include "sqlite.hpp"
 #include "util.hpp"
 #include "raster.hpp"
 #include "treetops.hpp"
 
 using namespace geotools::raster;
 using namespace geotools::util;
-using namespace geotools::db;
 
 using namespace geotools::treetops::config;
 using namespace geotools::treetops::util;
@@ -57,40 +55,49 @@ namespace geotools {
 			class Node {
 			public:
 				uint64_t id;
-				int c, r, tc, tr;
-				double z, tz;
+				int c, r;
+				double z;
+				int tc, tr;
+				double tz;
 
 				Node(uint64_t id, int c, int r, double z, int tc, int tr, double tz) :
-						id(id), c(c), r(r), tc(tc), tr(tr), z(z), tz(tz) {
+						id(id),
+						c(c), r(r), z(z),
+						tc(tc), tr(tr), tz(tz) {
 				}
 
-				Node(Point *p) :
-					id(0), c(0), r(0), tc(0), tr(0), z(0), tz(0) {
-					id = atoi(p->fields["id"].c_str());
-					c = tc = atoi(p->fields["smoothedCol"].c_str());
-					r = tr = atoi(p->fields["smoothedRow"].c_str());
-					z = tz = atof(p->fields["smoothedZ"].c_str());
+				Node(Top *p) :
+					id(p->id), 
+					c(p->sc), r(p->sr), z(p->sz),
+					tc(p->sc), tr(p->sr), tz(p->sz) {
 				}
-
 			};
 
 			// Returns true if the pixel at the center of the given circular window is
 			// the maximum value in the window.
-			bool isMaxCenter(Grid &raster, int col, int row, int window, double *max, int band) {
+			bool isMaxCenter(Grid &raster, int col, int row, int window, double *max, double *nulls, int band) {
 				*max = 0;
 				int mc = 0, mr = 0;
-				float v;
-				float d = g_max(std::sqrt(2.0), g_sq((float) window / 2));
+				int n = 0, ntotal = 0;
+				double nodata = raster.props().nodata();
+				double d = g_max(std::sqrt(2.0), g_sq((double) window / 2));
 				for (int r = row - window / 2; r < row + window / 2 + 1; ++r) {
 					for (int c = col - window / 2; c < col + window / 2 + 1; ++c) {
-						float d0 = g_sq((float) col - c) + g_sq((float) row - r);
-						if (d0 <= d && (v = raster.getFloat(c, r, band)) > *max) {
-							*max = v;
-							mc = c;
-							mr = r;
+						double d0 = g_sq((double) col - c) + g_sq((double) row - r);
+						if (d0 <= d) {
+							++ntotal;
+							double v = raster.getFloat(c, r, band);
+							if(v == nodata) {
+								++n;
+							} else if(v > *max) {
+								*max = v;
+								mc = c;
+								mr = r;
+							}
 						}
 					}
 				}
+				*nulls = (double) n / ntotal;
 				return mc == col && mr == row;
 			}
 
@@ -126,28 +133,15 @@ namespace geotools {
 				}
 			}
 
-			void savePoints(std::list<Top*> &tops, SQLite &db) {
-				std::vector<Point*> points(tops.size());
-				int i = 0;
-				for (Top *t : tops) {
-					std::map<std::string, std::string> fields;
-					fields["id"] = std::to_string(t->id);
-					fields["parentID"] = std::to_string(t->parentID);
-					fields["originalX"] = std::to_string(t->ox);
-					fields["originalY"] = std::to_string(t->oy);
-					fields["originalZ"] = std::to_string(t->oz);
-					fields["smoothedX"] = std::to_string(t->sx);
-					fields["smoothedY"] = std::to_string(t->sy);
-					fields["smoothedZ"] = std::to_string(t->sz);
-					fields["smoothedCol"] = std::to_string(t->sc);
-					fields["smoothedRow"] = std::to_string(t->sr);
-					points[i++] = new Point(t->sx, t->sy, t->oz, fields);
-					delete t;
+			void findCrownMax(Raster &chm, Raster &crowns,
+					std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights, int chmBand, int crownsBand) {
+				const GridProps &chmProps = chm.props();
+				for(long i = 0; i < crowns.props().size(); ++i) {
+					uint32_t id = crowns.getInt(i, crownsBand);
+					double v = chm.getFloat(i);
+					if(heights.find(id) == heights.end() || v > std::get<2>(heights[id]))
+						heights[id] = std::make_tuple(chmProps.toCentroidX(i % chmProps.cols()), chmProps.toCentroidY(i / chmProps.rows()), v);
 				}
-				tops.clear();
-				db.begin();
-				db.addPoints(points);
-				db.commit();
 			}
 
 		} // util
@@ -170,6 +164,7 @@ TreetopsConfig::TreetopsConfig() :
 	smoothSigma(0.8),
 	smoothOriginalCHMBand(1),
 	doTops(false),
+	topsMaxNulls(0.2),
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
@@ -343,19 +338,19 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if(m_callbacks)
 		m_callbacks->statusCallback("Preparing database...");
 
-	std::map<std::string, int> fields;
-	fields["id"] = 1;
-	fields["parentID"] = 1;
-	fields["smoothedX"] = 2;
-	fields["smoothedY"] = 2;
-	fields["smoothedZ"] = 2;
-	fields["smoothedCol"] = 1;
-	fields["smoothedRow"] = 1;
-	fields["originalX"] = 2;
-	fields["originalY"] = 2;
-	fields["originalZ"] = 2;
-	SQLite db(config.topsTreetopsDatabase, SQLite::POINT, config.srid, fields, true);
-	db.makeFast();
+	std::unordered_map<std::string, FieldType> fields;
+	fields["id"] = FieldType::FTInt;
+	fields["parentID"] = FieldType::FTInt;
+	fields["originalX"] = FieldType::FTDouble;
+	fields["originalY"] = FieldType::FTDouble;
+	fields["originalZ"] = FieldType::FTDouble;
+	fields["smoothedX"] = FieldType::FTDouble;
+	fields["smoothedY"] = FieldType::FTDouble;
+	fields["smoothedZ"] = FieldType::FTDouble;
+	fields["smoothedCol"] = FieldType::FTInt;
+	fields["smoothedRow"] = FieldType::FTInt;
+	
+	TTDB db(config.topsTreetopsDatabase, "data", fields, GeomType::GTPoint, config.srid, true);
 	db.dropGeomIndex();
 	db.setCacheSize(config.tableCacheSize);
 
@@ -382,6 +377,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	std::atomic<uint64_t> status(0);
 
 	uint16_t bufSize = 256;
+
+	omp_set_num_threads(1);
 
 	// Iterate over the thresholds from lowest height to highest.
 	for(const auto &it : config.topsThresholds) {
@@ -425,7 +422,9 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 						if(v < threshold) continue;
 
 						double max;
-						if (isMaxCenter(smooth, col, row, window, &max, 1))
+						double nulls; // The proportion of null pixels.
+						bool isMax = isMaxCenter(smooth, col, row, window, &max, &nulls, 1);
+						if (isMax && nulls <= config.topsMaxNulls)
 							tops.push_back(std::make_tuple(col, b + row - window / 2, window));
 					}
 					if (m_callbacks)
@@ -477,7 +476,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	#pragma omp parallel
 	{
 
-		std::list<Top*> tops;
+		std::list<std::unique_ptr<Top> > tops;
 
 		#pragma omp for
 		for(int32_t row = 0; row < topsIDGrid.props().rows(); ++row) {
@@ -489,7 +488,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				uint8_t window = topsWindowGrid.getInt(col, row);
 				if(!window) continue;
 
-				Top * pt = new Top(topsIDGrid.getInt(col, row),
+				std::unique_ptr<Top> t(new Top(topsIDGrid.getInt(col, row),
 					topsParentGrid.getInt(col, row),
 					0, // original.toCentroidX(col),
 					0, // original.toCentroidY(row),
@@ -498,8 +497,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					original.props().toCentroidY(row),
 					smoothed.getInt(col, row),
 					col, row
-				);
-				tops.push_back(pt);
+				));
+				tops.push_back(std::move(t));
 			}
 
 			if (m_callbacks)
@@ -509,13 +508,24 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				if (m_callbacks)
 					m_callbacks->statusCallback("Inserting points...");
 				#pragma omp critical(__save_points)
-				savePoints(tops, db);
+				{
+					db.begin();
+					db.addTops(tops);
+					db.commit();
+					tops.clear();
+				}
+
 			}
 		}
 		if (m_callbacks)
 			m_callbacks->statusCallback("Inserting points...");
 		#pragma omp critical(__save_points)
-		savePoints(tops, db);
+		{
+			db.begin();
+			db.addTops(tops);
+			db.commit();
+			tops.clear();
+		}
 	}
 
 	if (m_callbacks)
@@ -528,7 +538,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			m_callbacks->statusCallback("Building index...");
 		db.createGeomIndex();
 	}
-	db.makeSlow();
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);
@@ -545,168 +554,215 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.01f);
-		m_callbacks->statusCallback("Starting crowns...");
+		m_callbacks->statusCallback("Crowns: Loading raster...");
 	}
 
-	if (*cancel)
-		return;
-
-	// Initialize the rasters.
-	if(m_callbacks)
-		m_callbacks->statusCallback("Preparing rasters...");
-
+	// Load the smoothed CHM.
 	Raster inrast(config.crownsSmoothedCHM);
-	double nodata = inrast.props().nodata();
-	GridProps pr = GridProps(inrast.props());
+	const GridProps &iprops = inrast.props();
+	double nodata = iprops.nodata();
+
+	// Initialize the output raster for writing.
+	GridProps pr = GridProps(iprops);
 	pr.setBands(1);
+	pr.setDataType(DataType::UInt32);
 	pr.setNoData(0);
 	Raster outrast(config.crownsCrownsRaster, pr);
 
-	pr = GridProps(inrast.props());
-	pr.setDataType(DataType::UInt32);
-	MemRaster blk(pr, 1);
-	blk.fillInt(0);
-
-	if (*cancel)
-		return;
-
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.02f);
-		m_callbacks->statusCallback("Preparing database...");
+		m_callbacks->statusCallback("Crowns: Preparing database...");
 	}
 
 	// Initialize the database, get the treetop count and estimate the buffer size.
-
-	SQLite db(config.crownsTreetopsDatabase);
+	TTDB db(config.crownsTreetopsDatabase, "data");
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(0.03f);
-		m_callbacks->statusCallback("Processing crowns...");
+		m_callbacks->statusCallback("Crowns: Processing...");
 	}
 
-	// Build the list of offsets for D8 or D4 search.
-	size_t offsetCount = 8;
-	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-	//size_t offsetCount = 4;
-	//int offsets[][2] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
-
-	uint64_t geomCount = db.getGeomCount();
-	std::atomic<uint64_t> status(0);
-	uint32_t bufSize = 128;
+	int bufSize = 256;
 	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
 
-	#pragma omp parallel
 	{
+		// Build the list of offsets for D8 search.
+		size_t offsetCount = 8;
+		int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
 
-		// To keep track of visited cells.
-		GridProps pr = GridProps(inrast.props());
-		pr.setDataType(DataType::Float64);
-		pr.setSize(pr.cols(), bufSize + radius * 2 + 1);
-		MemRaster buf(pr);
-		pr.setDataType(DataType::UInt32);
-		MemRaster blk(pr);
+		uint64_t geomCount = db.getGeomCount();
+		std::atomic<uint64_t> status(0);
 
-		const GridProps &iprops = inrast.props();
-		#pragma omp for
-		for(uint32_t i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
+
+		#pragma omp parallel
+		{
+
+			// A buffer for reading the CHM.
+			GridProps pr = GridProps(inrast.props());
+			pr.setDataType(DataType::Float64);
+			pr.setSize(pr.cols(), bufSize + radius * 2 + 1);
+			MemRaster buf(pr);
+
+			// A block for writing the crowns.
+			pr.setDataType(DataType::UInt32);
+			MemRaster blk(pr);
+			blk.fillInt(0);
+
+			#pragma omp for
+			for(int i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
+				if (*cancel) continue;
+
+				int b = i * bufSize;
+
+				std::vector<std::unique_ptr<Top> > tops;
+
+				Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
+						iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
+
+				#pragma omp critical(__crowns_db)
+				db.getTops(tops, bounds);
+				if(tops.empty())
+					continue;
+
+				status += tops.size();
+
+				// Convert the Tops to Nodes.
+				std::queue<std::unique_ptr<Node> > q;
+				for (std::unique_ptr<Top> &t : tops) {
+					std::unique_ptr<Node> n(new Node(t.get()));
+					q.push(std::move(n));
+				}
+				tops.clear();
+
+				if (*cancel)
+					continue;
+
+				if (m_callbacks)
+					m_callbacks->statusCallback("Loading raster...");
+
+				std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
+
+				uint16_t readOffset = b > 0 ? b - radius : 0;
+				uint16_t writeOffset = b > 0 ? 0 : radius;
+				buf.fillFloat(iprops.nodata());
+				blk.fillInt(0);
+
+				#pragma omp critical(__crowns_in)
+				inrast.writeToBlock(buf, buf.props().cols(), buf.props().rows(),
+						0, readOffset, 0, writeOffset);
+
+				if (m_callbacks)
+					m_callbacks->statusCallback("Delineating crowns...");
+
+				// Run through the queue.
+				while (!*cancel && q.size()) {
+					std::unique_ptr<Node> n = std::move(q.front());
+					q.pop();
+
+					int c = n->c;
+					int r = n->r - b + radius;
+					//if(!(c >= 0 && r >= 0 && c < blk.cols() && r < blk.rows()))
+					//	continue;
+
+					blk.setInt(c, r, (uint32_t) n->id);
+					for(size_t i = 0; i < offsetCount; ++i) {
+						c = n->c + offsets[i][0];
+						r = n->r + offsets[i][1];
+
+						if ((r - b + radius) < 0 || c < 0 ||
+								(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
+							continue;
+
+						size_t idx = (size_t) (r - b + radius) * iprops.cols() + c;
+						if (visited[idx])
+							continue;
+
+						double v = buf.getFloat(idx);
+						if (v != nodata           												// is not nodata
+							&& v < n->z		      												// is less than the neighbouring pixel
+							&& v >= config.crownsMinHeight 										// is greater than the min height
+							&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
+							&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+						) {
+							std::unique_ptr<Node> n(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+							q.push(std::move(n));
+							blk.setInt(idx, n->id);
+							visited[idx] = true;
+						}
+					}
+
+					if(m_callbacks) {
+						m_callbacks->statusCallback("Writing output...");
+						m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
+					}
+
+					#pragma omp critical(__crowns_out)
+					blk.writeToBlock(outrast, iprops.cols(), bufSize, 0, b, 0, radius);
+				}
+			}
+		}
+	}
+
+	{
+		if(m_callbacks)
+			m_callbacks->statusCallback("Finding tops from original CHM...");
+
+		std::unordered_map<uint32_t, std::tuple<double, double, double> > heights;
+		Raster chm(config.crownsOriginalCHM);
+		findCrownMax(chm, outrast, heights, 1, 1);
+
+		for(int i = 0; i < iprops.rows() / bufSize + 1; ++i) {
 			if (*cancel) continue;
-
-			if (m_callbacks)
-				m_callbacks->statusCallback("Loading tops...");
 
 			int b = i * bufSize;
 
 			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
 					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
 
-			std::vector<Point*> tops;
-			#pragma omp critical(__crowns_db)
-			db.getPoints(tops, bounds);
+			if (m_callbacks)
+				m_callbacks->statusCallback("Loading tops...");
+
+			std::vector<std::unique_ptr<Top> > tops;
+			db.getTops(tops, bounds);
 			if(tops.empty())
 				continue;
 
-			status += tops.size();
-
-			// Convert the Tops to Nodes.
-			std::queue<Node*> q;
-			for (Point *p : tops) {
-				if (*cancel)
-					break;
-				q.push(new Node(p));
-				delete p;
-			}
-
 			if (m_callbacks)
-				m_callbacks->statusCallback("Loading raster...");
+				m_callbacks->statusCallback("Updating tops...");
 
-			uint16_t readOffset = b > 0 ? b - radius : 0;
-			uint16_t writeOffset = b > 0 ? 0 : radius;
-			buf.fillFloat(iprops.nodata());
-			#pragma omp critical(__crowns_in)
-			inrast.writeToBlock(buf, buf.props().cols(), buf.props().rows(),
-					0, readOffset, 0, writeOffset);
-
-			blk.fillInt(0);
-			std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
-
-			if (m_callbacks)
-				m_callbacks->statusCallback("Delineating crowns...");
-
-			// Run through the queue.
-			while (!*cancel && q.size()) {
-				Node *n = q.front();
-				q.pop();
-
-				blk.setInt(n->c, n->r - b + radius, (uint32_t) n->id);
-
-				for(size_t i = 0; i < offsetCount; ++i) {
-					int c = n->c + offsets[i][0];
-					int r = n->r + offsets[i][1];
-
-					if ((r - b + radius) < 0 || c < 0 ||
-							(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
-						continue;
-
-					uint32_t idx = (uint64_t) (r - b + radius) * iprops.cols() + c;
-					if (visited[idx])
-						continue;
-
-					double v = buf.getFloat(idx);
-					if (v != nodata           												// is not nodata
-						&& v < n->z		      												// is less than the neighbouring pixel
-						&& v >= config.crownsMinHeight 										// is greater than the min height
-						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
-						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
-					) {
-						q.push(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-						blk.setInt(idx, n->id);
-						visited[idx] = true;
-					}
+			auto end = heights.end();
+			for(const std::unique_ptr<Top> &t : tops) {
+				if(heights.find(t->id) != end) {
+					auto tup = heights[t->id];
+					t->ox = std::get<0>(tup);
+					t->oy = std::get<1>(tup);
+					t->oz = std::get<2>(tup);
 				}
-				delete n;
 			}
 
 			if(m_callbacks)
-				m_callbacks->statusCallback("Writing output...");
+				m_callbacks->statusCallback("Saving tops...");
 
-			#pragma omp critical(__crowns_out)
-			blk.writeToBlock(outrast, iprops.cols(), bufSize, 0, b, 0, radius);
-
-			if(m_callbacks)
-				m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
+			db.begin();
+			db.updateTops(tops);
+			db.commit();
 
 		}
 	}
 
-	// TODO: Filter out isolated pixels if D8 is used. See DTOOLS-22
-
 	if(m_callbacks)
-		m_callbacks->stepCallback(1.0f);
+		m_callbacks->stepCallback(0.99f);
 
 	if(!config.crownsCrownsDatabase.empty()) {
 		if(m_callbacks)
 			m_callbacks->statusCallback("Polygonizing...");
-		outrast.polygonize(config.crownsCrownsDatabase, db.srid(), 1, m_callbacks, cancel);
+		outrast.polygonize(config.crownsCrownsDatabase, "crowns", db.srid(), 1, m_callbacks, cancel);
+		if(m_callbacks)
+			m_callbacks->statusCallback("Deleting invalid polygons...");
+		TTDB db(config.crownsCrownsDatabase, "crowns");
+		db.begin();
+		db.deleteFeature("id", 0);
+		db.commit();
 	}
 
 	if (m_callbacks) {

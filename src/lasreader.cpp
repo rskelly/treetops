@@ -132,7 +132,7 @@ LASReader::~LASReader() {
 }
 
 void LASReader::setFilter(const LASFilter *filter) {
-	m_filter = new LASFilter(*filter);
+	m_filter = filter;
 }
 
 std::string LASReader::filename() const {
@@ -236,7 +236,7 @@ LASMultiReader::~LASMultiReader() {
 }
 
 void LASMultiReader::setFilter(const LASFilter *filter) {
-	m_filter = new LASFilter(*filter);
+	m_filter = filter;
 }
 
 void LASMultiReader::buildFinalizer(const LASReaderCallback *callback) {

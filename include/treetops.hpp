@@ -6,6 +6,7 @@
 
 #include "geotools.hpp"
 #include "util.hpp"
+#include "db.hpp"
 
 namespace geotools {
 
@@ -62,10 +63,13 @@ namespace geotools {
                 // the previous one.
                 std::vector<std::pair<float, uint8_t> > topsThresholds;
 
-
                 std::string topsOriginalCHM;
                 std::string topsSmoothedCHM;
                 std::string topsTreetopsDatabase;
+
+                // The max proportion of pixels in a given kernel that are allowed
+                // to be null. Any kernel with this many or greater is ignored.
+                double topsMaxNulls;
 
                 // Set to true to delineate crowns.
                 bool doCrowns;
@@ -81,6 +85,9 @@ namespace geotools {
 
                 // The input raster -- ideally the same one used for tops.
                 std::string crownsSmoothedCHM;
+
+                // The original CHM from which the smoothed raster was created.
+                std::string crownsOriginalCHM;
 
                 // The treetops database file.
                 std::string crownsTreetopsDatabase;
@@ -129,6 +136,96 @@ namespace geotools {
                     int32_t sc, int32_t sr);
 
                 Top();
+            };
+
+            using namespace geotools::db;
+
+            class TTDB : public DB {
+            public:
+
+                TTDB(const std::string &file, const std::string &layer,
+                    const std::unordered_map<std::string, FieldType> &fields,
+                    GeomType type, int srid = 0, bool replace = false) : 
+                    DB(file, layer, fields, type, srid, replace) {}
+
+                TTDB(const std::string &file, const std::string &layer) :
+                    DB(file, layer) {}
+
+                void addTop(const std::unique_ptr<Top> &top) {
+                    if(m_type != GeomType::GTPoint)
+                        g_runerr("This dataset is not a point dataset.");
+                    OGRFeature feat(m_fdef);
+                    feat.SetField("id", (GIntBig) top->id);
+                    feat.SetField("parentId", (GIntBig) top->parentID);
+                    feat.SetField("originalX", top->ox);
+                    feat.SetField("originalY", top->oy);
+                    feat.SetField("originalZ", top->oz);
+                    feat.SetField("smoothedX", top->sx);
+                    feat.SetField("smoothedY", top->sy);
+                    feat.SetField("smoothedZ", top->sz);
+                    feat.SetField("smoothedCol", top->sc);
+                    feat.SetField("smoothedRow", top->sr);
+                    OGRPoint geom(top->sx, top->sy, top->sz);
+                    feat.SetGeometry(&geom);
+                    if(CPLE_None != m_layer->CreateFeature(&feat))
+                        g_runerr("Failed to add feature to " << m_file << ".");
+                }
+
+                void addTops(const std::list<std::unique_ptr<Top> > &tops) {
+                    for(const std::unique_ptr<Top> &t : tops)
+                        addTop(t);
+                }
+
+                void getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
+                    if(m_type != GeomType::GTPoint)
+                        g_runerr("This dataset is not a point dataset.");
+                    m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
+                    OGRFeature *feat;
+                    while((feat = m_layer->GetNextFeature())) {
+                        std::unique_ptr<Top> t(new Top(
+                            feat->GetFieldAsInteger64("id"),
+                            feat->GetFieldAsInteger64("parentID"),
+                            feat->GetFieldAsDouble("originalX"),
+                            feat->GetFieldAsDouble("originalY"),
+                            feat->GetFieldAsDouble("originalZ"),
+                            feat->GetFieldAsDouble("smoothedX"),
+                            feat->GetFieldAsDouble("smoothedY"),
+                            feat->GetFieldAsDouble("smoothedZ"),
+                            feat->GetFieldAsInteger("smoothedCol"),
+                            feat->GetFieldAsInteger("smoothedRow")
+                        ));
+                        tops.push_back(std::move(t));
+                        OGRFeature::DestroyFeature(feat);
+                    }
+                    m_layer->SetSpatialFilter(NULL);
+                }
+
+                void updateTop(const std::unique_ptr<Top> &top) {
+                    std::stringstream ss;
+                    ss << "\"id\"=" << top->id;
+                    m_layer->SetAttributeFilter(ss.str().c_str());
+                    OGRFeature *feat = m_layer->GetNextFeature();
+                    if(!feat)
+                        g_runerr("Failed to find feature with ID: id=" << top->id);
+                    feat->SetField("parentID", (GIntBig) top->parentID);
+                    feat->SetField("originalX", top->ox);
+                    feat->SetField("originalY", top->oy);
+                    feat->SetField("originalZ", top->oy);
+                    feat->SetField("smoothedX", top->sx);
+                    feat->SetField("smoothedY", top->sy);
+                    feat->SetField("smoothedZ", top->sz);
+                    feat->SetField("smoothedCol", top->sc);
+                    feat->SetField("smoothedRow", top->sr);
+                    if(CPLE_None != m_layer->SetFeature(feat))
+                        g_runerr("Failed to save feature: " << top->id << ".");
+                    OGRFeature::DestroyFeature(feat);
+                }
+
+                void updateTops(std::vector<std::unique_ptr<Top> > &tops) {
+                    for(const std::unique_ptr<Top> &top : tops)
+                        updateTop(top);
+                }
+
             };
 
         } // util

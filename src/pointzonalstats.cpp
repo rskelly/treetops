@@ -318,18 +318,16 @@ void doVector(const std::string &shapefile, const std::string &outfile,
 	using namespace geotools::point::util;
 
 	const GEOSContextHandle_t gctx = OGRGeometry::createGEOSContext();
-	const geom::GeometryFactory *gf =
-			geom::GeometryFactory::getDefaultInstance();
-	const geom::CoordinateSequenceFactory *cf =
-			gf->getCoordinateSequenceFactory();
+	const geom::GeometryFactory *gf = geom::GeometryFactory::getDefaultInstance();
+	const geom::CoordinateSequenceFactory *cf = gf->getCoordinateSequenceFactory();
 	std::vector<Stat> stats;
 
 	g_debug(" -- doVector - opening " << shapefile);
 
-	OGRRegisterAll();
+	GDALAllRegister();
 
 	// Load the shapefile and get the polygons from it.
-	OGRDataSource *srcDs = OGRSFDriverRegistrar::Open(shapefile.c_str(), FALSE);
+	GDALDataset *srcDs = (GDALDataset *) GDALOpen(shapefile.c_str(), GA_ReadOnly);
 	if (srcDs == nullptr)
 		g_runerr("Couldn't open shapefile.");
 
@@ -419,13 +417,11 @@ void doVector(const std::string &shapefile, const std::string &outfile,
 
 	// Start building the output shapefile.
 	g_debug(" -- doVector - updating shapefile.");
-	OGRRegisterAll();
-	OGRSFDriver *drv = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName(
-			"ESRI Shapefile");
+	GDALAllRegister();
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName("ESRI Shapefile");
 	if (drv == nullptr)
 		g_runerr("Shapefile driver is not available.");
-
-	OGRDataSource *dstDs = drv->CreateDataSource(outfile.c_str(), nullptr);
+	GDALDataset *dstDs = drv->Create(outfile.c_str(), 0, 0, 0, GDT_Unknown, NULL);
 	if (dstDs == nullptr)
 		g_runerr("Couldn't create shapefile.");
 
@@ -494,8 +490,6 @@ void doVector(const std::string &shapefile, const std::string &outfile,
 			g_runerr("Failed to create feature.");
 		OGRFeature::DestroyFeature(feat);
 	}
-
-	OGRDataSource::DestroyDataSource(dstDs);
 }
 
 void doRaster(const std::string &raster, const std::string &outfile, int band,
@@ -643,7 +637,7 @@ void doRaster(const std::string &raster, const std::string &outfile, int band,
 									fg.grid(), cols, rows, GDT_Float32, 0, 0))
 						g_runerr("Failed to read band raster.");
 					for (int i = 0; i < rows * cols; ++i) {
-						if (id == dg[i])
+						if (id == dg.get(i))
 							fg.set(i, values[b]);
 					}
 					if (0

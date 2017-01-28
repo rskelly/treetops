@@ -369,6 +369,8 @@ namespace geotools {
 
             GDALDataType getGDType() const;
 
+            static std::string getDriverForFilename(const std::string &filename);
+
         protected:
             GDALDataset* ds() const;
 
@@ -442,10 +444,9 @@ namespace geotools {
             // Flush the current block to the dataset.
             void flush();
 
-            //Raster convert(DataType type);
-
             // Vectorize the raster.
-            void polygonize(const std::string &filename, int srid = 0, int band = 1,
+            void polygonize(const std::string &filename, const std::string &layerName, 
+                uint16_t srid = 0, uint16_t band = 1, 
 				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
 
             ~Raster();

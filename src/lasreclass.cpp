@@ -222,7 +222,7 @@ void recoverEdges(std::vector<std::string> &files, std::string &outfile) {
 		double dir0 = 0, dir1 = 0; // queue direction
 		std::list<liblas::Point> pq0;
 		std::list<liblas::Point> pq1;
-		int limit = 20;
+		size_t limit = 20;
 		double lastTime = 0.0;
 
 		while (r.ReadNextPoint()) {
@@ -450,7 +450,7 @@ void recoverEdgesWEdgeMarker(std::vector<std::string> &files,
 
 		std::list<liblas::Point> pq0;
 		std::list<liblas::Point> pq1;
-		int limit = 20;
+		size_t limit = 20;
 
 		while (r.ReadNextPoint()) {
 			//g_trace("Q0: " << pq0.size() << "; Q1: " << pq1.size());

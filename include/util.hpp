@@ -65,7 +65,7 @@ namespace geotools {
         class Point {
         public:
             double x, y, z;
-            std::map<std::string, std::string> fields;
+            std::unordered_map<std::string, std::string> fields;
             Point();
             Point(double x, double y, double z = 0);
             Point(double x, double y, double z, const std::map<std::string, std::string> &fields);
@@ -238,6 +238,12 @@ namespace geotools {
 
             static const std::string tmpFile();
 
+            // Returns true if the file exists.
+            static bool exists(const std::string &name);
+
+            // Returns true if the path exists, even if the file does not.
+            static bool pathExists(const std::string &name);
+            
             static bool rm(const std::string &name);
 
             static bool mkdir(const std::string &dir);

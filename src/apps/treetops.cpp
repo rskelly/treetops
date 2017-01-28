@@ -9,6 +9,7 @@
 
 #ifdef WITH_GUI
 #include "treetops_ui.hpp"
+#include "cpl_conv.h"
 #endif
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
@@ -54,6 +55,10 @@ void usage() {
 
 int runWithGui(int argc, char **argv) {
 #ifdef WITH_GUI
+
+#ifdef _MSC_VER
+	CPLSetConfigOption("GDAL_DATA", "./gdal-data");
+#endif
 
 	class TTApplication : public QApplication {
 	public:

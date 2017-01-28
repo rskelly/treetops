@@ -534,6 +534,16 @@ void Util::status(int step, int of, const std::string &message, bool end) {
 	}
 }
 
+bool Util::exists(const std::string &name) {
+	boost::filesystem::path p(name);
+	return boost::filesystem::exists(p);
+}
+
+bool Util::pathExists(const std::string &name) {
+	boost::filesystem::path p(name);
+	return boost::filesystem::exists(p.remove_filename());
+}
+
 bool Util::rm(const std::string &name) {
 	using namespace boost::filesystem;
 	path p(name);
@@ -543,19 +553,9 @@ bool Util::rm(const std::string &name) {
 bool Util::mkdir(const std::string &dir) {
 	using namespace boost::filesystem;
 	path bdir(dir);
-	if (!exists(bdir))
+	if (!boost::filesystem::exists(bdir))
 		return create_directory(bdir);
 	return true;
-}
-
-std::string& Util::lower(std::string &str) {
-	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-	return str;
-}
-
-std::string& Util::upper(std::string &str) {
-	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-	return str;
 }
 
 std::string Util::extension(const std::string &filename) {
@@ -590,6 +590,16 @@ size_t Util::dirlist(const std::string &dir, std::vector<std::string> &files,
 	return files.size();
 }
 
+std::string& Util::lower(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+}
+
+std::string& Util::upper(std::string &str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+	return str;
+}
+
 const std::string Util::tmpFile() {
 	return Util::tmpFile("");
 }
@@ -601,6 +611,7 @@ const std::string Util::tmpFile(const std::string &root) {
 		path r(root);
 		return (r / p).string();
 	}
+	p = temp_directory_path() / p;
 	return p.string(); // Windows can have wide string paths.
 }
 
