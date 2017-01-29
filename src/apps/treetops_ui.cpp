@@ -256,8 +256,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtTopsThresholds->setText(qstr(m_config.thresholds()));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
-	cboTopsTopsDatabaseDriver->addItems(vectorDrivers);
-	cboTopsTopsDatabaseDriver->setCurrentText(qstr(m_config.topsTreetopsDatabaseDriver));
+	cboTopsTreetopsDatabaseDriver->addItems(vectorDrivers);
+	cboTopsTreetopsDatabaseDriver->setCurrentText(qstr(m_config.topsTreetopsDatabaseDriver));
 	spnTopsTreetopsSRID->setValue(m_config.srid);
 	spnTopsMaxNulls->setValue(m_config.topsMaxNulls);
 
@@ -288,7 +288,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(txtSmoothSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothSmoothedCHMChanged(QString)));
 	connect(btnSmoothOriginalCHM, SIGNAL(clicked()), this, SLOT(smoothOriginalCHMClicked()));
 	connect(btnSmoothSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothSmoothedCHMClicked()));
-	connect(cboSmoothSmoothedCHMDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(smoothSmoothedCHMDriverChanged(QString)));
+	connect(cboSmoothSmoothedCHMDriver, SIGNAL(currentTextChanged(QString)),
+			this, SLOT(smoothSmoothedCHMDriverChanged(QString)));
 	// -- tops
 	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
 	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
@@ -297,6 +298,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(topsTreetopsDatabaseChanged(QString)));
 	connect(btnTopsSmoothedCHM, SIGNAL(clicked()), this, SLOT(topsSmoothedCHMClicked()));
 	connect(btnTopsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(topsTreetopsDatabaseClicked()));
+	connect(cboTopsTreetopsDatabaseDriver, SIGNAL(currentTextChanged(QString)),
+			this, SLOT(topsTreetopsDatabaseDriverChanged(QString)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
 	// -- crowns
 	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), this, SLOT(crownsRadiusChanged(double)));
@@ -311,7 +314,11 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnCrownsSmoothedCHM, SIGNAL(clicked()), this, SLOT(crownsSmoothedCHMClicked()));
 	connect(btnCrownsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(crownsTreetopsDatabaseClicked()));
 	connect(btnCrownsCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsCrownsRasterClicked()));
+	connect(cboCrownsCrownsRasterDriver, SIGNAL(currentTextChanged(QString)),
+			this, SLOT(crownsCrownsRasterDriverChanged(QString)));
 	connect(btnCrownsCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsCrownsDatabaseClicked()));
+	connect(cboCrownsCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)),
+			this, SLOT(crownsCrownsDatabaseDriverChanged(QString)));
 	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), this, SLOT(topsTreetopsSRIDClicked()));
 	// -- program buttons
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
@@ -396,6 +403,11 @@ void TreetopsForm::topsTreetopsDatabaseClicked() {
 	checkRun();
 }
 
+void TreetopsForm::topsTreetopsDatabaseDriverChanged(QString text) {
+	m_config.topsTreetopsDatabaseDriver = text.toStdString();
+	checkRun();
+}
+
 void TreetopsForm::topsThresholdsClicked() {
 	getThresholds(m_form, m_config.topsThresholds);
 	txtTopsThresholds->setText(qstr(m_config.thresholds()));
@@ -426,9 +438,20 @@ void TreetopsForm::crownsCrownsRasterClicked() {
 	checkRun();
 }
 
+void TreetopsForm::crownsCrownsRasterDriverChanged(QString text) {
+	m_config.crownsCrownsRasterDriver = text.toStdString();
+	checkRun();
+}
+
+
 void TreetopsForm::crownsCrownsDatabaseClicked() {
 	getOutputFile(m_form, "Crowns Database", m_last, ALL_PATTERN, m_config.crownsCrownsDatabase);
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
+	checkRun();
+}
+
+void TreetopsForm::crownsCrownsDatabaseDriverChanged(QString text) {
+	m_config.crownsCrownsDatabaseDriver = text.toStdString();
 	checkRun();
 }
 

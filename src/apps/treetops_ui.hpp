@@ -75,6 +75,7 @@ namespace geotools {
 			void topsThresholdsChanged(QString);
 			void topsSmoothedCHMChanged(QString);
 			void topsTreetopsDatabaseChanged(QString);
+			void topsTreetopsDatabaseDriverChanged(QString);
 			void topsTreetopsSRIDClicked();
 			void topsTreetopsSRIDChanged(int);
 			void topsMaxNullsChanged(double);
@@ -86,7 +87,9 @@ namespace geotools {
 			void crownsSmoothedCHMChanged(QString);
 			void crownsOriginalCHMChanged(QString);
 			void crownsCrownsRasterChanged(QString);
+			void crownsCrownsRasterDriverChanged(QString);
 			void crownsCrownsDatabaseChanged(QString);
+			void crownsCrownsDatabaseDriverChanged(QString);
 
 			void exitClicked();
 			void runClicked();
