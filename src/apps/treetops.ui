@@ -701,12 +701,13 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>grpSmoothing</tabstop>
+  <tabstop>cboSmoothMethod</tabstop>
   <tabstop>spnSmoothWindow</tabstop>
   <tabstop>spnSmoothSigma</tabstop>
   <tabstop>txtSmoothOriginalCHM</tabstop>
   <tabstop>btnSmoothOriginalCHM</tabstop>
   <tabstop>txtSmoothSmoothedCHM</tabstop>
+  <tabstop>cboSmoothSmoothedCHMDriver</tabstop>
   <tabstop>btnSmoothSmoothedCHM</tabstop>
   <tabstop>grpTops</tabstop>
   <tabstop>txtTopsThresholds</tabstop>
@@ -714,6 +715,7 @@
   <tabstop>txtTopsSmoothedCHM</tabstop>
   <tabstop>btnTopsSmoothedCHM</tabstop>
   <tabstop>txtTopsTreetopsDatabase</tabstop>
+  <tabstop>cboTopsTreetopsDatabaseDriver</tabstop>
   <tabstop>btnTopsTreetopsDatabase</tabstop>
   <tabstop>spnTopsMaxNulls</tabstop>
   <tabstop>spnTopsTreetopsSRID</tabstop>
@@ -729,13 +731,16 @@
   <tabstop>txtCrownsTreetopsDatabase</tabstop>
   <tabstop>btnCrownsTreetopsDatabase</tabstop>
   <tabstop>txtCrownsCrownsRaster</tabstop>
+  <tabstop>cboCrownsCrownsRasterDriver</tabstop>
   <tabstop>btnCrownsCrownsRaster</tabstop>
   <tabstop>txtCrownsCrownsDatabase</tabstop>
+  <tabstop>cboCrownsCrownsDatabaseDriver</tabstop>
   <tabstop>btnCrownsCrownsDatabase</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnCancel</tabstop>
   <tabstop>btnExit</tabstop>
   <tabstop>btnHelp</tabstop>
+  <tabstop>grpSmoothing</tabstop>
  </tabstops>
  <resources/>
  <connections/>
