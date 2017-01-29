@@ -561,7 +561,9 @@ bool Util::mkdir(const std::string &dir) {
 std::string Util::extension(const std::string &filename) {
 	using namespace boost::filesystem;
 	path p(filename);
-	std::string ext = p.extension().string().substr(1);
+	std::string ext = p.extension().string();
+	if(ext.size())
+		ext = ext.substr(1);
 	lower(ext);
 	return ext;
 
@@ -598,6 +600,18 @@ std::string& Util::lower(std::string &str) {
 std::string& Util::upper(std::string &str) {
 	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 	return str;
+}
+
+std::string Util::lower(const std::string &str) {
+	std::string n(str);
+	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+	return n;
+}
+
+std::string Util::upper(const std::string &str) {
+	std::string n(str);
+	std::transform(n.begin(), n.end(), n.begin(), ::toupper);
+	return n;
 }
 
 const std::string Util::tmpFile() {

@@ -150,6 +150,16 @@ namespace geotools {
             	GDALClose(m_ds);
             }
 
+            // Returns a map with file extensions for keys, and a list of driver names
+            // as values.
+            static std::map<std::string, std::set<std::string> > extensions();
+
+            // Returns a map with driver short names as keys and long names for values.
+            static std::map<std::string, std::string> drivers();
+
+            // Returns a vector driver for the given filename.
+            static std::string getDriverForFilename(const std::string &filename);
+
             void clear();
 
             void addPoint(double x, double y, double z, const std::unordered_map<std::string, std::string> &fields) {

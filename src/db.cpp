@@ -102,3 +102,57 @@ void geotools::db::util::updateFields(OGRFeature *feat, std::unordered_map<std::
         }
     }
 }
+
+bool _isRast(GDALDriver *drv) {
+	const char* cc = drv->GetMetadataItem(GDAL_DCAP_RASTER);
+	return cc == NULL || std::strncmp(cc, "YES", 3) == 0;
+}
+
+std::map<std::string, std::set<std::string> > DB::extensions() {
+	GDALAllRegister();
+	std::map<std::string, std::set<std::string> > extensions;
+	GDALDriverManager* mgr = GetGDALDriverManager();
+	for(int i = 0; i < mgr->GetDriverCount(); ++i) {
+		GDALDriver* drv = mgr->GetDriver(i);
+		if(!_isRast(drv)) {
+			const char* desc = drv->GetDescription();
+			if(desc != NULL) {
+				const char *ext = drv->GetMetadataItem(GDAL_DMD_EXTENSION);
+				if(ext != NULL ) {
+					std::list<std::string> lst;
+					Util::splitString(std::string(ext), lst);
+					for(const std::string &item : lst)
+						extensions[desc].insert(Util::lower(item));
+				}
+			}
+		}
+	}
+	return extensions;
+}
+
+std::map<std::string, std::string> DB::drivers() {
+	GDALAllRegister();
+	std::map<std::string, std::string> drivers;
+	GDALDriverManager *mgr = GetGDALDriverManager();
+	for(int i = 0; i < mgr->GetDriverCount(); ++i) {
+		GDALDriver *drv = mgr->GetDriver(i);
+		if(!_isRast(drv)) {
+			const char* name = drv->GetMetadataItem(GDAL_DMD_LONGNAME);
+			const char* desc = drv->GetDescription();
+			if(name != NULL && desc != NULL)
+				drivers[desc] = name;
+		}
+	}
+	return drivers;
+}
+
+std::string DB::getDriverForFilename(const std::string &filename) {
+	std::string ext = Util::extension(filename);
+	std::map<std::string, std::set<std::string> > drivers = extensions();
+	std::string result;
+	for(const auto &it : drivers) {
+		if(it.second.find(ext) != it.second.end())
+			result = it.first;
+	}
+	return result;
+}

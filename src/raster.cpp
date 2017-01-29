@@ -16,6 +16,7 @@
 #include "geotools.hpp"
 #include "util.hpp"
 #include "raster.hpp"
+#include "db.hpp"
 
 using namespace geotools::util;
 using namespace geotools::raster;
@@ -181,6 +182,14 @@ GridProps::GridProps() :
 		m_writable(false),			// True if the grid is writable
 		m_nodata(0),
 		m_type(DataType::None) {	// The data type.
+}
+
+std::string GridProps::driver() const {
+	return m_driver;
+}
+
+void GridProps::setDriver(const std::string &name) {
+	m_driver = name;
 }
 
 bool GridProps::isInt() const {
@@ -1035,32 +1044,43 @@ void MemRaster::writeToBlock(Grid &grd,
 
 // Implementations for Raster
 
-std::map<std::string, std::string> Raster::extensions() {
-	std::map<std::string, std::string> extensions;
+std::map<std::string, std::set<std::string> > Raster::extensions() {
+	GDALAllRegister();
+	std::map<std::string, std::set<std::string> > extensions;
 	GDALDriverManager* mgr = GetGDALDriverManager();
 	for(int i = 0; i < mgr->GetDriverCount(); ++i) {
 		GDALDriver* drv = mgr->GetDriver(i);
-		const char* ext = drv->GetMetadataItem(GDAL_DMD_EXTENSION);
-		const char* desc = drv->GetDescription();
-		if(ext != NULL && desc != NULL) {
-			std::string extl(ext);
-			extensions[Util::lower(extl)] = desc;
+		const char* cc = drv->GetMetadataItem(GDAL_DCAP_RASTER);
+		if(cc != NULL && std::strncmp(cc, "YES", 3) == 0) {
+			const char* desc = drv->GetDescription();
+			if(desc != NULL) {
+				const char* ext = drv->GetMetadataItem(GDAL_DMD_EXTENSION);
+				if(ext != NULL ) {
+					std::list<std::string> lst;
+					Util::splitString(std::string(ext), lst);
+					for(const std::string &item : lst)
+						extensions[desc].insert(Util::lower(item));
+				}
+
+			}
 		}
 	}
 	return extensions;
 }
 
 std::map<std::string, std::string> Raster::drivers() {
+	GDALAllRegister();
 	std::map<std::string, std::string> drivers;
 	GDALDriverManager *mgr = GetGDALDriverManager();
 	for(int i = 0; i < mgr->GetDriverCount(); ++i) {
 		GDALDriver *drv = mgr->GetDriver(i);
-		const char* cap = drv->GetMetadataItem(GDAL_DCAP_RASTER);
-		const char* name = drv->GetMetadataItem(GDAL_DMD_LONGNAME);
-		const char* desc = drv->GetDescription();
-		if(name != NULL && desc != NULL) {
-			std::string descl(desc);
-			drivers[Util::lower(descl)] = name;
+		const char* cc = drv->GetMetadataItem(GDAL_DCAP_RASTER);
+		if(cc != NULL && std::strncmp(cc, "YES", 3) == 0) {
+			const char* name = drv->GetMetadataItem(GDAL_DMD_LONGNAME);
+			const char* desc = drv->GetDescription();
+			if(name != NULL && desc != NULL) {
+				drivers[desc] = name;
+			}
 		}
 	}
 	return drivers;
@@ -1068,10 +1088,13 @@ std::map<std::string, std::string> Raster::drivers() {
 
 std::string Raster::getDriverForFilename(const std::string &filename) {
 	std::string ext = Util::extension(filename);
-	std::map<std::string, std::string> drivers = extensions();
-	if(drivers.find(ext) == drivers.end())
-		g_runerr("Could not find a driver for file extension: " << ext);
-	return drivers[ext];
+	std::map<std::string, std::set<std::string> > drivers = extensions();
+	std::string result;
+	for(const auto &it : drivers) {
+		if(it.second.find(ext) != it.second.end())
+			result = it.first;
+	}
+	return result;
 }
 
 Raster::Raster(const std::string &filename, const GridProps &props) :
@@ -1102,8 +1125,14 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 		opts = CSLSetNameValue(opts, "BIGTIFF", "YES");
 	*/
 	GDALAllRegister();
-	std::string drvName = getDriverForFilename(filename);
-	m_ds = GetGDALDriverManager()->GetDriverByName(drvName.c_str())->Create(
+	std::string drvName = m_props.driver();
+	if(drvName.empty())
+		drvName = getDriverForFilename(m_filename);
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
+	const char *create = drv->GetMetadataItem(GDAL_DCAP_CREATE);
+	if(create == NULL || std::strncmp(create, "YES", 3) != 0)
+		g_runerr("The " << drvName << " driver does not support dataset creation. Please specify a different driver.");
+	m_ds = drv->Create(
 			filename.c_str(), m_props.cols(), m_props.rows(), m_props.bands(),
 			_dataType2GDT(m_props.dataType()), opts);
 	if (!m_ds)
@@ -1143,6 +1172,13 @@ Raster::Raster(const std::string &filename, bool writable) :
 			writable ? GA_Update : GA_ReadOnly);
 	if (m_ds == NULL)
 		g_runerr("Failed to open raster.");
+
+	GDALDriver *drv = m_ds->GetDriver();
+	if(drv == NULL)
+		g_runerr("Failed to retrieve driver.");
+	const char *drvName = drv->GetDescription();
+	if(drvName != NULL)
+		m_props.setDriver(drvName);
 
 	m_type = m_ds->GetRasterBand(1)->GetRasterDataType();
 	// Save some raster properties
@@ -1449,7 +1485,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
 	Util::rm(filename);
 	GDALAllRegister();
-	std::string drvName = Raster::getDriverForFilename(filename);
+	std::string drvName = geotools::db::DB::getDriverForFilename(filename);
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
 	char **opts = nullptr;

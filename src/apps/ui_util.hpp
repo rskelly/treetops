@@ -18,6 +18,7 @@
 
 #define VECTOR_PATTERN "Vector Files (*.sqlite *.shp)"
 #define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
+#define ALL_PATTERN "All Files (*)"
 
 namespace geotools {
 

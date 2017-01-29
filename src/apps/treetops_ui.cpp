@@ -7,6 +7,7 @@
 #include <QUrl>
 
 #include "geotools.hpp"
+#include "raster.hpp"
 #include "treetops.hpp"
 #include "treetops_ui.hpp"
 #include "crs_selector_ui.hpp"
@@ -39,14 +40,16 @@ void _loadConfig(TreetopsConfig &config) {
 			qstr(config.smoothOriginalCHM)).toString().toStdString();
 	config.smoothSmoothedCHM = qs.value("smoothSmoothedCHM",
 			qstr(config.smoothSmoothedCHM)).toString().toStdString();
+	config.smoothSmoothedCHMDriver = qs.value("smoothSmoothedCHMDriver",
+			qstr(config.smoothSmoothedCHMDriver)).toString().toStdString();
 	config.doTops = qs.value("doTops", config.doTops).toBool();
 	config.parseThresholds(qs.value("topsThresholds", "").toString().toStdString());
-	config.topsOriginalCHM = qs.value("topsOriginalCHM",
-			qstr(config.topsOriginalCHM)).toString().toStdString();
 	config.topsSmoothedCHM = qs.value("topsSmoothedCHM",
 			qstr(config.topsSmoothedCHM)).toString().toStdString();
 	config.topsTreetopsDatabase = qs.value("topsTreetopsDatabase",
 			qstr(config.topsTreetopsDatabase)).toString().toStdString();
+	config.topsTreetopsDatabaseDriver = qs.value("topsTreetopsDatabaseDriver",
+			qstr(config.topsTreetopsDatabaseDriver)).toString().toStdString();
 	config.topsMaxNulls = qs.value("topsMaxNulls", config.topsMaxNulls).toDouble();
 	config.doCrowns = qs.value("doCrowns", config.doCrowns).toBool();
 	config.crownsRadius =
@@ -63,8 +66,12 @@ void _loadConfig(TreetopsConfig &config) {
 			qstr(config.crownsTreetopsDatabase)).toString().toStdString();
 	config.crownsCrownsRaster = qs.value("crownsCrownsRaster",
 			qstr(config.crownsCrownsRaster)).toString().toStdString();
+	config.crownsCrownsRasterDriver = qs.value("crownsCrownsRasterDriver",
+			qstr(config.crownsCrownsRasterDriver)).toString().toStdString();
 	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase)).toString().toStdString();
+	config.crownsCrownsDatabaseDriver = qs.value("crownsCrownsDatabaseDriver",
+			qstr(config.crownsCrownsDatabaseDriver)).toString().toStdString();
 }
 
 // Save the config settings for this app.
@@ -79,12 +86,14 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("smoothSigma", config.smoothSigma);
 	qs.setValue("smoothOriginalCHM", qstr(config.smoothOriginalCHM));
 	qs.setValue("smoothSmoothedCHM", qstr(config.smoothSmoothedCHM));
+	qs.setValue("smoothSmoothedCHMDriver", qstr(config.smoothSmoothedCHMDriver));
 	qs.setValue("doTops", config.doTops);
 	qs.setValue("topsThresholds", qstr(config.thresholds()));
-	qs.setValue("topsOriginalCHM", qstr(config.topsOriginalCHM));
 	qs.setValue("topsSmoothedCHM", qstr(config.topsSmoothedCHM));
 	qs.setValue("topsTreetopsDatabase",
 			qstr(config.topsTreetopsDatabase));
+	qs.setValue("topsTreetopsDatabaseDriver",
+			qstr(config.topsTreetopsDatabaseDriver));
 	qs.setValue("topsMaxNulls", config.topsMaxNulls);
 	qs.setValue("doCrowns", config.doCrowns);
 	qs.setValue("crownsRadius", config.crownsRadius);
@@ -95,8 +104,11 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("crownsTreetopsDatabase",
 			qstr(config.crownsTreetopsDatabase));
 	qs.setValue("crownsCrownsRaster", qstr(config.crownsCrownsRaster));
+	qs.setValue("crownsCrownsRasterDriver", qstr(config.crownsCrownsRasterDriver));
 	qs.setValue("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase));
+	qs.setValue("crownsCrownsDatabaseDriver",
+			qstr(config.crownsCrownsDatabaseDriver));
 
 }
 
@@ -219,6 +231,16 @@ void TreetopsForm::setupUi(QWidget *form) {
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
 
+	QStringList rasterDrivers;
+	rasterDrivers << "";
+	for(const auto &it : geotools::raster::Raster::drivers())
+		rasterDrivers << qstr(it.first);
+
+	QStringList vectorDrivers;
+	vectorDrivers << "";
+	for(const auto &it : geotools::db::DB::drivers())
+		rasterDrivers << qstr(it.first);
+
 	// Populate fields with saved or default values.
 	// -- smoothing
 	grpSmoothing->setChecked(m_config.doSmoothing);
@@ -226,12 +248,16 @@ void TreetopsForm::setupUi(QWidget *form) {
 	spnSmoothSigma->setValue(m_config.smoothSigma);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
+	cboSmoothSmoothedCHMDriver->addItems(rasterDrivers);
+	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothSmoothedCHMDriver));
+
 	// -- tops
 	grpTops->setChecked(m_config.doTops);
 	txtTopsThresholds->setText(qstr(m_config.thresholds()));
-	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
+	cboTopsTopsDatabaseDriver->addItems(vectorDrivers);
+	cboTopsTopsDatabaseDriver->setCurrentText(qstr(m_config.topsTreetopsDatabaseDriver));
 	spnTopsTreetopsSRID->setValue(m_config.srid);
 	spnTopsMaxNulls->setValue(m_config.topsMaxNulls);
 
@@ -244,7 +270,11 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
+	cboCrownsCrownsRasterDriver->addItems(rasterDrivers);
+	cboCrownsCrownsRasterDriver->setCurrentText(qstr(m_config.crownsCrownsRasterDriver));
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
+	cboCrownsCrownsDatabaseDriver->addItems(vectorDrivers);
+	cboCrownsCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsCrownsDatabaseDriver));
 
 	// Connect events
 	// -- section toggles
@@ -258,14 +288,13 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(txtSmoothSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothSmoothedCHMChanged(QString)));
 	connect(btnSmoothOriginalCHM, SIGNAL(clicked()), this, SLOT(smoothOriginalCHMClicked()));
 	connect(btnSmoothSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothSmoothedCHMClicked()));
+	connect(cboSmoothSmoothedCHMDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(smoothSmoothedCHMDriverChanged(QString)));
 	// -- tops
 	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
 	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
 	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
-	connect(txtTopsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(topsOriginalCHMChanged(QString)));
 	connect(txtTopsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(topsSmoothedCHMChanged(QString)));
 	connect(txtTopsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(topsTreetopsDatabaseChanged(QString)));
-	connect(btnTopsOriginalCHM, SIGNAL(clicked()), this, SLOT(topsOriginalCHMClicked()));
 	connect(btnTopsSmoothedCHM, SIGNAL(clicked()), this, SLOT(topsSmoothedCHMClicked()));
 	connect(btnTopsTreetopsDatabase, SIGNAL(clicked()), this, SLOT(topsTreetopsDatabaseClicked()));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
@@ -329,17 +358,15 @@ void TreetopsForm::updateView() {
 }
 
 void TreetopsForm::smoothOriginalCHMClicked() {
-	getInputFile(m_form, "CHM for Smoothing", m_last, RASTER_PATTERN, m_config.smoothOriginalCHM);
+	getInputFile(m_form, "CHM for Smoothing", m_last, ALL_PATTERN, m_config.smoothOriginalCHM);
 	txtSmoothOriginalCHM->setText(qstr(m_config.smoothOriginalCHM));
-	m_config.topsOriginalCHM = m_config.smoothOriginalCHM;
-	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
 	m_config.crownsOriginalCHM = m_config.smoothOriginalCHM;
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	checkRun();
 }
 
 void TreetopsForm::smoothSmoothedCHMClicked() {
-	getOutputFile(m_form, "Smoothed CHM", m_last, RASTER_PATTERN, m_config.smoothSmoothedCHM);
+	getOutputFile(m_form, "Smoothed CHM", m_last, ALL_PATTERN, m_config.smoothSmoothedCHM);
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	m_config.topsSmoothedCHM = m_config.smoothSmoothedCHM;
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
@@ -348,24 +375,21 @@ void TreetopsForm::smoothSmoothedCHMClicked() {
 	checkRun();
 }
 
+void TreetopsForm::smoothSmoothedCHMDriverChanged(QString text) {
+	m_config.smoothSmoothedCHMDriver = text.toStdString();
+	checkRun();
+}
+
 void TreetopsForm::topsSmoothedCHMClicked() {
-	getInputFile(m_form, "Smoothed CHM for Treetops", m_last, RASTER_PATTERN, m_config.topsSmoothedCHM);
+	getInputFile(m_form, "Smoothed CHM for Treetops", m_last, ALL_PATTERN, m_config.topsSmoothedCHM);
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	m_config.crownsSmoothedCHM = m_config.topsSmoothedCHM;
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	checkRun();
 }
 
-void TreetopsForm::topsOriginalCHMClicked() {
-	getInputFile(m_form, "Original CHM for Treetops", m_last, RASTER_PATTERN, m_config.topsOriginalCHM);
-	txtTopsOriginalCHM->setText(qstr(m_config.topsOriginalCHM));
-	m_config.crownsOriginalCHM = m_config.topsOriginalCHM;
-	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
-	checkRun();
-}
-
 void TreetopsForm::topsTreetopsDatabaseClicked() {
-	getOutputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN, m_config.topsTreetopsDatabase);
+	getOutputFile(m_form, "Treetops Database", m_last, ALL_PATTERN, m_config.topsTreetopsDatabase);
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
@@ -379,31 +403,31 @@ void TreetopsForm::topsThresholdsClicked() {
 }
 
 void TreetopsForm::crownsOriginalCHMClicked() {
-	getInputFile(m_form, "Original CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsOriginalCHM);
+	getInputFile(m_form, "Original CHM for Crown Delineation", m_last, ALL_PATTERN, m_config.crownsOriginalCHM);
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	checkRun();
 }
 
 void TreetopsForm::crownsSmoothedCHMClicked() {
-	getInputFile(m_form, "Smoothed CHM for Crown Delineation", m_last, RASTER_PATTERN, m_config.crownsSmoothedCHM);
+	getInputFile(m_form, "Smoothed CHM for Crown Delineation", m_last, ALL_PATTERN, m_config.crownsSmoothedCHM);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	checkRun();
 }
 
 void TreetopsForm::crownsTreetopsDatabaseClicked() {
-	getInputFile(m_form, "Treetops Database", m_last, VECTOR_PATTERN, m_config.crownsTreetopsDatabase);
+	getInputFile(m_form, "Treetops Database", m_last, ALL_PATTERN, m_config.crownsTreetopsDatabase);
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsRasterClicked() {
-	getOutputFile(m_form, "Crowns Raster", m_last, RASTER_PATTERN, m_config.crownsCrownsRaster);
+	getOutputFile(m_form, "Crowns Raster", m_last, ALL_PATTERN, m_config.crownsCrownsRaster);
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsDatabaseClicked() {
-	getOutputFile(m_form, "Crowns Database", m_last, VECTOR_PATTERN, m_config.crownsCrownsDatabase);
+	getOutputFile(m_form, "Crowns Database", m_last, ALL_PATTERN, m_config.crownsCrownsDatabase);
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
 	checkRun();
 }
@@ -476,11 +500,6 @@ void TreetopsForm::topsSmoothedCHMChanged(QString file) {
 	checkRun();
 }
 
-void TreetopsForm::topsOriginalCHMChanged(QString file) {
-	m_config.topsOriginalCHM = file.toStdString();
-	checkRun();
-}
-
 void TreetopsForm::topsTreetopsDatabaseChanged(QString file) {
 	m_config.topsTreetopsDatabase = file.toStdString();
 	checkRun();
@@ -503,6 +522,7 @@ void TreetopsForm::smoothOriginalCHMChanged(QString file) {
 
 void TreetopsForm::smoothSmoothedCHMChanged(QString file) {
 	m_config.smoothSmoothedCHM = file.toStdString();
+	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(geotools::raster::Raster::getDriverForFilename(file.toStdString())));
 	checkRun();
 }
 

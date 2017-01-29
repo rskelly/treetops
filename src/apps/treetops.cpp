@@ -109,9 +109,6 @@ int main(int argc, char **argv) {
 			} else if (arg == "-ss") {
 				config.smoothSmoothedCHM = argv[++i];
 				config.doSmoothing = true;
-			} else if (arg == "-to") {
-				config.topsOriginalCHM = argv[++i];
-				config.doTops = true;
 			} else if (arg == "-ts") {
 				config.topsSmoothedCHM = argv[++i];
 				config.doTops = true;

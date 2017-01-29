@@ -53,6 +53,7 @@ namespace geotools {
                 std::string smoothSmoothedCHM;
 
                 int smoothOriginalCHMBand;
+                std::string smoothSmoothedCHMDriver;
 
                 // If true, treetop location will be performed.
                 bool doTops;
@@ -63,9 +64,10 @@ namespace geotools {
                 // the previous one.
                 std::vector<std::pair<float, uint8_t> > topsThresholds;
 
-                std::string topsOriginalCHM;
                 std::string topsSmoothedCHM;
                 std::string topsTreetopsDatabase;
+
+                std::string topsTreetopsDatabaseDriver;
 
                 // The max proportion of pixels in a given kernel that are allowed
                 // to be null. Any kernel with this many or greater is ignored.
@@ -94,6 +96,9 @@ namespace geotools {
 
                 std::string crownsCrownsRaster;
                 std::string crownsCrownsDatabase;
+
+                std::string crownsCrownsRasterDriver;
+                std::string crownsCrownsDatabaseDriver;
 
                 // Build a TreetopsConfig with defaults.
                 TreetopsConfig();

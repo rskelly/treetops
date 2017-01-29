@@ -47,12 +47,16 @@ namespace geotools {
             double m_nodata;			// The nodata value.
     		DataType m_type;
     		std::string m_projection;	// The WKT representation of the projection
+    		std::string m_driver;
 
     	public:
 
     		GridProps();
 
     		Bounds bounds() const;
+
+    		std::string driver() const;
+    		void setDriver(const std::string &name);
 
     		bool isInt() const;
     		bool isFloat() const;
@@ -369,8 +373,6 @@ namespace geotools {
 
             GDALDataType getGDType() const;
 
-            static std::string getDriverForFilename(const std::string &filename);
-
         protected:
             GDALDataset* ds() const;
 
@@ -391,10 +393,12 @@ namespace geotools {
             static DataType getFileDataType(const std::string &filename);
 
             // Return a map containing the raster driver short name and extension.
-            static std::map<std::string, std::string> extensions();
+            static std::map<std::string, std::set<std::string> > extensions();
 
             // Return a map containing the raster driver short name and long name.
             static std::map<std::string, std::string> drivers();
+
+            static std::string getDriverForFilename(const std::string &filename);
 
             // Return the filename for this raster.
             std::string filename() const;

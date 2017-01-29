@@ -101,17 +101,17 @@ add_library (geotools STATIC src/geotools.cpp)
 add_library (util STATIC src/util.cpp)
 target_link_libraries (util ${Boost_LIBRARIES} geotools)
 
+add_library (db STATIC src/db.cpp)
+target_link_libraries (db ${GDAL_LIBRARY} geotools)
+
 add_library (raster STATIC src/raster.cpp)
-target_link_libraries (raster ${GDAL_LIBRARY} util geotools)
+target_link_libraries (raster ${GDAL_LIBRARY} util geotools db)
 
 add_library (cellstats STATIC src/cellstats.cpp src/laspoint.cpp)
 target_link_libraries (cellstats gmp CGAL boost_system las geotools)
 
 add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
 target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
-
-add_library (db STATIC src/db.cpp)
-target_link_libraries (db ${GDAL_LIBRARY} geotools raster)
 
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/apps/ui_util.cpp)

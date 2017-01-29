@@ -178,6 +178,8 @@ void TreetopsConfig::checkSmoothing() const {
 		g_argerr("Smoothing: CHM filename must not be empty.");
 	if (smoothSmoothedCHM.empty())
 		g_argerr("Smoothing: Output filename must not be empty.");
+	if (smoothSmoothedCHMDriver.empty())
+		g_argerr("Smoothing: Output driver must not be empty.");
 	if (smoothSigma <= 0 || smoothSigma > 1)
 		g_argerr("Smoothing: Std. deviation must be 0 < n <= 1. " << smoothSigma << " given.");
 	if (smoothWindowSize % 2 == 0 || smoothWindowSize < 3)
@@ -187,12 +189,12 @@ void TreetopsConfig::checkSmoothing() const {
 void TreetopsConfig::checkTops() const {
 	if (!doTops)
 		g_argerr("Not configured to find treetops.");
-	if (topsOriginalCHM.empty())
-		g_argerr("Tops: Unsmoothed CHM filename must not be empty.");
 	if (topsSmoothedCHM.empty())
 		g_argerr("Tops: Smoothed CHM filename must not be empty.");
 	if (topsTreetopsDatabase.empty())
-		g_argerr("Tops: Treetops database filename must not be empty.");
+		g_argerr("Tops: Database filename must not be empty.");
+	if (topsTreetopsDatabaseDriver.empty())
+		g_argerr("Tops: Database driver must not be empty.");
 	if (topsThresholds.empty()) {
 		g_argerr("Tops: At least one threshold must be configured.");
 	} else {
@@ -223,7 +225,11 @@ void TreetopsConfig::checkCrowns() const {
 	if (crownsHeightFraction <= 0.0 || crownsHeightFraction > 1.0)
 		g_argerr("Crowns: The crown height fraction must be between 0 and 1. " << crownsHeightFraction << " given.");
 	if (crownsCrownsRaster.empty())
-	g_argerr("Crowns: Output raster filename must not be empty.")
+		g_argerr("Crowns: Output raster filename must not be empty.")
+	if (crownsCrownsRasterDriver.empty())
+		g_argerr("Crowns: Output raster driver must not be empty.")
+	if(!crownsCrownsDatabase.empty() && crownsCrownsDatabaseDriver.empty())
+		g_argerr("Crowns: If database file is given, driver must also be given.");
 	if (crownsTreetopsDatabase.empty())
 		g_argerr("Crowns: Treetops database filename must not be empty.");
 	if (crownsSmoothedCHM.empty())
@@ -304,6 +310,7 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	Raster in(config.smoothOriginalCHM);
 	GridProps pr = GridProps(in.props());
 	pr.setWritable(true);
+	pr.setDriver(config.smoothSmoothedCHMDriver);
 	Raster out(config.smoothSmoothedCHM, pr);
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize,
 			config.smoothOriginalCHMBand, m_callbacks, cancel);
@@ -328,7 +335,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Loading rasters...");
 
 	// Initialize input rasters.
-	Raster original(config.topsOriginalCHM);
 	Raster smoothed(config.topsSmoothedCHM);
 
 	if (*cancel)
@@ -362,7 +368,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Processing...");
 	}
 
-	GridProps pr = GridProps(original.props());
+	GridProps pr = GridProps(smoothed.props());
 	pr.setDataType(DataType::Byte);
 	MemRaster topsWindowGrid(pr, true);
 	topsWindowGrid.fillInt(0);
@@ -446,20 +452,20 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 		}
 	}
 
-	pr = GridProps(original.props());
+	pr = GridProps(smoothed.props());
 	MemRaster topsParentGrid(pr, true);
 	topsParentGrid.fillInt(0);
 
 	uint8_t minWindow = config.topsThresholds.begin()->second;
 
-	for(uint16_t row = 0; row < original.props().rows(); ++row) {
-		for(uint16_t col = 0; col < original.props().cols(); ++col) {
+	for(uint16_t row = 0; row < pr.rows(); ++row) {
+		for(uint16_t col = 0; col < pr.cols(); ++col) {
 
 			uint8_t window = topsWindowGrid.getInt(col, row);
 			if(window <= minWindow) continue;
 
-			for(int32_t r = g_max(0, row - window / 2); r < g_min(original.props().rows(), row + window / 2 + 1); ++r) {
-				for(int32_t c = g_max(0, col - window / 2); c < g_min(original.props().cols(), col + window / 2 + 1); ++c) {
+			for(int32_t r = g_max(0, row - window / 2); r < g_min(pr.rows(), row + window / 2 + 1); ++r) {
+				for(int32_t c = g_max(0, col - window / 2); c < g_min(pr.cols(), col + window / 2 + 1); ++c) {
 					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) continue;
 
 					uint8_t window0 = topsWindowGrid.getInt(c, r);
@@ -493,8 +499,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					0, // original.toCentroidX(col),
 					0, // original.toCentroidY(row),
 					0, // original.get(col, row),
-					original.props().toCentroidX(col),
-					original.props().toCentroidY(row),
+					pr.toCentroidX(col),
+					pr.toCentroidY(row),
 					smoothed.getInt(col, row),
 					col, row
 				));
@@ -593,6 +599,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		uint64_t geomCount = db.getGeomCount();
 		std::atomic<uint64_t> status(0);
 
+		omp_set_num_threads(1);
 
 		#pragma omp parallel
 		{
@@ -661,8 +668,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 					int c = n->c;
 					int r = n->r - b + radius;
-					//if(!(c >= 0 && r >= 0 && c < blk.cols() && r < blk.rows()))
-					//	continue;
 
 					blk.setInt(c, r, (uint32_t) n->id);
 					for(size_t i = 0; i < offsetCount; ++i) {
@@ -690,15 +695,14 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 							q.push(std::move(n0));
 						}
 					}
-
-					if(m_callbacks) {
-						m_callbacks->statusCallback("Writing output...");
-						m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
-					}
-
-					#pragma omp critical(__crowns_out)
-					blk.writeToBlock(outrast, iprops.cols(), bufSize, 0, b, 0, radius);
 				}
+				if(m_callbacks) {
+					m_callbacks->statusCallback("Writing output...");
+					m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.95f);
+				}
+
+				#pragma omp critical(__crowns_out)
+				blk.writeToBlock(outrast, iprops.cols(), bufSize, 0, radius, 0, b);
 			}
 		}
 	}
@@ -715,7 +719,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			if (*cancel) continue;
 
 			int b = i * bufSize;
-
 			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
 					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
 
@@ -746,7 +749,6 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 			db.begin();
 			db.updateTops(tops);
 			db.commit();
-
 		}
 	}
 

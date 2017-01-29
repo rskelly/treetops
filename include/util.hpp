@@ -221,6 +221,10 @@ namespace geotools {
 
             static std::string& upper(std::string &str);
 
+            static std::string lower(const std::string &str);
+
+            static std::string upper(const std::string &str);
+
             // Prints out a status message; a percentage representing current
             // of total steps.
             static void status(int current, int total);
