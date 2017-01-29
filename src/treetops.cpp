@@ -684,10 +684,10 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 							&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
 							&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 						) {
-							std::unique_ptr<Node> n(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-							q.push(std::move(n));
 							blk.setInt(idx, n->id);
 							visited[idx] = true;
+							std::unique_ptr<Node> n0(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+							q.push(std::move(n0));
 						}
 					}
 

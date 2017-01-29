@@ -665,8 +665,9 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 		size++;
 	}
 
-	Buffer weights(size * size * _getTypeSize(DataType::Float64));
-	Grid::gaussianWeights((double *) weights.buf, size, sigma);
+	Buffer weightsBuf(size * size * _getTypeSize(DataType::Float64));
+	double* weights = (double*) weightsBuf.buf;
+	Grid::gaussianWeights(weights, size, sigma);
 
 	double nd = props().nodata();
 	int cols = props().cols();
@@ -676,9 +677,10 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 	if (status)
 		status->stepCallback(0.02f);
 
+	int bufSize = g_max(size, 256);
+
 	#pragma omp parallel
 	{
-		int bufSize = g_max(size, 256);
 
 		GridProps pr = GridProps(props());
 		pr.setSize(cols, bufSize + size);
@@ -719,8 +721,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 								foundNodata = true;
 								break;
 							} else {
-								double w = *(((double *) weights.buf) + gr * size + gc);
-								t += w * v;
+								t += weights[gr * size + gc] * v;
 							}
 						}
 						if(foundNodata) break;
@@ -737,7 +738,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 			}
 
 			#pragma omp critical(__smooth_write)
-			smooth.writeToBlock(smoothed, pr.cols(), pr.rows(), 0, size / 2, 0, b); // Always write to b and read from (size / 2)
+			smooth.writeToBlock(smoothed, pr.cols(), g_min(bufSize, smoothed.props().rows() - b), 0, size / 2, 0, b); // Always write to b and read from (size / 2)
 		}
 	}
 
@@ -955,22 +956,20 @@ void MemRaster::writeToBlockRaster(Raster &grd,
 		GDALRasterBand *band = grd.m_ds->GetRasterBand(dstBand);
 
 		if(CPLE_None != band->RasterIO(GF_Write, dstCol, dstRow, cols, rows, data,
-				gp.cols(), gp.rows(), gtype, 0, 0, 0))
+				gp.cols(), rows, gtype, 0, 0, 0))
 			g_runerr("Failed to write to: " << grd.filename());
 	} else {
-		int bcols = gp.cols() - srcCol;
-		int brows = gp.rows() - srcRow;
-		Buffer buf(bcols * brows * typeSize);
+		Buffer buf(cols * rows * typeSize);
 		GDALRasterBand *band = grd.m_ds->GetRasterBand(dstBand);
 
 		char* input  = (char*) grid();
 		char* output = (char*) buf.buf;
 		int gcols = gp.cols();
-		for(int r = 0; r < brows; ++r)
-			std::memcpy(output + r * bcols * typeSize, input + ((srcRow + r) * gcols + srcCol) * typeSize, bcols * typeSize);
+		for(int r = 0; r < rows; ++r)
+			std::memcpy(output + r * cols * typeSize, input + ((srcRow + r) * gcols + srcCol) * typeSize, cols * typeSize);
 
 		if(CPLE_None != band->RasterIO(GF_Write, dstCol, dstRow, cols, rows, output,
-				bcols, brows, gtype, 0, 0, 0))
+				cols, rows, gtype, 0, 0, 0))
 			g_runerr("Failed to read from: " << grd.filename());
 	}
 }
@@ -1264,29 +1263,27 @@ void Raster::writeToBlockMemRaster(MemRaster &grd,
 	GDALDataType gtype = _dataType2GDT(type);
 	int typeSize = _getTypeSize(type);
 
-	if(dstCol != 0) {
+	if(dstCol == 0) {
 		int offset = (dstRow * gp.cols() + dstCol) * typeSize;
 		char *grid = ((char *) grd.grid()) + offset;
 		GDALRasterBand *band = m_ds->GetRasterBand(srcBand);
 
 		if(CPLE_None != band->RasterIO(GF_Read, srcCol, srcRow, cols, rows, grid,
-				gp.cols(), gp.rows() - dstRow, gtype, 0, 0, 0))
+				gp.cols(), rows, gtype, 0, 0, 0))
 			g_runerr("Failed to read from: " << filename());
 	} else {
-		int bcols = gp.cols() - dstCol;
-		int brows = gp.rows() - dstRow;
-		Buffer buf(bcols * brows * typeSize);
+		Buffer buf(cols * rows * typeSize);
 		GDALRasterBand *band = m_ds->GetRasterBand(srcBand);
 
 		if(CPLE_None != band->RasterIO(GF_Read, srcCol, srcRow, cols, rows, buf.buf,
-				bcols, brows, gtype, 0, 0, 0))
+				cols, rows, gtype, 0, 0, 0))
 			g_runerr("Failed to read from: " << filename());
 
 		char* output = (char*) grd.grid();
 		char* input  = (char*) buf.buf;
 		int gcols = gp.cols();
-		for(int r = 0; r < brows; ++r)
-			std::memcpy(output + ((dstRow + r) * gcols + dstCol) * typeSize , input + r * bcols * typeSize, bcols * typeSize);
+		for(int r = 0; r < rows; ++r)
+			std::memcpy(output + ((dstRow + r) * gcols + dstCol) * typeSize , input + r * cols * typeSize, cols * typeSize);
 
 	}
 }
