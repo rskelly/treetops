@@ -223,7 +223,7 @@ namespace geotools {
             virtual void setFloat(int col, int row, double value, int band = 1) = 0;
 
             // Write data from Grid instance.
-            virtual void writeToBlock(Grid &grd,
+            virtual void write(Grid &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
@@ -335,17 +335,17 @@ namespace geotools {
             void setFloat(int col, int row, double value, int band = 1);
 
 			// Write data from Grid instance.
-			void writeToBlock(Grid &grd,
+			void write(Grid &grd,
 					int cols = 0, int rows = 0,
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void writeToBlockMemRaster(MemRaster &grd,
+            void writeMemRaster(MemRaster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
             		int srcBand = 1, int dstBand = 1);
-            void writeToBlockRaster(Raster &grd,
+            void writeRaster(Raster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
@@ -408,17 +408,17 @@ namespace geotools {
             void fillFloat(double value, int band = 1);
 
 			// Write data from Grid instance.
-			void writeToBlock(Grid &grd,
+			void write(Grid &grd,
 					int cols = 0, int rows = 0,
 					int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
 					int srcBand = 1, int dstBand = 1);
-            void writeToBlockMemRaster(MemRaster &grd,
+            void writeMemRaster(MemRaster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
             		int srcBand = 1, int dstBand = 1);
-            void writeToBlockRaster(Raster &grd,
+            void writeRaster(Raster &grd,
             		int cols = 0, int rows = 0,
             		int srcCol = 0, int srcRow = 0,
 					int dstCol = 0, int dstRow = 0,
@@ -451,7 +451,7 @@ namespace geotools {
             // Vectorize the raster.
             void polygonize(const std::string &filename, const std::string &layerName, 
                 uint16_t srid = 0, uint16_t band = 1, 
-				geotools::util::Callbacks *callbacks = nullptr, bool *cancel = nullptr);
+				geotools::util::Status *status = nullptr, bool *cancel = nullptr);
 
             ~Raster();
 

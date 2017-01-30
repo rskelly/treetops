@@ -23,86 +23,159 @@ using namespace geotools::raster;
 
 bool _cancel = false;
 
-// Keeps track of polygonization progress and provides a cancellation mechanism.
-class _PolyProgressData {
-public:
-	Callbacks *cb;
-	bool *cancel;
-	bool _cancel;
-	_PolyProgressData(Callbacks *cb, bool *cancel) :
-		cb(cb), cancel(cancel), _cancel(false) {
-		if (cancel == nullptr)
-			cancel = &_cancel;
-	}
-};
+namespace geotools {
 
-// Callback for polygonization.
-int _polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg) {
-	_PolyProgressData *data = (_PolyProgressData *)pProgressArg;
-	if (data) {
-		data->cb->stepCallback((float)dfComplete);
-		return *(data->cancel) ? 0 : 1;
-	}
-	return 1;
-}
+	namespace raster {
 
-void _writeToBlock(void *block, GDALDataType type, double value, int idx) {
-	switch(type) {
-	case GDT_Float32:
-		*(((float *) block) + idx) = (float) value;
-		break;
-	case GDT_Float64:
-		*(((double *) block) + idx) = (double) value;
-		break;
-	case GDT_UInt32:
-		*(((uint32_t *) block) + idx) = (uint32_t) value;
-		break;
-	case GDT_UInt16:
-		*(((uint16_t *) block) + idx) = (uint16_t) value;
-		break;
-	case GDT_Int32:
-		*(((int32_t *) block) + idx) = (int32_t) value;
-		break;
-	case GDT_Int16:
-		*(((int16_t *) block) + idx) = (int16_t) value;
-		break;
-	case GDT_Byte:
-		*(((uint8_t *) block) + idx) = (uint8_t) value;
-		break;
-	default:
-		g_runerr("Data type not implemented: " << type);
-		break;
-	}
-}
+		namespace util {
 
-void _writeToBlock(void *block, GDALDataType type, int value, int idx) {
-	switch(type) {
-	case GDT_Float32:
-		*(((float *) block) + idx) = (float) value;
-		break;
-	case GDT_Float64:
-		*(((double *) block) + idx) = (double) value;
-		break;
-	case GDT_UInt32:
-		*(((uint32_t *) block) + idx) = (uint32_t) value;
-		break;
-	case GDT_UInt16:
-		*(((uint16_t *) block) + idx) = (uint16_t) value;
-		break;
-	case GDT_Int32:
-		*(((int32_t *) block) + idx) = (int32_t) value;
-		break;
-	case GDT_Int16:
-		*(((int16_t *) block) + idx) = (int16_t) value;
-		break;
-	case GDT_Byte:
-		*(((uint8_t *) block) + idx) = (uint8_t) value;
-		break;
-	default:
-		g_runerr("Data type not implemented: " << type);
-		break;
-	}
-}
+			// Keeps track of polygonization progress and provides a cancellation mechanism.
+			class PolyProgressData {
+			public:
+				Status *status;
+				bool *cancel;
+				bool _cancel;
+
+				PolyProgressData(Status *status, bool *cancel) :
+					status(status), cancel(cancel), _cancel(false) {
+					if (cancel == nullptr)
+						cancel = &_cancel;
+				}
+			};
+
+			// Callback for polygonization.
+			int polyProgress(double dfComplete, const char *pszMessage, void *pProgressArg) {
+				PolyProgressData *data = (PolyProgressData *) pProgressArg;
+				if (data) {
+					if(data->status)
+						data->status->update((float) dfComplete);
+					return *(data->cancel) ? 0 : 1;
+				}
+				return 1;
+			}
+
+			void writeToBlock(void *block, GDALDataType type, double value, int idx) {
+				switch(type) {
+				case GDT_Float32:
+					*(((float *) block) + idx) = (float) value;
+					break;
+				case GDT_Float64:
+					*(((double *) block) + idx) = (double) value;
+					break;
+				case GDT_UInt32:
+					*(((uint32_t *) block) + idx) = (uint32_t) value;
+					break;
+				case GDT_UInt16:
+					*(((uint16_t *) block) + idx) = (uint16_t) value;
+					break;
+				case GDT_Int32:
+					*(((int32_t *) block) + idx) = (int32_t) value;
+					break;
+				case GDT_Int16:
+					*(((int16_t *) block) + idx) = (int16_t) value;
+					break;
+				case GDT_Byte:
+					*(((uint8_t *) block) + idx) = (uint8_t) value;
+					break;
+				default:
+					g_runerr("Data type not implemented: " << type);
+					break;
+				}
+			}
+
+			void writeToBlock(void *block, GDALDataType type, int value, int idx) {
+				switch(type) {
+				case GDT_Float32:
+					*(((float *) block) + idx) = (float) value;
+					break;
+				case GDT_Float64:
+					*(((double *) block) + idx) = (double) value;
+					break;
+				case GDT_UInt32:
+					*(((uint32_t *) block) + idx) = (uint32_t) value;
+					break;
+				case GDT_UInt16:
+					*(((uint16_t *) block) + idx) = (uint16_t) value;
+					break;
+				case GDT_Int32:
+					*(((int32_t *) block) + idx) = (int32_t) value;
+					break;
+				case GDT_Int16:
+					*(((int16_t *) block) + idx) = (int16_t) value;
+					break;
+				case GDT_Byte:
+					*(((uint8_t *) block) + idx) = (uint8_t) value;
+					break;
+				default:
+					g_runerr("Data type not implemented: " << type);
+					break;
+				}
+			}
+
+			void readFromBlock(void *block, GDALDataType type, double *value, int idx) {
+				switch(type) {
+				case GDT_Float32:
+					*value = (double) *(((float *) block) + idx);
+					break;
+				case GDT_Float64:
+					*value = (double) *(((double *) block) + idx);
+					break;
+				case GDT_UInt32:
+					*value = (double) *(((uint32_t *) block) + idx);
+					break;
+				case GDT_UInt16:
+					*value= (double) *(((uint16_t *) block) + idx);
+					break;
+				case GDT_Int32:
+					*value = (double) *(((int32_t *) block) + idx);
+					break;
+				case GDT_Int16:
+					*value = (double) *(((int16_t *) block) + idx);
+					break;
+				case GDT_Byte:
+					*value = (double) *(((uint8_t *) block) + idx);
+					break;
+				default:
+					g_runerr("Data type not implemented: " << type);
+					break;
+				}
+			}
+
+			void readFromBlock(void *block, GDALDataType type, int *value, int idx) {
+				switch(type) {
+				case GDT_Float32:
+					*value = (int) *(((float *) block) + idx);
+					break;
+				case GDT_Float64:
+					*value = (int) *(((double *) block) + idx);
+					break;
+				case GDT_UInt32:
+					*value = (int) *(((uint32_t *) block) + idx);
+					break;
+				case GDT_UInt16:
+					*value= (int) *(((uint16_t *) block) + idx);
+					break;
+				case GDT_Int32:
+					*value = (int) *(((int32_t *) block) + idx);
+					break;
+				case GDT_Int16:
+					*value = (int) *(((int16_t *) block) + idx);
+					break;
+				case GDT_Byte:
+					*value = (int) *(((uint8_t *) block) + idx);
+					break;
+				default:
+					g_runerr("Data type not implemented: " << type);
+					break;
+				}
+			}
+
+
+		} //util
+	} // raster
+} // geotools
+
+using namespace geotools::raster::util;
 
 void Raster::setInt(int col, int row, int v, int band) {
 	if (!props().writable())
@@ -119,7 +192,7 @@ void Raster::setInt(int col, int row, int v, int band) {
 		m_brow = brow;
 	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
-	_writeToBlock(m_block, getGDType(), v, idx);
+	writeToBlock(m_block, getGDType(), v, idx);
 	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
 		g_runerr("Failed to write to: " << filename());
 }
@@ -651,7 +724,7 @@ void Grid::voidFillIDW(double radius, int count, double exp, int band) {
 				g_warn("Pixel not filled at " << c << "," << r << ". Consider larger radius or smaller count.");
 		}
 	}
-	writeToBlock(tmp);
+	write(tmp);
 }
 
 void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
@@ -713,7 +786,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 			int readOffset = b > 0 ? b - size / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
 			int writeOffset = b > 0 ? 0 : size / 2;     // If this is the first row, write to (size / 2), otherwise 0.
 			#pragma omp critical(__smooth_read)
-			writeToBlock(buf, pr.cols(), pr.rows(), 0, readOffset, 0, writeOffset, band);
+			write(buf, pr.cols(), pr.rows(), 0, readOffset, 0, writeOffset, band);
 
 			if(status)
 				status->statusCallback("Processing...");
@@ -747,7 +820,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 			}
 
 			#pragma omp critical(__smooth_write)
-			smooth.writeToBlock(smoothed, pr.cols(), g_min(bufSize, smoothed.props().rows() - b), 0, size / 2, 0, b); // Always write to b and read from (size / 2)
+			smooth.write(smoothed, pr.cols(), g_min(bufSize, smoothed.props().rows() - b), 0, size / 2, 0, b); // Always write to b and read from (size / 2)
 		}
 	}
 
@@ -936,7 +1009,7 @@ void MemRaster::fromMatrix(
 	}
 }
 
-void MemRaster::writeToBlockRaster(Raster &grd,
+void MemRaster::writeRaster(Raster &grd,
 			int cols, int rows,
 			int srcCol, int srcRow,
 			int dstCol, int dstRow,
@@ -983,7 +1056,7 @@ void MemRaster::writeToBlockRaster(Raster &grd,
 	}
 }
 
-void MemRaster::writeToBlockMemRaster(MemRaster &grd,
+void MemRaster::writeMemRaster(MemRaster &grd,
 		int cols, int rows,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
@@ -1028,15 +1101,15 @@ void MemRaster::writeToBlockMemRaster(MemRaster &grd,
 	}
 }
 
-void MemRaster::writeToBlock(Grid &grd,
+void MemRaster::write(Grid &grd,
 		int cols, int rows,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
 		int srcBand, int dstBand) {
 	if(dynamic_cast<MemRaster*>(&grd)) {
-		writeToBlockMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+		writeMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
 	} else if(dynamic_cast<Raster*>(&grd)) {
-		writeToBlockRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+		writeRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
 	} else {
 		g_runerr("writeToBlock not implemented to handle this type of grid.");
 	}
@@ -1240,7 +1313,7 @@ void Raster::fillFloat(double value, int band) {
 	}
 }
 
-void Raster::writeToBlockRaster(Raster &grd,
+void Raster::writeRaster(Raster &grd,
 			int cols, int rows,
 			int srcCol, int srcRow,
 			int dstCol, int dstRow,
@@ -1276,7 +1349,7 @@ void Raster::writeToBlockRaster(Raster &grd,
 		g_runerr("Failed to write to: " << filename());
 }
 
-void Raster::writeToBlockMemRaster(MemRaster &grd,
+void Raster::writeMemRaster(MemRaster &grd,
 		int cols, int rows,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
@@ -1324,75 +1397,17 @@ void Raster::writeToBlockMemRaster(MemRaster &grd,
 	}
 }
 
-void Raster::writeToBlock(Grid &grd,
+void Raster::write(Grid &grd,
 		int cols, int rows,
 		int srcCol, int srcRow,
 		int dstCol, int dstRow,
 		int srcBand, int dstBand) {
 	if(dynamic_cast<MemRaster*>(&grd)) {
-		writeToBlockMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+		writeMemRaster(dynamic_cast<MemRaster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
 	} else if(dynamic_cast<Raster*>(&grd)) {
-		writeToBlockRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
+		writeRaster(dynamic_cast<Raster&>(grd), cols, rows, srcCol, srcRow, dstCol, dstRow, srcBand, dstBand);
 	} else {
 		g_runerr("writeToBlock not implemented to handle this type of grid.");
-	}
-}
-
-void _readFromBlock(void *block, GDALDataType type, double *value, int idx) {
-	switch(type) {
-	case GDT_Float32:
-		*value = (double) *(((float *) block) + idx);
-		break;
-	case GDT_Float64:
-		*value = (double) *(((double *) block) + idx);
-		break;
-	case GDT_UInt32:
-		*value = (double) *(((uint32_t *) block) + idx);
-		break;
-	case GDT_UInt16:
-		*value= (double) *(((uint16_t *) block) + idx);
-		break;
-	case GDT_Int32:
-		*value = (double) *(((int32_t *) block) + idx);
-		break;
-	case GDT_Int16:
-		*value = (double) *(((int16_t *) block) + idx);
-		break;
-	case GDT_Byte:
-		*value = (double) *(((uint8_t *) block) + idx);
-		break;
-	default:
-		g_runerr("Data type not implemented: " << type);
-		break;
-	}
-}
-
-void _readFromBlock(void *block, GDALDataType type, int *value, int idx) {
-	switch(type) {
-	case GDT_Float32:
-		*value = (int) *(((float *) block) + idx);
-		break;
-	case GDT_Float64:
-		*value = (int) *(((double *) block) + idx);
-		break;
-	case GDT_UInt32:
-		*value = (int) *(((uint32_t *) block) + idx);
-		break;
-	case GDT_UInt16:
-		*value= (int) *(((uint16_t *) block) + idx);
-		break;
-	case GDT_Int32:
-		*value = (int) *(((int32_t *) block) + idx);
-		break;
-	case GDT_Int16:
-		*value = (int) *(((int16_t *) block) + idx);
-		break;
-	case GDT_Byte:
-		*value = (int) *(((uint8_t *) block) + idx);
-		break;
-	default:
-		g_runerr("Data type not implemented: " << type);
-		break;
 	}
 }
 
@@ -1410,7 +1425,7 @@ double Raster::getFloat(int col, int row, int band) {
 		g_runerr("Failed to read from: " << filename());
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	double v;
-	_readFromBlock(m_block, getGDType(), &v, idx);
+	readFromBlock(m_block, getGDType(), &v, idx);
 	return v;
 }
 
@@ -1433,7 +1448,7 @@ int Raster::getInt(int col, int row, int band) {
 		g_runerr("Failed to read from: " << filename());
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	int v;
-	_readFromBlock(m_block, getGDType(), &v, idx);
+	readFromBlock(m_block, getGDType(), &v, idx);
 	return v;
 }
 
@@ -1468,7 +1483,7 @@ void Raster::setFloat(int col, int row, double v, int band) {
 		m_brow = brow;
 	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
-	_writeToBlock(m_block, getGDType(), v, idx);
+	writeToBlock(m_block, getGDType(), v, idx);
 	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
 		g_runerr("Failed to write to: " << filename());
 }
@@ -1482,9 +1497,12 @@ void Raster::setFloat(double x, double y, double v, int band) {
 }
 
 void Raster::polygonize(const std::string &filename, const std::string &layerName,
-		uint16_t srid, uint16_t band, Callbacks *callbacks, bool *cancel) {
+		uint16_t srid, uint16_t band, Status *status, bool *cancel) {
+
 	Util::rm(filename);
+
 	GDALAllRegister();
+
 	std::string drvName = geotools::db::DB::getDriverForFilename(filename);
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
@@ -1493,17 +1511,17 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
 		opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
 	}
+
 	OGRSpatialReference sr;
 	sr.importFromEPSG(srid);
 	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, opts);
+
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
-	if (callbacks) {
-		_PolyProgressData pd(callbacks, cancel);
-		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &_polyProgress, &pd);
-	} else {
-		GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, NULL, NULL);
-	}
+
+	PolyProgressData pd(status, cancel);
+	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &polyProgress, &pd);
+
 	GDALClose(ds);
 }
 
@@ -1517,6 +1535,13 @@ void Raster::flush() {
 
 Raster::~Raster() {
 	flush();
-	free(m_block);
-	GDALClose(m_ds);
+	#pragma omp critical(__raster_destruct)
+	{
+		if(m_block)
+			free(m_block);
+		m_block = nullptr;
+		if(m_ds)
+			GDALClose(m_ds);
+		m_ds = nullptr;
+	}
 }
