@@ -20,6 +20,9 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 #include "geotools.hpp"
 
@@ -61,6 +64,17 @@ namespace geotools {
             virtual void overallCallback(float status) const = 0;
             virtual void statusCallback(const std::string &msg) const = 0;
         };
+
+		// Simple class for capturing status from utility functions.
+		class Status {
+		public:
+			Callbacks *callbacks;
+			float start, end;
+
+			Status(Callbacks *callbacks, float start, float end);
+
+			void update(float s);
+		};
 
         class Point {
         public:
@@ -216,6 +230,8 @@ namespace geotools {
 
             // TODO: Use back inserter.
             static void splitString(const std::string &str, std::vector<std::string> &lst);
+
+            static std::string join(const std::vector<std::string> &lst, const std::string &delim);
 
             static std::string& lower(std::string &str);
 

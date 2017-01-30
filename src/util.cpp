@@ -8,10 +8,6 @@
 #include <string>
 #include <tuple>
 
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
-
 #include <ogr_spatialref.h>
 
 #include "geotools.hpp"
@@ -32,6 +28,13 @@ void Callbacks::statusCallback(const std::string &msg) const {
 }
 
 Callbacks::~Callbacks() {
+}
+
+Status::Status(Callbacks *callbacks, float start, float end) :
+	callbacks(callbacks), start(start), end(end) {
+}
+void Status::update(float s) {
+	callbacks->stepCallback(start + s * (end - start));
 }
 
 Point::Point(double x, double y, double z) :
@@ -426,6 +429,10 @@ void Util::splitString(const std::string &str, std::vector<std::string> &lst) {
 	std::string item;
 	while (std::getline(ss, item, ','))
 		lst.push_back(item);
+}
+
+std::string Util::join(const std::vector<std::string> &lst, const std::string &delim) {
+	return boost::algorithm::join(lst, delim);
 }
 
 /**
