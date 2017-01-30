@@ -239,7 +239,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	QStringList vectorDrivers;
 	vectorDrivers << "";
 	for(const auto &it : geotools::db::DB::drivers())
-		rasterDrivers << qstr(it.first);
+		vectorDrivers << qstr(it.first);
 
 	// Populate fields with saved or default values.
 	// -- smoothing

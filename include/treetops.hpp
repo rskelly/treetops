@@ -49,10 +49,19 @@ namespace geotools {
                 // 0 < n <= 1.
                 double smoothSigma;
 
+                // The method to use for smoothing; e.g. Gaussian, Median
+                std::string smoothMethod;
+
+                // The path to the original CHM.
                 std::string smoothOriginalCHM;
+
+                // The path to the smoothed CHM.
                 std::string smoothSmoothedCHM;
 
+                // The raster band to smooth.
                 int smoothOriginalCHMBand;
+
+                // The driver to use for creating the smoothed CHM.
                 std::string smoothSmoothedCHMDriver;
 
                 // If true, treetop location will be performed.
@@ -64,9 +73,13 @@ namespace geotools {
                 // the previous one.
                 std::vector<std::pair<float, uint8_t> > topsThresholds;
 
+                // The path to the smoothed CHM.
                 std::string topsSmoothedCHM;
+
+                // The path to the treetops database.
                 std::string topsTreetopsDatabase;
 
+                // The river to use for creating the database.
                 std::string topsTreetopsDatabaseDriver;
 
                 // The max proportion of pixels in a given kernel that are allowed
@@ -94,21 +107,35 @@ namespace geotools {
                 // The treetops database file.
                 std::string crownsTreetopsDatabase;
 
+                // The path to the crowns raster.
                 std::string crownsCrownsRaster;
+
+                // The path to the crowns database.
                 std::string crownsCrownsDatabase;
 
+                // The driver to use for the raster.
                 std::string crownsCrownsRasterDriver;
+
+                // The driver to use for the database.
                 std::string crownsCrownsDatabaseDriver;
 
                 // Build a TreetopsConfig with defaults.
                 TreetopsConfig();
 
+                // Check that the settings are appropriate for a smoothing
+                // job, throw an exception otherwise.
                 void checkSmoothing() const;
 
+                // Check that the settings are appropriate for a treetops
+                // job, throw an exception otherwise.
                 void checkTops() const;
 
+                // Check that the settings are appropriate for a crowns
+                // job, throw an exception otherwise.
                 void checkCrowns() const;
 
+                // Check that the settings are appropriate for a merge
+                // job, throw an exception otherwise.
                 void checkMerge() const;
 
                 // Check the validity of the configuration.
@@ -117,8 +144,10 @@ namespace geotools {
                 // Returns true if any function can be successfully run.
                 bool canRun() const;
 
+                // Returns the thresholds as a comma-delimited list.
                 std::string thresholds() const;
 
+                // Parses a comma-delimited list of thresholds into an internal list.
                 void parseThresholds(const std::string &str);
 
             };
@@ -130,11 +159,11 @@ namespace geotools {
             // A simple class for maintaining information about a tree top.
             class Top {
             public:
-                uint64_t id;
-                uint64_t parentID;
-                double ox, oy, oz; // Original x, y, z value
-                double sx, sy, sz; // Smoothed x, y, z value.
-                int32_t sc, sr;    // Smoothed col, row.
+                uint64_t id;		// The ID of this top.
+                uint64_t parentID;	// The ID of this top's parent.
+                double ox, oy, oz; 	// Original x, y, z value
+                double sx, sy, sz; 	// Smoothed x, y, z value.
+                int32_t sc, sr;    	// Smoothed col, row.
                 Top(uint64_t id, uint64_t parentId, 
                     double ox, double oy, double oz, 
                     double sx, double sy, double sz, 
@@ -145,91 +174,25 @@ namespace geotools {
 
             using namespace geotools::db;
 
+            // A subclass of DB with specific methods for managing treetops.
             class TTDB : public DB {
             public:
 
-                TTDB(const std::string &file, const std::string &layer,
+                TTDB(const std::string &file, const std::string &layer, const std::string &driver,
                     const std::unordered_map<std::string, FieldType> &fields,
-                    GeomType type, int srid = 0, bool replace = false) : 
-                    DB(file, layer, fields, type, srid, replace) {}
+                    GeomType type, int srid = 0, bool replace = false);
 
-                TTDB(const std::string &file, const std::string &layer) :
-                    DB(file, layer) {}
+                TTDB(const std::string &file, const std::string &layer);
 
-                void addTop(const std::unique_ptr<Top> &top) {
-                    if(m_type != GeomType::GTPoint)
-                        g_runerr("This dataset is not a point dataset.");
-                    OGRFeature feat(m_fdef);
-                    feat.SetField("id", (GIntBig) top->id);
-                    feat.SetField("parentId", (GIntBig) top->parentID);
-                    feat.SetField("originalX", top->ox);
-                    feat.SetField("originalY", top->oy);
-                    feat.SetField("originalZ", top->oz);
-                    feat.SetField("smoothedX", top->sx);
-                    feat.SetField("smoothedY", top->sy);
-                    feat.SetField("smoothedZ", top->sz);
-                    feat.SetField("smoothedCol", top->sc);
-                    feat.SetField("smoothedRow", top->sr);
-                    OGRPoint geom(top->sx, top->sy, top->sz);
-                    feat.SetGeometry(&geom);
-                    if(CPLE_None != m_layer->CreateFeature(&feat))
-                        g_runerr("Failed to add feature to " << m_file << ".");
-                }
+                void addTop(const std::unique_ptr<Top> &top);
 
-                void addTops(const std::list<std::unique_ptr<Top> > &tops) {
-                    for(const std::unique_ptr<Top> &t : tops)
-                        addTop(t);
-                }
+                void addTops(const std::list<std::unique_ptr<Top> > &tops);
 
-                void getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
-                    if(m_type != GeomType::GTPoint)
-                        g_runerr("This dataset is not a point dataset.");
-                    m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
-                    OGRFeature *feat;
-                    while((feat = m_layer->GetNextFeature())) {
-                        std::unique_ptr<Top> t(new Top(
-                            feat->GetFieldAsInteger64("id"),
-                            feat->GetFieldAsInteger64("parentID"),
-                            feat->GetFieldAsDouble("originalX"),
-                            feat->GetFieldAsDouble("originalY"),
-                            feat->GetFieldAsDouble("originalZ"),
-                            feat->GetFieldAsDouble("smoothedX"),
-                            feat->GetFieldAsDouble("smoothedY"),
-                            feat->GetFieldAsDouble("smoothedZ"),
-                            feat->GetFieldAsInteger("smoothedCol"),
-                            feat->GetFieldAsInteger("smoothedRow")
-                        ));
-                        tops.push_back(std::move(t));
-                        OGRFeature::DestroyFeature(feat);
-                    }
-                    m_layer->SetSpatialFilter(NULL);
-                }
+                void getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds);
 
-                void updateTop(const std::unique_ptr<Top> &top) {
-                    std::stringstream ss;
-                    ss << "\"id\"=" << top->id;
-                    m_layer->SetAttributeFilter(ss.str().c_str());
-                    OGRFeature *feat = m_layer->GetNextFeature();
-                    if(!feat)
-                        g_runerr("Failed to find feature with ID: id=" << top->id);
-                    feat->SetField("parentID", (GIntBig) top->parentID);
-                    feat->SetField("originalX", top->ox);
-                    feat->SetField("originalY", top->oy);
-                    feat->SetField("originalZ", top->oy);
-                    feat->SetField("smoothedX", top->sx);
-                    feat->SetField("smoothedY", top->sy);
-                    feat->SetField("smoothedZ", top->sz);
-                    feat->SetField("smoothedCol", top->sc);
-                    feat->SetField("smoothedRow", top->sr);
-                    if(CPLE_None != m_layer->SetFeature(feat))
-                        g_runerr("Failed to save feature: " << top->id << ".");
-                    OGRFeature::DestroyFeature(feat);
-                }
+                void updateTop(const std::unique_ptr<Top> &top);
 
-                void updateTops(std::vector<std::unique_ptr<Top> > &tops) {
-                    for(const std::unique_ptr<Top> &top : tops)
-                        updateTop(top);
-                }
+                void updateTops(std::vector<std::unique_ptr<Top> > &tops);
 
             };
 
