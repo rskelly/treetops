@@ -144,20 +144,19 @@ namespace geotools {
 				const GridProps &chmProps = chm.props();
 				const GridProps &crownProps = crowns.props();
 
-				int rows = crownProps.rows();
 				for(long i = 0; i < crownProps.size(); ++i) {
 					uint32_t id = crowns.getInt(i, crownsBand);
-					double v = chm.getFloat(i, chmBand);
-					if(heights.find(id) == heights.end() || v > std::get<2>(heights[id])) {
-						double x = chmProps.toCentroidX(i % chmProps.cols());
-						double y = chmProps.toCentroidY(i / chmProps.rows());
-						heights[id] = std::make_tuple(x, y, v);
+					if(id > 0) {
+						double v = chm.getFloat(i, chmBand);
+						if(heights.find(id) == heights.end() || v > std::get<2>(heights[id])) {
+							double x = chmProps.toCentroidX(i % chmProps.cols());
+							double y = chmProps.toCentroidY(i / chmProps.rows());
+							heights[id] = std::make_tuple(x, y, v);
+						}
 					}
-					if(i % rows == 0) {
-						if(*cancel)
-							break;
-						status.update((float) i / crownProps.size());
-					}
+					if(*cancel)
+						break;
+					status.update((float) i / crownProps.size());
 				}
 			}
 
@@ -328,14 +327,14 @@ void TTDB::addTop(const std::unique_ptr<Top> &top) {
     OGRFeature* feat = OGRFeature::CreateFeature(m_fdef);
     feat->SetField("id", (GIntBig) top->id);
     feat->SetField("parentId", (GIntBig) top->parentID);
-    feat->SetField("originalX", top->ox);
-    feat->SetField("originalY", top->oy);
-    feat->SetField("originalZ", top->oz);
-    feat->SetField("smoothedX", top->sx);
-    feat->SetField("smoothedY", top->sy);
-    feat->SetField("smoothedZ", top->sz);
-    feat->SetField("smoothedCol", top->sc);
-    feat->SetField("smoothedRow", top->sr);
+    feat->SetField("origX", top->ox);
+    feat->SetField("origY", top->oy);
+    feat->SetField("origZ", top->oz);
+    feat->SetField("smoothX", top->sx);
+    feat->SetField("smoothY", top->sy);
+    feat->SetField("smoothZ", top->sz);
+    feat->SetField("smoothCol", top->sc);
+    feat->SetField("smoothRow", top->sr);
     OGRPoint geom(top->sx, top->sy, top->sz);
     feat->SetGeometry(&geom);
     OGRErr e = m_layer->CreateFeature(feat);
@@ -349,7 +348,7 @@ void TTDB::addTops(const std::list<std::unique_ptr<Top> > &tops) {
         addTop(t);
 }
 
-void TTDB::getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
+void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
     if(m_type != GeomType::GTPoint)
         g_runerr("This dataset is not a point dataset.");
     m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
@@ -358,14 +357,14 @@ void TTDB::getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::uti
         std::unique_ptr<Top> t(new Top(
             feat->GetFieldAsInteger64("id"),
             feat->GetFieldAsInteger64("parentID"),
-            feat->GetFieldAsDouble("originalX"),
-            feat->GetFieldAsDouble("originalY"),
-            feat->GetFieldAsDouble("originalZ"),
-            feat->GetFieldAsDouble("smoothedX"),
-            feat->GetFieldAsDouble("smoothedY"),
-            feat->GetFieldAsDouble("smoothedZ"),
-            feat->GetFieldAsInteger("smoothedCol"),
-            feat->GetFieldAsInteger("smoothedRow")
+            feat->GetFieldAsDouble("origX"),
+            feat->GetFieldAsDouble("origY"),
+            feat->GetFieldAsDouble("origZ"),
+            feat->GetFieldAsDouble("smoothX"),
+            feat->GetFieldAsDouble("smoothY"),
+            feat->GetFieldAsDouble("smoothZ"),
+            feat->GetFieldAsInteger("smoothCol"),
+            feat->GetFieldAsInteger("smoothRow")
         ));
         tops.push_back(std::move(t));
         OGRFeature::DestroyFeature(feat);
@@ -381,20 +380,20 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     if(!feat)
         g_runerr("Failed to find feature with ID: id=" << top->id);
     feat->SetField("parentID", (GIntBig) top->parentID);
-    feat->SetField("originalX", top->ox);
-    feat->SetField("originalY", top->oy);
-    feat->SetField("originalZ", top->oy);
-    feat->SetField("smoothedX", top->sx);
-    feat->SetField("smoothedY", top->sy);
-    feat->SetField("smoothedZ", top->sz);
-    feat->SetField("smoothedCol", top->sc);
-    feat->SetField("smoothedRow", top->sr);
+    feat->SetField("origX", top->ox);
+    feat->SetField("origY", top->oy);
+    feat->SetField("origZ", top->oy);
+    feat->SetField("smoothX", top->sx);
+    feat->SetField("smoothY", top->sy);
+    feat->SetField("smoothZ", top->sz);
+    feat->SetField("smoothCol", top->sc);
+    feat->SetField("smoothRow", top->sr);
     if(CPLE_None != m_layer->SetFeature(feat))
         g_runerr("Failed to save feature: " << top->id << ".");
     OGRFeature::DestroyFeature(feat);
 }
 
-void TTDB::updateTops(std::vector<std::unique_ptr<Top> > &tops) {
+void TTDB::updateTops(std::list<std::unique_ptr<Top> > &tops) {
     for(const std::unique_ptr<Top> &top : tops)
         updateTop(top);
 }
@@ -452,14 +451,14 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	std::unordered_map<std::string, FieldType> fields;
 	fields["id"] = FieldType::FTInt;
 	fields["parentID"] = FieldType::FTInt;
-	fields["originalX"] = FieldType::FTDouble;
-	fields["originalY"] = FieldType::FTDouble;
-	fields["originalZ"] = FieldType::FTDouble;
-	fields["smoothedX"] = FieldType::FTDouble;
-	fields["smoothedY"] = FieldType::FTDouble;
-	fields["smoothedZ"] = FieldType::FTDouble;
-	fields["smoothedCol"] = FieldType::FTInt;
-	fields["smoothedRow"] = FieldType::FTInt;
+	fields["origX"] = FieldType::FTDouble;
+	fields["origY"] = FieldType::FTDouble;
+	fields["origZ"] = FieldType::FTDouble;
+	fields["smoothX"] = FieldType::FTDouble;
+	fields["smoothY"] = FieldType::FTDouble;
+	fields["smoothZ"] = FieldType::FTDouble;
+	fields["smoothCol"] = FieldType::FTInt;
+	fields["smoothRow"] = FieldType::FTInt;
 	
 	TTDB db(config.topsTreetopsDatabase, "data", config.topsTreetopsDatabaseDriver,
 			fields, GeomType::GTPoint, config.srid, true);
@@ -686,6 +685,244 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 }
 
+void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *cancel, float start, float end) {
+
+	if(m_callbacks)
+		m_callbacks->statusCallback("Crowns: Finding original top heights...");
+
+	if (*cancel)
+		return;
+
+	// Load the smoothed CHM.
+	Raster inrast(config.crownsSmoothedCHM);
+	const GridProps &iprops = inrast.props();
+
+	// Initialize the output raster for writing.
+	Raster outrast(config.crownsCrownsRaster);
+
+	// Initialize the database.
+	TTDB db(config.crownsTreetopsDatabase, "data");
+
+	std::unordered_map<uint, std::tuple<double, double, double> > heights;
+	Raster chm(config.crownsOriginalCHM);
+	Status status(m_callbacks, 0.33f, 0.50f);
+	findCrownMax(chm, outrast, heights, 1, 1, status, cancel);
+
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
+
+	if(m_callbacks)
+		m_callbacks->statusCallback("Crowns: Updating tops...");
+
+	int bufSize = 10;
+	int steps = iprops.rows() / bufSize + 1;
+	for(int i = 0; i < steps; ++i) {
+
+		if (*cancel)
+			continue;
+
+		int b = i * bufSize;
+		Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
+				iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
+
+		std::list<std::unique_ptr<Top> > tops;
+		db.getTops(tops, bounds);
+		if(tops.empty())
+			continue;
+
+		auto iend = heights.end();
+		for(const std::unique_ptr<Top> &t : tops) {
+			if(heights.find(t->id) != iend) {
+				auto tup = heights[t->id];
+				t->ox = std::get<0>(tup);
+				t->oy = std::get<1>(tup);
+				t->oz = std::get<2>(tup);
+			}
+		}
+
+		db.begin();
+		db.updateTops(tops);
+		db.commit();
+
+		if(m_callbacks)
+			m_callbacks->stepCallback(start + (end - start) * (i + 1) / steps);
+	}
+
+}
+
+void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float start, float end) {
+
+	if (m_callbacks)
+		m_callbacks->stepCallback(start);
+
+	// Load the smoothed CHM.
+	Raster inrast(config.crownsSmoothedCHM);
+	const GridProps &iprops = inrast.props();
+	double nodata = iprops.nodata();
+
+	// Initialize the database, get the treetop count and estimate the buffer size.
+	TTDB db(config.crownsTreetopsDatabase, "data");
+
+	if (m_callbacks)
+		m_callbacks->statusCallback("Crowns: Processing...");
+
+	// Buffer for reading/processing
+	// TODO: Configurable/dynamic buffer size.
+	int bufSize = 256;
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
+
+	// Initialize the output raster for writing.
+	GridProps pr = GridProps(iprops);
+	pr.setBands(1);
+	pr.setDataType(DataType::UInt32);
+	pr.setNoData(0);
+	pr.setWritable(true);
+	Raster outrast(config.crownsCrownsRaster, pr);
+
+	// Build the list of offsets for D8 search.
+	size_t offsetCount = 8;
+	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+
+	// Values for status indicator.
+	uint64_t geomCount = db.getGeomCount();
+	std::atomic<uint64_t> status(0);
+
+	#pragma omp parallel
+	{
+
+		// A buffer for reading the CHM.
+		GridProps pr = GridProps(inrast.props());
+		pr.setDataType(DataType::Float64);
+		pr.setSize(pr.cols(), bufSize + radius * 2 + 1);
+		MemRaster buf(pr);
+
+		// A block for writing the crowns.
+		pr.setDataType(DataType::UInt32);
+		MemRaster blk(pr);
+		blk.fillInt(0);
+
+		#pragma omp for
+		for(int i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
+
+			if (*cancel)
+				continue;
+
+			int b = i * bufSize;
+
+			std::list<std::unique_ptr<Top> > tops;
+
+			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
+					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Crowns: Loading tops...");
+
+			#pragma omp critical(__crowns_db)
+			db.getTops(tops, bounds);
+			if(tops.empty())
+				continue;
+
+			status += tops.size();
+
+			// Convert the Tops to Nodes.
+			std::queue<std::unique_ptr<Node> > q;
+			for (std::unique_ptr<Top> &t : tops) {
+				std::unique_ptr<Node> n(new Node(t.get()));
+				q.push(std::move(n));
+			}
+			tops.clear();
+
+			if (*cancel)
+				continue;
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Crowns: Loading raster...");
+
+			std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
+
+			int readOffset = b > 0 ? b - radius : 0;
+			int writeOffset = b > 0 ? 0 : radius;
+			buf.fillFloat(iprops.nodata());
+			blk.fillInt(0);
+
+			#pragma omp critical(__crowns_in)
+			inrast.write(buf, buf.props().cols(), buf.props().rows(),
+					0, readOffset, 0, writeOffset);
+
+			if (m_callbacks)
+				m_callbacks->statusCallback("Crowns: Delineating crowns...");
+
+			// Run through the queue.
+			while (!*cancel && q.size()) {
+				std::unique_ptr<Node> n = std::move(q.front());
+				q.pop();
+
+				int c = n->c;
+				int r = n->r - b + radius;
+				if(c < 0 || r < 0 || c >= blk.props().cols() || r >= blk.props().rows())
+					continue;
+
+				blk.setInt(c, r, (uint) n->id);
+				for(size_t i = 0; i < offsetCount; ++i) {
+					c = n->c + offsets[i][0];
+					r = n->r + offsets[i][1];
+
+					if ((r - b + radius) < 0 || c < 0 ||
+							(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
+						continue;
+
+					size_t idx = (size_t) (r - b + radius) * iprops.cols() + c;
+					if (visited[idx])
+						continue;
+
+					double v = buf.getFloat(idx);
+					if (v != nodata           												// is not nodata
+						&& v < n->z		      												// is less than the neighbouring pixel
+						&& v >= config.crownsMinHeight 										// is greater than the min height
+						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
+						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
+					) {
+						blk.setInt(idx, n->id);
+						visited[idx] = true;
+						std::unique_ptr<Node> n0(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
+						q.push(std::move(n0));
+					}
+				}
+			}
+			if(m_callbacks)
+				m_callbacks->statusCallback("Crowns: Writing output...");
+
+			#pragma omp critical(__crowns_out)
+			blk.write(outrast, iprops.cols(), bufSize, 0, radius, 0, b);
+
+			if(m_callbacks)
+				m_callbacks->stepCallback(start + (start - end) * (float) status / geomCount);
+		}
+	}
+}
+
+void Treetops::polygonizeCrowns(const TreetopsConfig &config, bool *cancel, float start, float end) {
+
+	if(config.crownsCrownsDatabase.empty())
+		return;
+
+	if(m_callbacks)
+		m_callbacks->statusCallback("Polygonizing...");
+
+	Raster outrast(config.crownsCrownsRaster);
+
+	Status status(m_callbacks, start, end);
+	outrast.polygonize(config.crownsCrownsDatabase, "crowns", config.crownsCrownsDatabaseDriver,
+			config.srid, 1, &status, cancel);
+
+	if(m_callbacks)
+		m_callbacks->statusCallback("Deleting invalid polygons...");
+
+	TTDB db(config.crownsCrownsDatabase, "crowns");
+	db.begin();
+	db.deleteFeature("id", 0);
+	db.commit();
+}
+
 void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 	config.checkCrowns();
 
@@ -697,213 +934,11 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		m_callbacks->statusCallback("Crowns: Preparing...");
 	}
 
-	// Load the smoothed CHM.
-	Raster inrast(config.crownsSmoothedCHM);
-	const GridProps &iprops = inrast.props();
-	double nodata = iprops.nodata();
+	delineateCrowns(config, cancel, 0.02f, 0.25f);
 
-	// Initialize the output raster for writing.
-	GridProps pr = GridProps(iprops);
-	pr.setBands(1);
-	pr.setDataType(DataType::UInt32);
-	pr.setNoData(0);
-	Raster outrast(config.crownsCrownsRaster, pr);
+	updateOriginalCHMHeights(config, cancel, 0.26f, 0.5f);
 
-	if (m_callbacks)
-		m_callbacks->stepCallback(0.02f);
-
-	// Initialize the database, get the treetop count and estimate the buffer size.
-	TTDB db(config.crownsTreetopsDatabase, "data");
-
-	if (m_callbacks) {
-		m_callbacks->stepCallback(0.03f);
-		m_callbacks->statusCallback("Crowns: Processing...");
-	}
-
-	// Buffer for reading/processing
-	// TODO: Configurable/dynamic buffer size.
-	int bufSize = 256;
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
-
-	{
-		// Build the list of offsets for D8 search.
-		size_t offsetCount = 8;
-		int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-
-		// Values for status indicator.
-		uint64_t geomCount = db.getGeomCount();
-		std::atomic<uint64_t> status(0);
-
-		#pragma omp parallel
-		{
-
-			// A buffer for reading the CHM.
-			GridProps pr = GridProps(inrast.props());
-			pr.setDataType(DataType::Float64);
-			pr.setSize(pr.cols(), bufSize + radius * 2 + 1);
-			MemRaster buf(pr);
-
-			// A block for writing the crowns.
-			pr.setDataType(DataType::UInt32);
-			MemRaster blk(pr);
-			blk.fillInt(0);
-
-			#pragma omp for
-			for(int i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
-
-				if (*cancel)
-					continue;
-
-				int b = i * bufSize;
-
-				std::vector<std::unique_ptr<Top> > tops;
-
-				Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
-						iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
-
-				if (m_callbacks)
-					m_callbacks->statusCallback("Crowns: Loading tops...");
-
-				#pragma omp critical(__crowns_db)
-				db.getTops(tops, bounds);
-				if(tops.empty())
-					continue;
-
-				status += tops.size();
-
-				// Convert the Tops to Nodes.
-				std::queue<std::unique_ptr<Node> > q;
-				for (std::unique_ptr<Top> &t : tops) {
-					std::unique_ptr<Node> n(new Node(t.get()));
-					q.push(std::move(n));
-				}
-				tops.clear();
-
-				if (*cancel)
-					continue;
-
-				if (m_callbacks)
-					m_callbacks->statusCallback("Crowns: Loading raster...");
-
-				std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
-
-				int readOffset = b > 0 ? b - radius : 0;
-				int writeOffset = b > 0 ? 0 : radius;
-				buf.fillFloat(iprops.nodata());
-				blk.fillInt(0);
-
-				#pragma omp critical(__crowns_in)
-				inrast.write(buf, buf.props().cols(), buf.props().rows(),
-						0, readOffset, 0, writeOffset);
-
-				if (m_callbacks)
-					m_callbacks->statusCallback("Crowns: Delineating crowns...");
-
-				// Run through the queue.
-				while (!*cancel && q.size()) {
-					std::unique_ptr<Node> n = std::move(q.front());
-					q.pop();
-
-					int c = n->c;
-					int r = n->r - b + radius;
-
-					blk.setInt(c, r, (uint) n->id);
-					for(size_t i = 0; i < offsetCount; ++i) {
-						c = n->c + offsets[i][0];
-						r = n->r + offsets[i][1];
-
-						if ((r - b + radius) < 0 || c < 0 ||
-								(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
-							continue;
-
-						size_t idx = (size_t) (r - b + radius) * iprops.cols() + c;
-						if (visited[idx])
-							continue;
-
-						double v = buf.getFloat(idx);
-						if (v != nodata           												// is not nodata
-							&& v < n->z		      												// is less than the neighbouring pixel
-							&& v >= config.crownsMinHeight 										// is greater than the min height
-							&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
-							&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
-						) {
-							blk.setInt(idx, n->id);
-							visited[idx] = true;
-							std::unique_ptr<Node> n0(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
-							q.push(std::move(n0));
-						}
-					}
-				}
-				if(m_callbacks)
-					m_callbacks->statusCallback("Crowns: Writing output...");
-
-				#pragma omp critical(__crowns_out)
-				blk.write(outrast, iprops.cols(), bufSize, 0, radius, 0, b);
-
-				if(m_callbacks)
-					m_callbacks->stepCallback(0.03f + (float) status / geomCount * 0.30f);
-			}
-		}
-	}
-
-	{
-		if(m_callbacks)
-			m_callbacks->statusCallback("Crowns: Finding original top heights...");
-
-		if (*cancel)
-			return;
-
-		std::unordered_map<uint, std::tuple<double, double, double> > heights;
-		Raster chm(config.crownsOriginalCHM);
-		Status status(m_callbacks, 0.33f, 0.50f);
-		findCrownMax(chm, outrast, heights, 1, 1, status, cancel);
-
-		int steps = iprops.rows() / bufSize + 1;
-		for(int i = 0; i < steps; ++i) {
-
-			if (*cancel)
-				continue;
-
-			int b = i * bufSize;
-			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
-					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
-
-			std::vector<std::unique_ptr<Top> > tops;
-			db.getTops(tops, bounds);
-			if(tops.empty())
-				continue;
-
-			auto end = heights.end();
-			for(const std::unique_ptr<Top> &t : tops) {
-				if(heights.find(t->id) != end) {
-					auto tup = heights[t->id];
-					t->ox = std::get<0>(tup);
-					t->oy = std::get<1>(tup);
-					t->oz = std::get<2>(tup);
-				}
-			}
-
-			db.begin();
-			db.updateTops(tops);
-			db.commit();
-
-			if(m_callbacks)
-				m_callbacks->stepCallback(0.50f + (float) i / steps * 0.25f);
-		}
-	}
-
-	if(!config.crownsCrownsDatabase.empty()) {
-		if(m_callbacks)
-			m_callbacks->statusCallback("Polygonizing...");
-		Status status(m_callbacks, 0.75f, 0.99f);
-		outrast.polygonize(config.crownsCrownsDatabase, "crowns", db.srid(), 1, &status, cancel);
-		if(m_callbacks)
-			m_callbacks->statusCallback("Deleting invalid polygons...");
-		TTDB db(config.crownsCrownsDatabase, "crowns");
-		db.begin();
-		db.deleteFeature("id", 0);
-		db.commit();
-	}
+	polygonizeCrowns(config, cancel, 0.51f, 0.99f);
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);

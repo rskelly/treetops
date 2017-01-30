@@ -54,7 +54,7 @@ namespace geotools {
 				return 1;
 			}
 
-			void writeToBlock(void *block, GDALDataType type, double value, int idx) {
+			inline void writeToBlock(void *block, GDALDataType type, double value, int idx) {
 				switch(type) {
 				case GDT_Float32:
 					*(((float *) block) + idx) = (float) value;
@@ -83,7 +83,7 @@ namespace geotools {
 				}
 			}
 
-			void writeToBlock(void *block, GDALDataType type, int value, int idx) {
+			inline void writeToBlock(void *block, GDALDataType type, int value, int idx) {
 				switch(type) {
 				case GDT_Float32:
 					*(((float *) block) + idx) = (float) value;
@@ -112,7 +112,7 @@ namespace geotools {
 				}
 			}
 
-			void readFromBlock(void *block, GDALDataType type, double *value, int idx) {
+			inline void readFromBlock(void *block, GDALDataType type, double *value, int idx) {
 				switch(type) {
 				case GDT_Float32:
 					*value = (double) *(((float *) block) + idx);
@@ -141,7 +141,7 @@ namespace geotools {
 				}
 			}
 
-			void readFromBlock(void *block, GDALDataType type, int *value, int idx) {
+			inline void readFromBlock(void *block, GDALDataType type, int *value, int idx) {
 				switch(type) {
 				case GDT_Float32:
 					*value = (int) *(((float *) block) + idx);
@@ -1173,10 +1173,10 @@ std::string Raster::getDriverForFilename(const std::string &filename) {
 Raster::Raster(const std::string &filename, const GridProps &props) :
 		m_ds(nullptr),
 		m_bcols(0), m_brows(0),
-		m_block(nullptr),
-		m_type(GDT_Unknown),
 		m_bcol(-1), m_brow(-1),
-		m_band(1) {
+		m_band(1),
+		m_block(nullptr),
+		m_type(GDT_Unknown) {
 
 	if (props.resolutionX() == 0 || props.resolutionY() == 0)
 		g_argerr("Resolution must not be zero.");
@@ -1229,10 +1229,10 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 Raster::Raster(const std::string &filename, bool writable) :
 		m_ds(nullptr),
 		m_bcols(0), m_brows(0),
-		m_block(nullptr),
-		m_type(GDT_Unknown),
 		m_bcol(-1), m_brow(-1),
-		m_band(1) {
+		m_band(1),
+		m_block(nullptr),
+		m_type(GDT_Unknown) {
 
 	if (filename.empty())
 		g_argerr("Filename must be given.");
@@ -1418,11 +1418,15 @@ GDALDataType Raster::getGDType() const {
 double Raster::getFloat(int col, int row, int band) {
 	int bcol = col / m_bcols;
 	int brow = row / m_brows;
-	GDALRasterBand *rb = m_ds->GetRasterBand(band);
-	if(!rb)
-		g_argerr("No such band: " << band);
-	if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
-		g_runerr("Failed to read from: " << filename());
+	if(bcol != m_bcol || brow != m_brow) {
+		GDALRasterBand *rb = m_ds->GetRasterBand(band);
+		if(!rb)
+			g_argerr("No such band: " << band);
+		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
+			g_runerr("Failed to read from: " << filename());
+		m_bcol = bcol;
+		m_brow = brow;
+	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	double v;
 	readFromBlock(m_block, getGDType(), &v, idx);
@@ -1441,11 +1445,15 @@ double Raster::getFloat(double x, double y, int band) {
 int Raster::getInt(int col, int row, int band) {
 	int bcol = col / m_bcols;
 	int brow = row / m_brows;
-	GDALRasterBand *rb = m_ds->GetRasterBand(band);
-	if(!rb)
-		g_argerr("No such band: " << band);
-	if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
-		g_runerr("Failed to read from: " << filename());
+	if(bcol != m_bcol || brow != m_brow) {
+		GDALRasterBand *rb = m_ds->GetRasterBand(band);
+		if(!rb)
+			g_argerr("No such band: " << band);
+		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
+			g_runerr("Failed to read from: " << filename());
+		m_bcol = bcol;
+		m_brow = brow;
+	}
 	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
 	int v;
 	readFromBlock(m_block, getGDType(), &v, idx);
@@ -1497,24 +1505,19 @@ void Raster::setFloat(double x, double y, double v, int band) {
 }
 
 void Raster::polygonize(const std::string &filename, const std::string &layerName,
-		uint16_t srid, uint16_t band, Status *status, bool *cancel) {
+		const std::string &driver, uint16_t srid, uint16_t band, Status *status, bool *cancel) {
 
 	Util::rm(filename);
 
 	GDALAllRegister();
 
-	std::string drvName = geotools::db::DB::getDriverForFilename(filename);
-	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(drvName.c_str());
+	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(driver.c_str());
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
-	char **opts = nullptr;
-	if(drvName == "SQLite") {
-		opts = CSLSetNameValue(opts, "FORMAT", "SPATIALITE");
-		opts = CSLSetNameValue(opts, "SPATIAL_INDEX", "YES");
-	}
 
 	OGRSpatialReference sr;
 	sr.importFromEPSG(srid);
-	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, opts);
+
+	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, NULL);
 
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
@@ -1526,7 +1529,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 }
 
 void Raster::flush() {
-	if(m_brow > -1 && m_bcol > -1) {
+	if(m_brow > -1 && m_bcol > -1 && m_props.writable()) {
 		if(CPLE_None != m_ds->GetRasterBand(m_band)->WriteBlock(m_bcol, m_brow, m_block))
 			g_warn("Failed to write block to " << filename());
 	}

@@ -188,11 +188,11 @@ namespace geotools {
 
                 void addTops(const std::list<std::unique_ptr<Top> > &tops);
 
-                void getTops(std::vector<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds);
+                void getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds);
 
                 void updateTop(const std::unique_ptr<Top> &top);
 
-                void updateTops(std::vector<std::unique_ptr<Top> > &tops);
+                void updateTops(std::list<std::unique_ptr<Top> > &tops);
 
             };
 
@@ -201,6 +201,15 @@ namespace geotools {
         class G_DLL_EXPORT Treetops {
         private:
             geotools::util::Callbacks *m_callbacks;
+
+            void updateOriginalCHMHeights(const geotools::treetops::config::TreetopsConfig &config,
+            		bool *cancel, float start, float end);
+
+            void delineateCrowns(const geotools::treetops::config::TreetopsConfig &config,
+            		bool *cancel, float start, float end);
+
+            void polygonizeCrowns(const geotools::treetops::config::TreetopsConfig &config,
+            		bool *cancel, float start, float end);
 
         public:
 

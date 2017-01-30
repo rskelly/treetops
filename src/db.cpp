@@ -178,21 +178,28 @@ DB::DB(const std::string &file, const std::string &layer) :
 	m_fdef(nullptr) {
 
     GDALAllRegister();
-	m_ds = (GDALDataset *) GDALOpenEx(m_file.c_str(), GDAL_OF_VECTOR|GDAL_OF_UPDATE, NULL, NULL, NULL);
+
+    m_ds = (GDALDataset *) GDALOpenEx(m_file.c_str(), GDAL_OF_VECTOR|GDAL_OF_UPDATE, NULL, NULL, NULL);
     if(!m_ds)
         g_runerr("Failed to open data set for " << m_file);
-	if(m_layerName.empty()) {
-		m_layer = m_ds->GetLayer(1);
-    	if(!m_layer)
-    		g_runerr("No layer was found on this data set.");
-	} else {
+
+    if(!m_layerName.empty())
 		m_layer = m_ds->GetLayerByName(m_layerName.c_str());
-    	if(!m_layer)
-    		g_runerr("No layer, " << m_layerName << " was found on this data set.");
+    if(!m_layer)
+		m_layer = m_ds->GetLayer(0);
+	if(!m_layer) {
+		if(m_layerName.empty()) {
+			g_runerr("No layer, " << m_layerName << " was found on this data set, and no default was available.");
+		} else {
+			g_runerr("No layer was found on this data set.");
+		}
 	}
+
 	m_type = geomType(m_layer->GetGeomType());
+
 	OGRGeomFieldDefn *gdef = m_layer->GetLayerDefn()->GetGeomFieldDefn(0);
 	m_geomName = std::string(gdef->GetNameRef());
+
 	m_fdef = m_layer->GetLayerDefn();
 	for(int i = 0; i < m_fdef->GetFieldCount(); ++i) {
 		OGRFieldDefn *def = m_fdef->GetFieldDefn(i);

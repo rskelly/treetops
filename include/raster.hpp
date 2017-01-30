@@ -363,13 +363,13 @@ namespace geotools {
         	friend class MemRaster;
         private:
             GDALDataset *m_ds;          // GDAL dataset
-            int m_bcols, m_brows;
+            int m_bcols, m_brows;		// The size of the GDAL block.
+            int m_bcol, m_brow;			// The current loaded block position.
+            int m_band;
     		void *m_block;
             std::string m_filename;     // Raster filename
             GridProps m_props;
             GDALDataType m_type;        // GDALDataType -- limits the possible template types.
-            int m_bcol, m_brow;
-            int m_band;
 
             GDALDataType getGDType() const;
 
@@ -450,7 +450,7 @@ namespace geotools {
 
             // Vectorize the raster.
             void polygonize(const std::string &filename, const std::string &layerName, 
-                uint16_t srid = 0, uint16_t band = 1, 
+                const std::string &driver, uint16_t srid = 0, uint16_t band = 1,
 				geotools::util::Status *status = nullptr, bool *cancel = nullptr);
 
             ~Raster();
