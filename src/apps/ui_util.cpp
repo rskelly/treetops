@@ -55,7 +55,7 @@ void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, 
 	}
 }
 
-void geotools::ui::util::getThresholds(QWidget *form, std::vector<std::pair<float, uint8_t> > &thresholds) {
+void geotools::ui::util::getThresholds(QWidget *form, std::vector<std::pair<double, uint8_t> > &thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

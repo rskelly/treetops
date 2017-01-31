@@ -47,7 +47,7 @@ namespace geotools {
 					const std::string &filter, std::string &filename);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getThresholds(QWidget *form, std::vector<std::pair<float, uint8_t> > &thresholds);
+			void getThresholds(QWidget *form, std::vector<std::pair<double, uint8_t> > &thresholds);
 		}
 
 	}

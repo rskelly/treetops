@@ -43,7 +43,7 @@ void TopsThresholdItem::itemWindowChanged(int) {
 	emit itemUpdate(this);
 }
 
-void TopsThresholdItem::set(int index, float height, uint8_t window) {
+void TopsThresholdItem::set(int index, double height, uint8_t window) {
 	m_index = index;
 	spnHeight->blockSignals(true);
 	spnWindow->blockSignals(true);
@@ -57,7 +57,7 @@ int TopsThresholdItem::index() const {
 	return m_index;
 }
 
-float TopsThresholdItem::height() const {
+double TopsThresholdItem::height() const {
 	return spnHeight->value();
 }
 
@@ -92,7 +92,7 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void TopsThresholdsForm::setThresholds(const std::vector<std::pair<float, uint8_t> > &thresholds) {
+void TopsThresholdsForm::setThresholds(const std::vector<std::pair<double, uint8_t> > &thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 }
@@ -108,7 +108,7 @@ void TopsThresholdsForm::sortItems() {
 	while(m_items.size() < m_thresholds.size()) {
 		TopsThresholdItem *item = new TopsThresholdItem(m_form);
 		m_items.push_back(item);
-		scrollLayout->insertWidget(m_items.size() - 1, item);
+		scrollLayout->insertWidget((int) m_items.size() - 1, item);
 		connect(item, SIGNAL(itemDelete(TopsThresholdItem*)), this, SLOT(itemDelete(TopsThresholdItem*)));
 		connect(item, SIGNAL(itemUpdate(TopsThresholdItem*)), this, SLOT(itemUpdate(TopsThresholdItem*)));
 	}
@@ -118,7 +118,7 @@ void TopsThresholdsForm::sortItems() {
 		(*item++)->set(i++, it.first, it.second);
 }
 
-std::vector<std::pair<float, uint8_t> > TopsThresholdsForm::thresholds() const {
+std::vector<std::pair<double, uint8_t> > TopsThresholdsForm::thresholds() const {
 	return m_thresholds;
 }
 

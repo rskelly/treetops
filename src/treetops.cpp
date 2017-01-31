@@ -138,7 +138,7 @@ namespace geotools {
 			// a map relating the ID to a tuple containing the 3D coordinate of the
 			// highest pixel.
 			void findCrownMax(Raster &chm, Raster &crowns,
-					std::unordered_map<uint32_t, std::tuple<double, double, double> > &heights,
+					std::unordered_map<uint64_t, std::tuple<double, double, double> > &heights,
 					int chmBand, int crownsBand, Status &status, bool *cancel) {
 
 				const GridProps &chmProps = chm.props();
@@ -148,7 +148,7 @@ namespace geotools {
 				auto iend = heights.end();
 
 				for(long i = 0; i < crownProps.size(); ++i) {
-					uint32_t id = crowns.getInt(i, crownsBand);
+					uint64_t id = crowns.getInt(i, crownsBand);
 					if(id > 0) {
 						double v = chm.getFloat(i, chmBand);
 						if(heights.find(id) == iend || v > std::get<2>(heights[id])) {
@@ -274,7 +274,7 @@ bool TreetopsConfig::canRun() const {
 		check();
 		return true;
 	} catch (const std::exception &ex) {
-		// Do nothing.
+		g_warn("Exception in canRun: " << ex.what());
 	}
 	return false;
 }
@@ -567,7 +567,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				{
 					for (const auto &top : tops) {
 						topsWindowGrid.setInt(std::get<0>(top), std::get<1>(top), std::get<2>(top));
-						topsIDGrid.setInt(std::get<0>(top), std::get<1>(top), ++topId);
+						topsIDGrid.setInt(std::get<0>(top), std::get<1>(top), (uint32_t) ++topId); // TODO: Possible data loss if ID too big.
 					}
 				}
 
@@ -716,11 +716,11 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	// Initialize the database.
 	TTDB db(config.crownsTreetopsDatabase, "data");
 
-	std::unordered_map<uint, std::tuple<double, double, double> > heights;
+	std::unordered_map<uint64_t, std::tuple<double, double, double> > heights;
 	Status status(m_callbacks, 0.33f, 0.50f);
 	findCrownMax(chm, outrast, heights, 1, 1, status, cancel);
 
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(cprops.resolutionX()));
+	int radius = (int) std::ceil(config.crownsRadius / g_abs(cprops.resolutionX()));
 
 	if(m_callbacks)
 		m_callbacks->statusCallback("Crowns: Updating tops...");
@@ -780,7 +780,7 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 	// Buffer for reading/processing
 	// TODO: Configurable/dynamic buffer size.
 	int bufSize = 256;
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
+	int radius = (int) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
 
 	// Initialize the output raster for writing.
 	GridProps pr = GridProps(iprops);
@@ -873,7 +873,7 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 				if(c < 0 || r < 0 || c >= blk.props().cols() || r >= blk.props().rows())
 					continue;
 
-				blk.setInt(c, r, (uint) n->id);
+				blk.setInt(c, r, (uint32_t) n->id); // TODO: Data loss here if ID gets too high.
 				for(size_t i = 0; i < offsetCount; ++i) {
 					c = n->c + offsets[i][0];
 					r = n->r + offsets[i][1];
@@ -882,7 +882,7 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 							(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
 						continue;
 
-					size_t idx = (size_t) (r - b + radius) * iprops.cols() + c;
+					long idx = (long) (r - b + radius) * iprops.cols() + c;
 					if (visited[idx])
 						continue;
 
@@ -893,7 +893,7 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
 						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 					) {
-						blk.setInt(idx, n->id);
+						blk.setInt(idx, (uint32_t) n->id); // TODO: Possible data loss if ID too big.
 						visited[idx] = true;
 						std::unique_ptr<Node> n0(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
 						q.push(std::move(n0));
