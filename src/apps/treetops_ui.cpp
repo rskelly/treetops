@@ -241,6 +241,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	for(const auto &it : geotools::db::DB::drivers())
 		vectorDrivers << qstr(it.first);
 
+	QStringList smoothMethods;
+	smoothMethods << "Gaussian";
+
 	// Populate fields with saved or default values.
 	// -- smoothing
 	grpSmoothing->setChecked(m_config.doSmoothing);
@@ -250,6 +253,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	cboSmoothSmoothedCHMDriver->addItems(rasterDrivers);
 	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothSmoothedCHMDriver));
+	// TODO: Temporary -- need to add smoothing methods.
+	cboSmoothMethod->addItems(smoothMethods);
+	cboSmoothMethod->setCurrentText("Gaussian");
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops);
