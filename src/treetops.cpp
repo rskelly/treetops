@@ -337,8 +337,7 @@ void TTDB::addTop(const std::unique_ptr<Top> &top) {
     feat->SetField("smoothRow", top->sr);
     OGRPoint geom(top->sx, top->sy, top->sz);
     feat->SetGeometry(&geom);
-    OGRErr e = m_layer->CreateFeature(feat);
-    if(CPLE_None != e)
+    if(OGRERR_NONE != m_layer->CreateFeature(feat))
         g_runerr("Failed to add feature to " << m_file << ".");
     OGRFeature::DestroyFeature(feat);
 }
@@ -388,9 +387,10 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     feat->SetField("smoothZ", top->sz);
     feat->SetField("smoothCol", top->sc);
     feat->SetField("smoothRow", top->sr);
-    if(CPLE_None != m_layer->SetFeature(feat))
+    if(OGRERR_NONE != m_layer->SetFeature(feat))
         g_runerr("Failed to save feature: " << top->id << ".");
     OGRFeature::DestroyFeature(feat);
+    m_layer->SyncToDisk();
 }
 
 void TTDB::updateTops(std::list<std::unique_ptr<Top> > &tops) {
@@ -693,36 +693,35 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	if (*cancel)
 		return;
 
-	// Load the smoothed CHM.
-	Raster inrast(config.crownsSmoothedCHM);
-	const GridProps &iprops = inrast.props();
+	// Load the original CHM.
+	Raster chm(config.crownsOriginalCHM);
+	const GridProps &cprops = chm.props();
 
-	// Initialize the output raster for writing.
+	// Initialize the output raster for reading.
 	Raster outrast(config.crownsCrownsRaster);
 
 	// Initialize the database.
 	TTDB db(config.crownsTreetopsDatabase, "data");
 
 	std::unordered_map<uint, std::tuple<double, double, double> > heights;
-	Raster chm(config.crownsOriginalCHM);
 	Status status(m_callbacks, 0.33f, 0.50f);
 	findCrownMax(chm, outrast, heights, 1, 1, status, cancel);
 
-	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(inrast.props().resolutionX()));
+	int16_t radius = (int16_t) std::ceil(config.crownsRadius / g_abs(cprops.resolutionX()));
 
 	if(m_callbacks)
 		m_callbacks->statusCallback("Crowns: Updating tops...");
 
 	int bufSize = 10;
-	int steps = iprops.rows() / bufSize + 1;
+	int steps = cprops.rows() / bufSize + 1;
 	for(int i = 0; i < steps; ++i) {
 
 		if (*cancel)
 			continue;
 
 		int b = i * bufSize;
-		Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
-				iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
+		Bounds bounds(cprops.toX(0), cprops.toY(b - radius),
+				cprops.toX(cprops.cols()), cprops.toY(b + bufSize + radius));
 
 		std::list<std::unique_ptr<Top> > tops;
 		db.getTops(tops, bounds);
