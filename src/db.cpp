@@ -380,7 +380,7 @@ void DB::deleteFeature(const std::string &idField, uint64_t id) {
     }
 }
 
-void execute(std::string &sql) {
+void DB::execute(std::string &sql) {
 	g_runerr("Not implemented.");
 }
 

@@ -24,7 +24,7 @@
 #include <queue>
 #include <iostream>
 #include <atomic>
-
+#include <memory>
 #include <omp.h>
 
 #include "geotools.hpp"
@@ -143,20 +143,24 @@ namespace geotools {
 
 				const GridProps &chmProps = chm.props();
 				const GridProps &crownProps = crowns.props();
+				int cols = crownProps.cols();
+				int rows = crownProps.rows();
+				auto iend = heights.end();
 
 				for(long i = 0; i < crownProps.size(); ++i) {
 					uint32_t id = crowns.getInt(i, crownsBand);
 					if(id > 0) {
 						double v = chm.getFloat(i, chmBand);
-						if(heights.find(id) == heights.end() || v > std::get<2>(heights[id])) {
-							double x = chmProps.toCentroidX(i % chmProps.cols());
-							double y = chmProps.toCentroidY(i / chmProps.rows());
+						if(heights.find(id) == iend || v > std::get<2>(heights[id])) {
+							double x = chmProps.toCentroidX(i % cols);
+							double y = chmProps.toCentroidY(i / rows);
 							heights[id] = std::make_tuple(x, y, v);
 						}
 					}
 					if(*cancel)
 						break;
-					status.update((float) i / crownProps.size());
+					if(i % cols == 0)
+						status.update((float) i / crownProps.size());
 				}
 			}
 
@@ -351,8 +355,13 @@ void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util:
     if(m_type != GeomType::GTPoint)
         g_runerr("This dataset is not a point dataset.");
     m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
+    //m_layer->ResetReading();
     OGRFeature *feat;
     while((feat = m_layer->GetNextFeature())) {
+    	//OGRPoint* pt = (OGRPoint*) feat->GetGeometryRef();
+    	//std::cerr << pt->getX() << ", " << pt->getY() << "\n";
+    	//if(!bounds.contains(pt->getX(), pt->getY()))
+    	//	continue;
         std::unique_ptr<Top> t(new Top(
             feat->GetFieldAsInteger64("id"),
             feat->GetFieldAsInteger64("parentID"),
@@ -381,7 +390,7 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     feat->SetField("parentID", (GIntBig) top->parentID);
     feat->SetField("origX", top->ox);
     feat->SetField("origY", top->oy);
-    feat->SetField("origZ", top->oy);
+    feat->SetField("origZ", top->oz);
     feat->SetField("smoothX", top->sx);
     feat->SetField("smoothY", top->sy);
     feat->SetField("smoothZ", top->sz);
@@ -390,7 +399,7 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     if(OGRERR_NONE != m_layer->SetFeature(feat))
         g_runerr("Failed to save feature: " << top->id << ".");
     OGRFeature::DestroyFeature(feat);
-    m_layer->SyncToDisk();
+    m_layer->SetAttributeFilter(NULL);
 }
 
 void TTDB::updateTops(std::list<std::unique_ptr<Top> > &tops) {
@@ -428,6 +437,11 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize,
 			config.smoothOriginalCHMBand, m_callbacks, cancel);
 	out.flush();
+
+	if (m_callbacks) {
+		m_callbacks->stepCallback(0.01f);
+		m_callbacks->statusCallback("Smoothing: Done.");
+	}
 }
 
 // TODO: Raster band selection.
@@ -462,8 +476,6 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	
 	TTDB db(config.topsTreetopsDatabase, "data", config.topsTreetopsDatabaseDriver,
 			fields, GeomType::GTPoint, config.srid, true);
-	//db.dropGeomIndex();
-	//db.setCacheSize(config.tableCacheSize);
 
 	if (*cancel)
 		return;
@@ -629,11 +641,12 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				#pragma omp critical(__smoothed_read)
 				z = smoothed.getFloat(col, row);
 
-				std::unique_ptr<Top> t(new Top(topsIDGrid.getInt(col, row),
+				std::unique_ptr<Top> t(new Top(
+					topsIDGrid.getInt(col, row),
 					topsParentGrid.getInt(col, row),
-					0, // original.toCentroidX(col),
-					0, // original.toCentroidY(row),
-					0, // original.get(col, row),
+					0, // Can't locate the values from the original raster 
+					0, // until the crowns are available.
+					0, 
 					pr.toCentroidX(col),
 					pr.toCentroidY(row),
 					z,
@@ -644,7 +657,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 			++status;
 
-			if (tops.size() >= 5000) {
+			if (tops.size() >= 1000) {
 				#pragma omp critical(__save_points)
 				{
 					db.begin();
@@ -697,7 +710,7 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	Raster chm(config.crownsOriginalCHM);
 	const GridProps &cprops = chm.props();
 
-	// Initialize the output raster for reading.
+	// Initialize the crowns raster for reading.
 	Raster outrast(config.crownsCrownsRaster);
 
 	// Initialize the database.
@@ -712,7 +725,7 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	if(m_callbacks)
 		m_callbacks->statusCallback("Crowns: Updating tops...");
 
-	int bufSize = 10;
+	int bufSize = g_max(1, (int) ((double) cprops.rows() * 1000.0 / db.getGeomCount()));
 	int steps = cprops.rows() / bufSize + 1;
 	for(int i = 0; i < steps; ++i) {
 
@@ -720,8 +733,8 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 			continue;
 
 		int b = i * bufSize;
-		Bounds bounds(cprops.toX(0), cprops.toY(b - radius),
-				cprops.toX(cprops.cols()), cprops.toY(b + bufSize + radius));
+		Bounds bounds(cprops.toX(0), cprops.toY(b),
+				cprops.toX(cprops.cols()), cprops.toY(b + bufSize));
 
 		std::list<std::unique_ptr<Top> > tops;
 		db.getTops(tops, bounds);
@@ -905,7 +918,7 @@ void Treetops::polygonizeCrowns(const TreetopsConfig &config, bool *cancel, floa
 		return;
 
 	if(m_callbacks)
-		m_callbacks->statusCallback("Polygonizing...");
+		m_callbacks->statusCallback("Crowns: Polygonizing...");
 
 	Raster outrast(config.crownsCrownsRaster);
 
@@ -914,7 +927,7 @@ void Treetops::polygonizeCrowns(const TreetopsConfig &config, bool *cancel, floa
 			config.srid, 1, &status, cancel);
 
 	if(m_callbacks)
-		m_callbacks->statusCallback("Deleting invalid polygons...");
+		m_callbacks->statusCallback("Crowns: Deleting invalid polygons...");
 
 	TTDB db(config.crownsCrownsDatabase, "crowns");
 	db.begin();
@@ -941,7 +954,7 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);
-		m_callbacks->statusCallback("Done.");
+		m_callbacks->statusCallback("Crowns: Done.");
 	}
 
 }
