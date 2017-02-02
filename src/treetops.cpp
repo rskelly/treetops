@@ -733,8 +733,8 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 			continue;
 
 		int b = i * bufSize;
-		Bounds bounds(cprops.toX(0), cprops.toY(b),
-				cprops.toX(cprops.cols()), cprops.toY(b + bufSize));
+		Bounds bounds(cprops.toX(0), cprops.toY(b - radius),
+				cprops.toX(cprops.cols()), cprops.toY(b + bufSize + radius));
 
 		std::list<std::unique_ptr<Top> > tops;
 		db.getTops(tops, bounds);
