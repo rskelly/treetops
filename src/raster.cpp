@@ -1523,8 +1523,60 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	layer->CreateField(&field);
 
 	PolyProgressData pd(status, cancel);
-	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &polyProgress, &pd);
 
+	GDALDriver *rdrv = GetGDALDriverManager()->GetDriverByName("MEM");
+	GDALDriver *vdrv = GetGDALDriverManager()->GetDriverByName("MEMORY");
+
+	GDALDataType type = _dataType2GDT(m_props.dataType());
+
+	int bufSize = 256;
+	#pragma omp parallel
+	{
+
+		GDALDataset *vds = vdrv->Create("MEM", 0, 0, 0, GDT_Unknown, NULL);
+
+		OGRLayer *lyr = vds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, NULL);
+			lyr->CreateField(&field);
+
+		#pragma omp for
+		for(int i = 0; i < m_props.rows() / bufSize; ++i) {
+
+			if(*cancel)
+				continue;
+
+			std::cerr << i << " of " << m_props.rows() / bufSize << "\n";
+			int b = i * bufSize;
+			int cols = m_props.cols();
+			int rows = g_min(m_props.rows() - b, bufSize);
+	
+			GDALDataset *rds = rdrv->Create("MEM", cols, rows, 1, type, NULL);
+			GDALRasterBand *bnd = rds->GetRasterBand(1);
+	
+			double trans[6];
+			m_ds->GetGeoTransform(trans);
+			trans[3] += b * trans[5];
+			rds->SetGeoTransform(trans);
+			Buffer buf(cols * rows * _getTypeSize(m_props.dataType()));
+
+			std::cerr << "read\n";
+			#pragma omp critical(__read_polygon_raster)
+			if(CPLE_None != m_ds->GetRasterBand(band)->RasterIO(GF_Read, 0, b, cols, rows, buf.buf, cols, rows, type, 0, 0, NULL))
+				g_warn("Failed to read from source raster.");
+			if(CPLE_None != bnd->RasterIO(GF_Write, 0, 0, cols, rows, buf.buf, cols, rows, type, 0, 0, NULL))
+				g_warn("Failed to write to buffer raster.");
+
+			std::cerr << "polygonize\n";
+			GDALPolygonize(bnd, NULL, lyr, 0, NULL, &polyProgress, &pd);
+
+			GDALClose(rds);
+		}
+
+		std::cerr << "update\n";
+		#pragma omp critical(__write_polygon_layer)
+		lyr->Update(lyr, layer, NULL, NULL, NULL);
+
+		GDALClose(vds);
+	}
 	GDALClose(ds);
 }
 
