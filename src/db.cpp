@@ -346,7 +346,7 @@ void DB::getPoints(std::vector<geotools::util::Point*> &points,
 	}
 }
 
-void getNearestPoints(const geotools::util::Point &target, int count,
+void DB::getNearestPoints(const geotools::util::Point &target, int count,
 		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
 	g_runerr("Not implemented.");
 }
