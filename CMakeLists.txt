@@ -80,7 +80,7 @@ set (CMAKE_AUTOMOC_OPTIONS "-Iinclude")
 find_package (OpenMP REQUIRED)
 find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2.1 REQUIRED)
-find_package (libLAS 1.8)
+find_package (libLAS 1.8) # Will fail on windows with gisinternals linkage; ignore.
 
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
@@ -226,6 +226,14 @@ endif()
 install (TARGETS treetops DESTINATION lib)
 install (TARGETS treetops-app DESTINATION bin)
 install (FILES include/treetops.hpp DESTINATION include)
+
+set (APP_BUNDLE_NAME "Treetops.app")
+set (APPS "./${APP_BUNDLE_NAME}")
+set (DIRS .)
+install (CODE "
+	include(BundleUtilities) 
+	fixup_bundle(\"${APPS}\" \"*.dylib\" \"${DIRS}\")
+	" COMPONENT Runtime)
 
 #install (TARGETS spectral DESTINATION lib)
 #install (TARGETS spectral-app DESTINATION bin)
