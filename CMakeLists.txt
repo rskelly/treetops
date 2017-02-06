@@ -111,12 +111,6 @@ target_link_libraries (db ${GDAL_LIBRARY} geotools)
 add_library (raster STATIC src/raster.cpp)
 target_link_libraries (raster ${GDAL_LIBRARY} util geotools db)
 
-add_library (cellstats STATIC src/cellstats.cpp src/laspoint.cpp)
-target_link_libraries (cellstats gmp CGAL boost_system las geotools)
-
-add_library (lasreader STATIC src/lasreader.cpp src/laspoint.cpp)
-target_link_libraries (lasreader gmp CGAL boost_system las geotools raster)
-
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/apps/ui_util.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
@@ -124,26 +118,6 @@ endif()
 
 
 # Build programs #####################################################################################################
-
-#add_executable (flood src/flood.cpp)
-#target_link_libraries (flood ${GDAL_LIBRARY} raster util geotools)
-
-
-#add_executable (rasterstats src/rasterstats.cpp)
-#target_link_libraries (rasterstats ${GDAL_LIBRARY} raster util geotools)
-
-
-#add_library (mosaic SHARED src/mosaic.cpp)
-#target_link_libraries (mosaic ${GDAL_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
-
-#if(${WITH_GUI})
-#	add_executable (mosaic-app src/apps/mosaic.cpp src/apps/mosaic_ui.cpp)
-#	target_link_libraries (mosaic-app PUBLIC mosaic Qt5::Gui Qt5::Core Qt5::Widgets)
-#else()
-#	add_executable (mosaic-app src/apps/mosaic.cpp)
-#	target_link_libraries (mosaic-app PUBLIC mosaic)
-#endif()
-
 
 add_library (treetops SHARED src/treetops.cpp)
 target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
@@ -156,72 +130,12 @@ else()
 	target_link_libraries (treetops-app PUBLIC treetops)
 endif()
 
-
 #add_library (spectral SHARED src/spectral.cpp)
 #target_link_libraries (spectral ${GDAL_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
 #add_executable (spectral-app src/apps/spectral.cpp)
 #target_link_libraries (spectral-app PUBLIC spectral)
 
-
-#add_library(pointstats SHARED src/pointstats.cpp)
-#target_link_libraries (pointstats ${GDAL_LIBRARY} laszip las ${Boost_LIBRARIES} raster util geotools cellstats lasreader)
-#if(${WITH_GUI})
-#	add_executable (pointstats-app src/apps/pointstats.cpp src/apps/pointstats_ui.cpp src/apps/crs_selector_ui.cpp src/apps/filelist.cpp)
-#	target_link_libraries (pointstats-app PUBLIC pointstats Qt5::Gui Qt5::Core Qt5::Widgets)
-#else()
-#	add_executable (pointstats-app src/apps/pointstats.cpp)
-#	target_link_libraries (pointstats-app PUBLIC pointstats)
-#endif()
-
-#add_library(pointnormalize SHARED src/pointnormalize.cpp)
-#target_link_libraries (pointnormalize ${GDAL_LIBRARY} CGAL gmp laszip las ${Boost_LIBRARIES} raster geotools lasreader)
-#if(${WITH_GUI})
-#	add_executable (pointnormalize-app src/apps/pointnormalize.cpp src/apps/pointnormalize_ui.cpp src/apps/filelist.cpp)
-#	target_link_libraries (pointnormalize-app PUBLIC pointnormalize Qt5::Gui Qt5::Core Qt5::Widgets)
-#else()
-#	add_executable (pointnormalize-app src/apps/pointnormalize.cpp)
-#	target_link_libraries (pointnormalize-app PUBLIC pointnormalize)
-#endif()
-
-#add_executable (lasboundary src/lasboundary.cpp src/lasutil.cpp)
-#target_link_libraries (lasboundary PUBLIC ${GDAL_LIBRARY} lasreader ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
-
-
-#add_library(lasvalidate SHARED src/lasvalidate.cpp src/lasutil.cpp)
-#target_link_libraries (lasvalidate las laszip ${GEOS_LIBRARY} raster util geotools)
-#add_executable (lasvalidate-app src/apps/lasvalidate.cpp)
-#target_link_libraries (lasvalidate-app PUBLIC lasvalidate)
-
-
-#add_executable (pointzonalstats src/pointzonalstats.cpp src/lasutil.cpp)
-#target_link_libraries (pointzonalstats ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} raster util geotools)
-
-#add_executable (rasternormalize src/rasternormalize.cpp)
-#target_link_libraries (rasternormalize raster)
-
-#add_executable (pointgrid src/pointgrid.cpp)
-#target_link_libraries (pointgrid ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${Boost_LIBRARIES} las laszip raster util geotools lasreader)
-
-#add_executable (lasmerge src/lasmerge.cpp src/lasutil.cpp)
-#target_link_libraries (lasmerge ${GDAL_LIBRARY} ${Boost_LIBRARIES} las laszip util geotools)
-
-
-#add_executable (lasreclass src/lasreclass.cpp src/lasutil.cpp)
-#target_link_libraries (lasreclass las laszip ${Boost_LIBRARIES} util geotools)
-
-
-#add_executable (lasclip src/lasclip.cpp src/lasutil.cpp)
-#target_link_libraries (lasclip ${GDAL_LIBRARY} las laszip ${GEOS_LIBRARY} ${Boost_LIBRARIES} util geotools)
-
-
-#add_executable (las2csrs src/las2csrs.cpp src/lasutil.cpp)
-#target_link_libraries (las2csrs ${GDAL_LIBRARY} las laszip proj ${Boost_LIBRARIES} util raster geotools)
-
-
 # Install ###########################################################################################################
-
-#install (TARGETS flood DESTINATION bin)
-#install (TARGETS pointgrid DESTINATION bin)
 
 install (TARGETS treetops DESTINATION lib)
 install (TARGETS treetops-app DESTINATION bin)
@@ -238,27 +152,3 @@ install (CODE "
 #install (TARGETS spectral DESTINATION lib)
 #install (TARGETS spectral-app DESTINATION bin)
 #install (FILES include/spectra.hpp DESTINATION include)
-
-#install (TARGETS rasterstats DESTINATION bin)
-
-#install (TARGETS mosaic-app DESTINATION bin)
-
-#install (TARGETS pointstats DESTINATION lib COMPONENT libraries)
-#install (TARGETS pointstats-app RUNTIME DESTINATION bin COMPONENT applications)
-#install (FILES include/pointstats.hpp DESTINATION include COMPONENT headers)
-
-#install (TARGETS lasvalidate DESTINATION lib)
-#install (TARGETS lasvalidate-app DESTINATION bin)
-#install (FILES include/lasvalidate.hpp DESTINATION include)
-
-#install (TARGETS pointzonalstats DESTINATION bin)
-
-#install (TARGETS lasmerge DESTINATION bin)
-
-#install (TARGETS lasreclass DESTINATION bin)
-
-#install (TARGETS lasclip DESTINATION bin)
-
-#install (TARGETS las2csrs DESTINATION bin)
-#install (DIRECTORY share/ DESTINATION share PATTERN "share/*")
-
