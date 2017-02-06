@@ -2,6 +2,8 @@
 #include <string>
 #include <fstream>
 #include <atomic>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -12,6 +14,12 @@
 #include <ogrsf_frmts.h>
 #include <cpl_string.h>
 #include <cpl_port.h>
+
+#include <geos/geom/GeometryFactory.h>
+#include <geos/geom/CoordinateSequenceFactory.h>
+#include <geos/geom/Geometry.h>
+#include <geos/geom/Polygon.h>
+#include <geos/geom/CoordinateSequence.h>
 
 #include "geotools.hpp"
 #include "util.hpp"
@@ -170,83 +178,62 @@ namespace geotools {
 				}
 			}
 
+			int getTypeSize(DataType type) {
+				switch(type) {
+				case DataType::Byte: return sizeof(uint8_t);
+				case DataType::Float32: return sizeof(float);
+				case DataType::Float64: return sizeof(double);
+				case DataType::Int16: return sizeof(int16_t);
+				case DataType::Int32: return sizeof(int32_t);
+				case DataType::UInt16: return sizeof(uint16_t);
+				case DataType::UInt32: return sizeof(uint32_t);
+				default:
+					g_runerr("No size for type: " << type);
+				}
+			}
+
+			GDALDataType dataType2GDT(DataType type) {
+				switch(type) {
+				case DataType::Byte:  	return GDT_Byte;
+				case DataType::UInt16: 	return GDT_UInt16;
+				case DataType::UInt32:	return GDT_UInt32;
+				case DataType::Int16:	return GDT_Int16;
+				case DataType::Int32:	return GDT_Int32;
+				case DataType::Float64:	return GDT_Float64;
+				case DataType::Float32:	return GDT_Float32;
+				case DataType::None:
+				default:
+					break;
+				}
+				return GDT_Unknown;
+			}
+
+			DataType gdt2DataType(GDALDataType type) {
+				switch(type) {
+				case GDT_Byte:	  	return DataType::Byte;
+				case GDT_UInt16: 	return DataType::UInt16;
+				case GDT_UInt32:	return DataType::UInt32;
+				case GDT_Int16:		return DataType::Int16;
+				case GDT_Int32:		return DataType::Int32;
+				case GDT_Float64:	return DataType::Float64;
+				case GDT_Float32:	return DataType::Float32;
+				case GDT_Unknown:
+				case GDT_CInt16:
+				case GDT_CInt32:
+				case GDT_CFloat32:
+				case GDT_CFloat64:
+				case GDT_TypeCount:
+				default:
+					break;
+				}
+				return DataType::None;
+			}
 
 		} //util
 	} // raster
 } // geotools
 
 using namespace geotools::raster::util;
-
-void Raster::setInt(int col, int row, int v, int band) {
-	if (!props().writable())
-		g_runerr("This raster is not writable.");
-	int bcol = col / m_bcols;
-	int brow = row / m_brows;
-	GDALRasterBand *rb = m_ds->GetRasterBand(band);
-	if(bcol != m_bcol || brow != m_brow || band != m_band) {
-		if(!rb)
-			g_argerr("No such band: " << band);
-		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
-			g_runerr("Failed to read from: " << filename());
-		m_bcol = bcol;
-		m_brow = brow;
-	}
-	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
-	writeToBlock(m_block, getGDType(), v, idx);
-	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
-		g_runerr("Failed to write to: " << filename());
-}
-
-int _getTypeSize(DataType type) {
-	switch(type) {
-	case DataType::Byte: return sizeof(uint8_t);
-	case DataType::Float32: return sizeof(float);
-	case DataType::Float64: return sizeof(double);
-	case DataType::Int16: return sizeof(int16_t);
-	case DataType::Int32: return sizeof(int32_t);
-	case DataType::UInt16: return sizeof(uint16_t);
-	case DataType::UInt32: return sizeof(uint32_t);
-	default:
-		g_runerr("No size for type: " << type);
-	}
-}
-
-GDALDataType _dataType2GDT(DataType type) {
-	switch(type) {
-	case DataType::Byte:  	return GDT_Byte;
-	case DataType::UInt16: 	return GDT_UInt16;
-	case DataType::UInt32:	return GDT_UInt32;
-	case DataType::Int16:	return GDT_Int16;
-	case DataType::Int32:	return GDT_Int32;
-	case DataType::Float64:	return GDT_Float64;
-	case DataType::Float32:	return GDT_Float32;
-	case DataType::None:
-	default:
-		break;
-	}
-	return GDT_Unknown;
-}
-
-DataType _gdt2DataType(GDALDataType type) {
-	switch(type) {
-	case GDT_Byte:	  	return DataType::Byte;
-	case GDT_UInt16: 	return DataType::UInt16;
-	case GDT_UInt32:	return DataType::UInt32;
-	case GDT_Int16:		return DataType::Int16;
-	case GDT_Int32:		return DataType::Int32;
-	case GDT_Float64:	return DataType::Float64;
-	case GDT_Float32:	return DataType::Float32;
-	case GDT_Unknown:
-	case GDT_CInt16:
-	case GDT_CInt32:
-	case GDT_CFloat32:
-	case GDT_CFloat64:
-	case GDT_TypeCount:
-	default:
-		break;
-	}
-	return DataType::None;
-}
 
 GridProps::GridProps() :
 		m_cols(0), m_rows(0),
@@ -401,10 +388,11 @@ void GridProps::setProjection(const std::string &proj) {
 
 std::string GridProps::projection() const {
 	if(m_projection.empty() && m_hsrid > 0) {
-		OGRSpatialReference ref;
-		ref.importFromEPSG(m_hsrid);
+		OGRSpatialReference* ref = new OGRSpatialReference();
+		ref->importFromEPSG(m_hsrid);
 		char *proj;
-		ref.exportToWkt(&proj);
+		ref->exportToWkt(&proj);
+		ref->Release();
 		return std::string(proj);
 	} else {
 		return m_projection;
@@ -483,8 +471,9 @@ void Grid::gaussianWeights(double *weights, int size, double sigma) {
 GridStats Grid::stats() {
 	GridStats st;
 	long i;
-	double v, nodata = props().nodata();
-	for (i = 0; i < props().size(); ++i) {
+	const GridProps& gp = props();
+	double v, nodata = gp.nodata();
+	for (i = 0; i < gp.size(); ++i) {
 		if ((v = getFloat(i)) != nodata) {
 			st.min = st.max = v;
 			break;
@@ -496,8 +485,8 @@ GridStats Grid::stats() {
 	double s = 0;
 	int k = 1;
 	// Welford's method for variance.
-	// i has the index of the first non-nodata element.
-	for (; i < props().size(); ++i) {
+	// i has the index of the first dpata element.
+	for (; i < gp.size(); ++i) {
 		if ((v = getFloat(i)) != nodata) {
 			double oldm = m;
 			m = m + (v - m) / k;
@@ -517,10 +506,11 @@ GridStats Grid::stats() {
 
 void Grid::normalize(int band) {
 	GridStats st = stats();
-	double v, nodata = props().nodata();
+	const GridProps& gp = props();
+	double v, nodata = gp.nodata();
 	double mean = st.mean;
 	double stdDev = st.stdDev;
-	for (long i = 0; i < props().size(); ++i) {
+	for (long i = 0; i < gp.size(); ++i) {
 		if ((v = getFloat(i, band)) != nodata && !std::isnan(v) && v < G_DBL_MAX_POS) {
 			setFloat(i, ((v - mean) / stdDev), band);
 		} else {
@@ -531,10 +521,11 @@ void Grid::normalize(int band) {
 
 void Grid::logNormalize(int band) {
 	GridStats st = stats();
+	const GridProps& gp = props();
 	double n = st.min;
 	double x = st.max;
 	double e = std::exp(1.0) - 1.0;
-	for(long i = 0; i < props().size(); ++i)
+	for(long i = 0; i < gp.size(); ++i)
 		setFloat(i, std::log(1.0 + e * (getFloat(i) - n) / (x - n)));
 }
 
@@ -544,14 +535,16 @@ void Grid::floodFill(int col, int row,
 	int *outminc, int *outminr,	int *outmaxc, int *outmaxr,
 	int *outarea) {
 
-	if(!props().isInt() || !other.props().isInt())
+	const GridProps& gp = props();
+
+	if(!gp.isInt() || !other.props().isInt())
 		g_argerr("Flood fill is only implemented for integer rasters.");
 
-	int cols = props().cols();
-	int rows = props().rows();
-	int size = props().size();
+	int cols = gp.cols();
+	int rows = gp.rows();
+	int size = gp.size();
 	int minc = cols + 1;
-	int minr = props().rows() + 1;
+	int minr = rows + 1;
 	int maxc = -1;
 	int maxr = -1;
 	int area = 0;
@@ -660,11 +653,12 @@ void Grid::floodFill(int col, int row,
 }
 
 void Grid::convert(Grid &g, int srcBand, int dstBand) {
+	const GridProps& gp = props();
 	if(g.props().isInt()) {
-		for (long i = 0; i < props().size(); ++i)
+		for (long i = 0; i < gp.size(); ++i)
 			g.setInt(i, getInt(i, srcBand), dstBand);
 	} else {
-		for (long i = 0; i < props().size(); ++i)
+		for (long i = 0; i < gp.size(); ++i)
 			g.setFloat(i, getFloat(i, srcBand), dstBand);
 	}
 }
@@ -729,7 +723,8 @@ void Grid::voidFillIDW(double radius, int count, double exp, int band) {
 
 void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 		Callbacks *status, bool *cancel) {
-	if(!props().isFloat())
+	const GridProps& gp = props();
+	if(!gp.isFloat())
 		g_runerr("Smoothing only implemented for float rasters.");
 	if (!cancel)
 		cancel = &_cancel;
@@ -747,13 +742,13 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 		size++;
 	}
 
-	Buffer weightsBuf(size * size * _getTypeSize(DataType::Float64));
+	Buffer weightsBuf(size * size * getTypeSize(DataType::Float64));
 	double* weights = (double*) weightsBuf.buf;
 	Grid::gaussianWeights(weights, size, sigma);
 
-	double nd = props().nodata();
-	int cols = props().cols();
-	int rows = props().rows();
+	double nd = gp.nodata();
+	int cols = gp.cols();
+	int rows = gp.rows();
 	std::atomic<int> curRow(0);
 
 	if (status)
@@ -764,7 +759,7 @@ void Grid::smooth(Grid &smoothed, double sigma, int size, int band,
 	#pragma omp parallel
 	{
 
-		GridProps pr = GridProps(props());
+		GridProps pr = GridProps(gp);
 		pr.setSize(cols, bufSize + size);
 		pr.setNoData(nd);
 		pr.setDataType(DataType::Float64);
@@ -881,12 +876,12 @@ void MemRaster::freeMem() {
 void MemRaster::init(const GridProps &pr, bool mapped) {
 	m_grid = nullptr;
 	m_mmapped = false;
-	if (pr.cols() != props().cols() || pr.rows() != props().rows()) {
+	if (pr.cols() != m_props.cols() || pr.rows() != m_props.rows()) {
 		freeMem();
 		m_props = GridProps(pr);
 		m_mmapped = mapped;
 		m_grid = nullptr;
-		int size = (props().isInt() ? sizeof(int) : sizeof(double))
+		int size = (m_props.isInt() ? sizeof(int) : sizeof(double))
 				* pr.cols() * pr.rows();
 		m_mappedFile.release();
 		if (mapped) {
@@ -903,29 +898,29 @@ void MemRaster::init(const GridProps &pr, bool mapped) {
 
 void MemRaster::fillFloat(double value, int band) {
 	checkInit();
-	if(props().isInt()) {
+	if(m_props.isInt()) {
 		fillInt((int) value, band);
 	} else {
-		for(long i = 0; i < props().size(); ++i)
+		for(long i = 0; i < m_props.size(); ++i)
 			*(((double *) m_grid) + i) = value;
 	}
 }
 
 void MemRaster::fillInt(int value, int band) {
 	checkInit();
-	if(props().isFloat()) {
+	if(m_props.isFloat()) {
 		fillFloat((double) value, band);
 	} else {
-		for(long i = 0; i < props().size(); ++i)
+		for(long i = 0; i < m_props.size(); ++i)
 			*(((int *) m_grid) + i) = value;
 	}
 }
 
 double MemRaster::getFloat(long idx, int band) {
 	checkInit();
-	if (idx < 0 || idx >= props().size())
-		g_argerr("Index out of bounds: " << idx << "; size: " << props().size());
-	if(props().isInt()) {
+	if (idx < 0 || idx >= m_props.size())
+		g_argerr("Index out of bounds: " << idx << "; size: " << m_props.size());
+	if(m_props.isInt()) {
 		return (double) getInt(idx, band);
 	} else {
 		return *(((double *) m_grid) + idx);
@@ -933,15 +928,15 @@ double MemRaster::getFloat(long idx, int band) {
 }
 
 double MemRaster::getFloat(int col, int row, int band) {
-	long idx = (long) row * props().cols() + col;
+	long idx = (long) row * m_props.cols() + col;
 	return getFloat(idx, band);
 }
 
 int MemRaster::getInt(long idx, int band) {
 	checkInit();
-	if (idx < 0 || idx >= props().size())
-		g_argerr("Index out of bounds: " << idx << "; size: " << props().size());
-	if(props().isInt()) {
+	if (idx < 0 || idx >= m_props.size())
+		g_argerr("Index out of bounds: " << idx << "; size: " << m_props.size());
+	if(m_props.isInt()) {
 		return *(((int *) m_grid) + idx);
 	} else {
 		return (int) getFloat(idx, band);
@@ -949,22 +944,22 @@ int MemRaster::getInt(long idx, int band) {
 }
 
 int MemRaster::getInt(int col, int row, int band) {
-	long idx = (long) row * props().cols() + col;
+	long idx = (long) row * m_props.cols() + col;
 	return getInt(idx, band);
 }
 
 void MemRaster::setFloat(int col, int row, double value, int band) {
-	long idx = (long) row * props().cols() + col;
+	long idx = (long) row * m_props.cols() + col;
 	setFloat(idx, value, band);
 }
 
 void MemRaster::setFloat(long idx, double value, int band) {
 	checkInit();
-	if (idx >= props().size())
-		g_argerr("Index out of bounds: " << idx << "; size: " << props().size()
-						<< "; value: " << value << "; col: " << (idx % props().cols())
-						<< "; row: " << (idx / props().cols()));
-	if(props().isInt()) {
+	if (idx >= m_props.size())
+		g_argerr("Index out of bounds: " << idx << "; size: " << m_props.size()
+						<< "; value: " << value << "; col: " << (idx % m_props.cols())
+						<< "; row: " << (idx / m_props.cols()));
+	if(m_props.isInt()) {
 		setInt(idx, (int) value, band);
 	} else {
 		*(((double *) m_grid) + idx) = value;
@@ -972,17 +967,17 @@ void MemRaster::setFloat(long idx, double value, int band) {
 }
 
 void MemRaster::setInt(int col, int row, int value, int band) {
-	long idx = (long) row * props().cols() + col;
+	long idx = (long) row * m_props.cols() + col;
 	setInt(idx, value, band);
 }
 
 void MemRaster::setInt(long idx, int value, int band) {
 	checkInit();
-	if (idx >= props().size())
-		g_argerr("Index out of bounds: " << idx << "; size: " << props().size()
-						<< "; value: " << value << "; col: " << (idx % props().cols())
-						<< "; row: " << (idx / props().cols()));
-	if(props().isInt()) {
+	if (idx >= m_props.size())
+		g_argerr("Index out of bounds: " << idx << "; size: " << m_props.size()
+						<< "; value: " << value << "; col: " << (idx % m_props.cols())
+						<< "; row: " << (idx / m_props.cols()));
+	if(m_props.isInt()) {
 		*(((int *) m_grid) + idx) = value;
 	} else {
 		setFloat(idx, (double) value, band);
@@ -991,8 +986,8 @@ void MemRaster::setInt(long idx, int value, int band) {
 
 void MemRaster::toMatrix(
 		Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> &mtx, int band) {
-	int cols = props().cols();
-	int rows = props().rows();
+	int cols = m_props.cols();
+	int rows = m_props.rows();
 	for (int r = 1; r < rows; ++r) {
 		for (int c = 0; c < cols; ++c)
 			mtx(r, c) = getFloat(c, r, band);
@@ -1001,8 +996,8 @@ void MemRaster::toMatrix(
 
 void MemRaster::fromMatrix(
 		Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> &mtx, int band) {
-	int cols = props().cols();
-	int rows = props().rows();
+	int cols = m_props.cols();
+	int rows = m_props.rows();
 	for (int r = 1; r < rows; ++r) {
 		for (int c = 0; c < cols; ++c)
 			setFloat(c, r, (double) mtx(r, c), band);
@@ -1015,22 +1010,22 @@ void MemRaster::writeRaster(Raster &grd,
 			int dstCol, int dstRow,
 			int srcBand, int dstBand) {
 
-	if(dstBand < 1 || dstBand > grd.props().bands())
+	if(dstBand < 1 || dstBand > grd.m_props.bands())
 		g_argerr("Invalid destination band: " << srcBand);
 
 	cols = g_abs(cols);
 	rows = g_abs(rows);
-	if(cols == 0) cols = props().cols();
-	if(rows == 0) rows = props().rows();
-	cols = g_min(props().cols() - srcCol, cols);
-	rows = g_min(props().rows() - srcRow, rows);
-	cols = g_min(grd.props().cols() - dstCol, cols);
-	rows = g_min(grd.props().rows() - dstRow, rows);
+	if(cols == 0) cols = m_props.cols();
+	if(rows == 0) rows = m_props.rows();
+	cols = g_min(m_props.cols() - srcCol, cols);
+	rows = g_min(m_props.rows() - srcRow, rows);
+	cols = g_min(grd.m_props.cols() - dstCol, cols);
+	rows = g_min(grd.m_props.rows() - dstRow, rows);
 
-	const GridProps& gp = props();
+	const GridProps& gp = m_props;
 	DataType type = gp.dataType();
-	GDALDataType gtype = _dataType2GDT(type);
-	int typeSize = _getTypeSize(type);
+	GDALDataType gtype = dataType2GDT(type);
+	int typeSize = getTypeSize(type);
 
 	if(srcCol == 0) {
 		int offset = (srcRow * gp.cols() + srcCol) * typeSize;
@@ -1062,20 +1057,20 @@ void MemRaster::writeMemRaster(MemRaster &grd,
 		int dstCol, int dstRow,
 		int srcBand, int dstBand) {
 
-	if(srcBand < 1 || srcBand > props().bands())
+	if(srcBand < 1 || srcBand > m_props.bands())
 		g_argerr("Invalid source band: " << srcBand);
 
 	cols = g_abs(cols);
 	rows = g_abs(rows);
-	if(cols == 0) cols = grd.props().cols();
-	if(rows == 0) rows = grd.props().rows();
-	cols = g_min(props().cols() - srcCol, cols);
-	rows = g_min(props().rows() - srcRow, rows);
-	cols = g_min(grd.props().cols() - dstCol, cols);
-	rows = g_min(grd.props().rows() - dstRow, rows);
+	if(cols == 0) cols = grd.m_props.cols();
+	if(rows == 0) rows = grd.m_props.rows();
+	cols = g_min(m_props.cols() - srcCol, cols);
+	rows = g_min(m_props.rows() - srcRow, rows);
+	cols = g_min(grd.m_props.cols() - dstCol, cols);
+	rows = g_min(grd.m_props.rows() - dstRow, rows);
 
-	if(grd.props().isInt()) {
-		if(props().isInt()) {
+	if(grd.m_props.isInt()) {
+		if(m_props.isInt()) {
 			for(int r = 0; r < rows; ++r) {
 				for(int c = 0; c < cols; ++c)
 					grd.setInt(c + dstCol, r + dstRow, getInt(c + srcCol, r + srcRow, srcBand), dstBand);
@@ -1087,7 +1082,7 @@ void MemRaster::writeMemRaster(MemRaster &grd,
 			}
 		}
 	} else {
-		if(props().isInt()) {
+		if(m_props.isInt()) {
 			for(int r = 0; r < rows; ++r) {
 				for(int c = 0; c < cols; ++c)
 					grd.setFloat(c + dstCol, r + dstRow, (double) getInt(c + srcCol, r + srcRow, srcBand), dstBand);
@@ -1207,7 +1202,7 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 		g_runerr("The " << drvName << " driver does not support dataset creation. Please specify a different driver.");
 	m_ds = drv->Create(
 			filename.c_str(), m_props.cols(), m_props.rows(), m_props.bands(),
-			_dataType2GDT(m_props.dataType()), opts);
+			dataType2GDT(m_props.dataType()), opts);
 	if (!m_ds)
 		g_runerr("Failed to create file.");
 
@@ -1223,7 +1218,7 @@ Raster::Raster(const std::string &filename, const GridProps &props) :
 	for(int i = 1; i <= m_props.bands(); ++i)
 		m_ds->GetRasterBand(i)->SetNoDataValue(m_props.nodata());
 	m_ds->GetRasterBand(1)->GetBlockSize(&m_bcols, &m_brows);
- 	m_block = malloc(m_bcols * m_brows * _getTypeSize(m_props.dataType()));
+ 	m_block = malloc(m_bcols * m_brows * getTypeSize(m_props.dataType()));
 }
 
 Raster::Raster(const std::string &filename, bool writable) :
@@ -1259,13 +1254,13 @@ Raster::Raster(const std::string &filename, bool writable) :
 	m_ds->GetGeoTransform(trans);
 	m_props.setTrans(trans);
 	m_props.setSize(m_ds->GetRasterXSize(), m_ds->GetRasterYSize());
-	m_props.setDataType(_gdt2DataType(m_type));
+	m_props.setDataType(gdt2DataType(m_type));
 	m_props.setBands(m_ds->GetRasterCount());
 	m_props.setWritable(writable);
 	m_props.setProjection(std::string(m_ds->GetProjectionRef()));
 	m_props.setNoData(m_ds->GetRasterBand(1)->GetNoDataValue());
 	m_ds->GetRasterBand(1)->GetBlockSize(&m_bcols, &m_brows);
- 	m_block = malloc(m_bcols * m_brows * _getTypeSize(m_props.dataType()));
+ 	m_block = malloc(m_bcols * m_brows * getTypeSize(m_props.dataType()));
 }
 
 GDALDataset* Raster::ds() const {
@@ -1278,7 +1273,7 @@ const GridProps& Raster::props() const {
 
 DataType Raster::getFileDataType(const std::string &filename) {
 	GDALDataset *ds = (GDALDataset *) GDALOpen(filename.c_str(), GA_ReadOnly);
-	DataType type = _gdt2DataType(ds->GetRasterBand(1)->GetRasterDataType());
+	DataType type = gdt2DataType(ds->GetRasterBand(1)->GetRasterDataType());
 	GDALClose(ds);
 	return type;
 }
@@ -1287,8 +1282,28 @@ std::string Raster::filename() const {
 	return m_filename;
 }
 
+void Raster::setInt(int col, int row, int v, int band) {
+	if (!m_props.writable())
+		g_runerr("This raster is not writable.");
+	int bcol = col / m_bcols;
+	int brow = row / m_brows;
+	GDALRasterBand *rb = m_ds->GetRasterBand(band);
+	if(bcol != m_bcol || brow != m_brow || band != m_band) {
+		if(!rb)
+			g_argerr("No such band: " << band);
+		if(CPLE_None != rb->ReadBlock(bcol, brow, m_block))
+			g_runerr("Failed to read from: " << filename());
+		m_bcol = bcol;
+		m_brow = brow;
+	}
+	int idx = (row - brow * m_brows) * m_bcols + (col - bcol * m_bcols);
+	writeToBlock(m_block, getGDType(), v, idx);
+	if(CPLE_None != rb->WriteBlock(bcol, brow, m_block))
+		g_runerr("Failed to write to: " << filename());
+}
+
 void Raster::fillInt(int value, int band) {
-	Buffer buf(m_bcols * m_brows * _getTypeSize(props().dataType()));
+	Buffer buf(m_bcols * m_brows * getTypeSize(m_props.dataType()));
 	for(int i = 0; i < m_bcols * m_brows; ++i)
 		*(((int *) buf.buf) + i) = value;
 	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
@@ -1301,7 +1316,7 @@ void Raster::fillInt(int value, int band) {
 }
 
 void Raster::fillFloat(double value, int band) {
-	Buffer buf(m_bcols * m_brows * _getTypeSize(props().dataType()));
+	Buffer buf(m_bcols * m_brows * getTypeSize(m_props.dataType()));
 	for(int i = 0; i < m_bcols * m_brows; ++i)
 		*(((double *) buf.buf) + i) = value;
 	GDALRasterBand *bnd = m_ds->GetRasterBand(band);
@@ -1321,24 +1336,24 @@ void Raster::writeRaster(Raster &grd,
 
 	if (&grd == this)
 		g_runerr("Recursive call to readBlock.");
-	if(srcBand < 1 || srcBand > props().bands())
+	if(srcBand < 1 || srcBand > m_props.bands())
 		g_argerr("Invalid source band: " << srcBand);
-	if(dstBand < 1 || dstBand > grd.props().bands())
+	if(dstBand < 1 || dstBand > grd.m_props.bands())
 		g_argerr("Invalid destination band: " << srcBand);
 
 	cols = g_abs(cols);
 	rows = g_abs(rows);
-	if(cols == 0) cols = grd.props().cols();
-	if(rows == 0) rows = grd.props().rows();
-	cols = g_min(props().cols() - srcCol, cols);
-	rows = g_min(props().rows() - srcRow, rows);
-	cols = g_min(grd.props().cols() - dstCol, cols);
-	rows = g_min(grd.props().rows() - dstRow, rows);
+	if(cols == 0) cols = grd.m_props.cols();
+	if(rows == 0) rows = grd.m_props.rows();
+	cols = g_min(m_props.cols() - srcCol, cols);
+	rows = g_min(m_props.rows() - srcRow, rows);
+	cols = g_min(grd.m_props.cols() - dstCol, cols);
+	rows = g_min(grd.m_props.rows() - dstRow, rows);
 
 	// A buffer for the entire copy.
-	DataType type = grd.props().dataType();
-	GDALDataType gtype = _dataType2GDT(type);
-	int typeSize = _getTypeSize(type);
+	DataType type = grd.m_props.dataType();
+	GDALDataType gtype = dataType2GDT(type);
+	int typeSize = getTypeSize(type);
 	Buffer buf(cols * rows * typeSize);
 
 	if(CPLE_None != grd.m_ds->GetRasterBand(srcBand)->RasterIO(GF_Read, srcCol, srcRow, cols, rows,
@@ -1355,22 +1370,22 @@ void Raster::writeMemRaster(MemRaster &grd,
 		int dstCol, int dstRow,
 		int srcBand, int dstBand) {
 
-	if(srcBand < 1 || srcBand > props().bands())
+	if(srcBand < 1 || srcBand > m_props.bands())
 		g_argerr("Invalid source band: " << srcBand);
 
 	cols = g_abs(cols);
 	rows = g_abs(rows);
 	if(cols == 0) cols = grd.props().cols();
 	if(rows == 0) rows = grd.props().rows();
-	cols = g_min(props().cols() - srcCol, cols);
-	rows = g_min(props().rows() - srcRow, rows);
+	cols = g_min(m_props.cols() - srcCol, cols);
+	rows = g_min(m_props.rows() - srcRow, rows);
 	cols = g_min(grd.props().cols() - dstCol, cols);
 	rows = g_min(grd.props().rows() - dstRow, rows);
 
 	const GridProps& gp = grd.props();
 	DataType type = gp.dataType();
-	GDALDataType gtype = _dataType2GDT(type);
-	int typeSize = _getTypeSize(type);
+	GDALDataType gtype = dataType2GDT(type);
+	int typeSize = getTypeSize(type);
 
 	if(dstCol == 0) {
 		int offset = (dstRow * gp.cols() + dstCol) * typeSize;
@@ -1412,7 +1427,7 @@ void Raster::write(Grid &grd,
 }
 
 GDALDataType Raster::getGDType() const {
-	return _dataType2GDT(props().dataType());
+	return dataType2GDT(m_props.dataType());
 }
 
 double Raster::getFloat(int col, int row, int band) {
@@ -1434,12 +1449,12 @@ double Raster::getFloat(int col, int row, int band) {
 }
 
 double Raster::getFloat(long idx, int band) {
-	return getFloat((int) idx % props().cols(), (int) idx / props().rows(), band);
+	return getFloat((int) idx % m_props.cols(), (int) idx / m_props.rows(), band);
 }
 
 
 double Raster::getFloat(double x, double y, int band) {
-	return getFloat(props().toCol(x), props().toRow(y), band);
+	return getFloat(m_props.toCol(x), m_props.toRow(y), band);
 }
 
 int Raster::getInt(int col, int row, int band) {
@@ -1461,23 +1476,23 @@ int Raster::getInt(int col, int row, int band) {
 }
 
 int Raster::getInt(long idx, int band) {
-	return getInt((int) idx % props().cols(), (int) idx / props().rows(), band);
+	return getInt((int) idx % m_props.cols(), (int) idx / m_props.rows(), band);
 }
 
 int Raster::getInt(double x, double y, int band) {
-	return getInt(props().toCol(x), props().toRow(y), band);
+	return getInt(m_props.toCol(x), m_props.toRow(y), band);
 }
 
 void Raster::setInt(long idx, int v, int band) {
-	setInt((int) idx % props().cols(), (int) idx / props().rows(), v, band);
+	setInt((int) idx % m_props.cols(), (int) idx / m_props.rows(), v, band);
 }
 
 void Raster::setInt(double x, double y, int v, int band) {
-	setInt(props().toCol(x), props().toRow(y), v, band);
+	setInt(m_props.toCol(x), m_props.toRow(y), v, band);
 }
 
 void Raster::setFloat(int col, int row, double v, int band) {
-	if (!props().writable())
+	if (!m_props.writable())
 		g_runerr("This raster is not writable.");
 	int bcol = col / m_bcols;
 	int brow = row / m_brows;
@@ -1497,11 +1512,11 @@ void Raster::setFloat(int col, int row, double v, int band) {
 }
 
 void Raster::setFloat(long idx, double v, int band) {
-	setFloat((int) idx % props().cols(), (int) idx / props().rows(), v, band);
+	setFloat((int) idx % m_props.cols(), (int) idx / m_props.rows(), v, band);
 }
 
 void Raster::setFloat(double x, double y, double v, int band) {
-	setFloat(props().toCol(x), props().toRow(y), v, band);
+	setFloat(m_props.toCol(x), m_props.toRow(y), v, band);
 }
 
 void Raster::polygonize(const std::string &filename, const std::string &layerName,
@@ -1512,20 +1527,192 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	GDALAllRegister();
 
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(driver.c_str());
-	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+	if(!drv)
+		g_runerr("Failed to find driver for " << driver << ".");
 
-	OGRSpatialReference sr;
-	sr.importFromEPSG(srid);
+	OGRSpatialReference* sr = new OGRSpatialReference();
+	sr->importFromEPSG(srid);
 
-	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, NULL);
+	char **dopts = NULL;
+	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, dopts);
+	if(!ds)
+		g_runerr("Failed to create dataset " << filename << ".");
+	CPLFree(dopts);
+
+	char **lopts = NULL;
+	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), sr, wkbMultiPolygon, lopts);
+	if(!layer)
+		g_runerr("Failed to create layer " << layerName << ".");
+	CPLFree(lopts);
 
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 
 	PolyProgressData pd(status, cancel);
-	GDALPolygonize(m_ds->GetRasterBand(1), NULL, layer, 0, NULL, &polyProgress, &pd);
+	int cols = m_props.cols();
+	int rows = m_props.rows();
+	std::atomic<uint64_t> fid(0);
+	GEOSContextHandle_t gctx = OGRGeometry::createGEOSContext();
+	std::unordered_map<uint64_t, std::unique_ptr<geos::geom::Geometry> > extraPolys;
+
+	const geos::geom::GeometryFactory* gf = geos::geom::GeometryFactory::getDefaultInstance();
+
+	if(OGRERR_NONE != layer->StartTransaction())
+		g_runerr("Failed to start transation.");
+
+	#pragma omp parallel
+	{
+
+		GridProps gp(m_props);
+		gp.setSize(cols, 1);
+		MemRaster rowBuf(gp);
+
+		std::unordered_set<uint64_t> atstart;
+		std::unordered_set<uint64_t> atend;
+		std::unordered_map<uint64_t, std::unique_ptr<geos::geom::Geometry> > polys;
+		bool first = true;
+
+		#pragma omp for
+		for(int r = 0; r < rows; ++r) {
+
+			if(*cancel)
+				continue;
+
+			#pragma omp critical(__read_raster)
+			write(rowBuf, cols, 1, 0, r, 0, 0, band);
+
+			atend.clear();
+
+			for(int c = 0; c < cols; ++c) {
+				uint64_t id0 = rowBuf.getInt(c, 0);
+				if(!id0) continue;
+
+				if(first)
+					atstart.insert(id0);
+				atend.insert(id0);
+
+				double x0 = gp.toX(c);
+				double y0 = gp.toY(r);
+
+				while(++c <= cols) {
+					uint64_t id1 = c < cols ? rowBuf.getInt(c, 0) : 0;
+					if(id0 > 0 && id1 != id0) {
+						double x1 = gp.toX(c);
+						double y1 = gp.toY(r) + gp.resolutionY();
+						//std::cerr << "adding block " << id0 << ": " << x0 << ", " << y0 << "; " << x1 << ", " << y1 << "\n";
+						geos::geom::CoordinateSequence* seq = gf->getCoordinateSequenceFactory()->create();
+						seq->add(geos::geom::Coordinate(x0, y0));
+						seq->add(geos::geom::Coordinate(x1, y0));
+						seq->add(geos::geom::Coordinate(x1, y1));
+						seq->add(geos::geom::Coordinate(x0, y1));
+						seq->add(geos::geom::Coordinate(x0, y0));
+						geos::geom::LinearRing* ring = gf->createLinearRing(seq);
+						geos::geom::Polygon* p = gf->createPolygon(ring, nullptr);
+						if(polys.find(id0) == polys.end()) {
+							std::unique_ptr<geos::geom::Polygon> pn(p);
+							polys[id0] = std::move(pn);
+						} else {
+							geos::geom::Geometry* u = polys[id0]->Union(p);
+							delete polys[id0].release();
+							delete p;
+							polys[id0].reset(u);
+						}
+						--c;
+						break;
+					}
+					id0 = id1;
+				}
+			}
+
+			first = false;
+
+			if(r % 128 == 0) {
+				std::unordered_set<uint64_t> remove;
+				for(const auto &it : polys) {
+					if(*cancel)
+						break;
+					// Only write polygons that are not represented (by ID) in the first or last rows
+					// of the current chunk.
+					if(atstart.find(it.first) == atstart.end() && atend.find(it.first) == atend.end()) {
+						OGRFeature feat(layer->GetLayerDefn());
+						OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
+						feat.SetGeometry(geom);
+						feat.SetField("id", (GIntBig) it.first);
+						feat.SetFID(++fid);
+						#pragma omp critical(__write_layer)
+						{
+							if(OGRERR_NONE != layer->CreateFeature(&feat))
+								g_runerr("Failed to add geometry.");
+						}
+						remove.insert(it.first);
+					}
+				}
+				// Remove any polys that were written.
+				for(const uint64_t &id : remove)
+					polys.erase(id);
+			}
+		}
+
+		std::unordered_set<uint64_t> remove;
+		for(const auto &it : polys) {
+			if(*cancel)
+				break;
+			// Only write polygons that are not represented (by ID) in the first or last rows
+			// of the current chunk.
+			if(atstart.find(it.first) == atstart.end() && atend.find(it.first) == atend.end()) {
+				OGRFeature feat(layer->GetLayerDefn());
+				OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
+				feat.SetGeometry(geom);
+				feat.SetField("id", (GIntBig) it.first);
+				feat.SetFID(++fid);
+				#pragma omp critical(__write_layer)
+				{
+					if(OGRERR_NONE != layer->CreateFeature(&feat))
+						g_runerr("Failed to add geometry.");
+				}
+				remove.insert(it.first);
+			}
+		}
+		// Remove any polys that were written.
+		for(const uint64_t &id : remove)
+			polys.erase(id);
+		// If there are any polygons left when this thread quits,
+		// union them into the left-over polygons map
+		for(auto &it : polys) {
+			if(extraPolys.find(it.first) != extraPolys.end()) {
+				std::unique_ptr<geos::geom::Geometry> u(extraPolys[it.first]->Union(it.second.get()));
+				extraPolys[it.first] = std::move(u);
+			} else {
+				extraPolys[it.first] = std::move(it.second);
+			}
+		}
+	}
+
+	// TODO: Make a row-range tracker and finalize polygons when there's at least one completed
+	// row above and below, and a contiguous completed range between. Should reduce
+	// the number of left-over polys.
+	std::cerr << extraPolys.size() << " left\n";
+	for(const auto &it : extraPolys) {
+		if(*cancel)
+			break;
+		OGRFeature feat(layer->GetLayerDefn());
+		OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
+		feat.SetGeometry(geom);
+		feat.SetField("id", (GIntBig) it.first);
+		feat.SetFID(++fid);
+		#pragma omp critical(__write_layer)
+		{
+			if(OGRERR_NONE != layer->CreateFeature(&feat))
+				g_runerr("Failed to add geometry.");
+		}
+	}
+
+	if(OGRERR_NONE != layer->CommitTransaction())
+		g_runerr("Failed to commit transation.");
 
 	GDALClose(ds);
+
+	sr->Release();
 }
 
 void Raster::flush() {
@@ -1538,13 +1725,10 @@ void Raster::flush() {
 
 Raster::~Raster() {
 	flush();
-	#pragma omp critical(__raster_destruct)
-	{
-		if(m_block)
-			free(m_block);
-		m_block = nullptr;
-		if(m_ds)
-			GDALClose(m_ds);
-		m_ds = nullptr;
-	}
+	if(m_block)
+		free(m_block);
+	m_block = nullptr;
+	if(m_ds)
+		GDALClose(m_ds);
+	m_ds = nullptr;
 }

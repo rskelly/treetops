@@ -149,12 +149,12 @@ DB::DB(const std::string &file, const std::string &layer, const std::string &dri
 	if(m_layerName.empty())
 		m_layerName = "data";
 
-	OGRSpatialReference sr;
-	sr.importFromEPSG(m_srid);
-
 	char **options = nullptr;
+	OGRSpatialReference* sr = new OGRSpatialReference();
+	sr->importFromEPSG(m_srid);
+	m_layer = m_ds->CreateLayer(m_layerName.c_str(), sr, geomType(m_type), options);
+	sr->Release();
 
-	m_layer = m_ds->CreateLayer(m_layerName.c_str(), &sr, geomType(m_type), options);
 	if(!m_layer)
 		g_runerr("Failed to create layer, " << m_layerName << ".");
 
@@ -208,12 +208,7 @@ DB::DB(const std::string &file, const std::string &layer) :
 }
 
 DB::~DB() {
-	#pragma omp critical(__db_destruct)
-	{
-		if(m_ds)
-			GDALClose(m_ds);
-		m_ds = nullptr;
-	}
+	GDALClose(m_ds);
 }
 
 std::map<std::string, std::set<std::string> > DB::extensions() {
