@@ -159,6 +159,7 @@ namespace geotools {
             // A simple class for maintaining information about a tree top.
             class Top {
             public:
+            	uint64_t fid;		// The geomid.
                 uint64_t id;		// The ID of this top.
                 uint64_t parentID;	// The ID of this top's parent.
                 double ox, oy, oz; 	// Original x, y, z value
@@ -176,22 +177,32 @@ namespace geotools {
 
             // A subclass of DB with specific methods for managing treetops.
             class TTDB : public DB {
+            private:
+
+            	// Returns a map of fields/types to use in the constructor.
+                static std::unordered_map<std::string, FieldType> fields();
+
             public:
 
-                TTDB(const std::string &file, const std::string &layer, const std::string &driver,
-                    const std::unordered_map<std::string, FieldType> &fields,
-                    GeomType type, int srid = 0, bool replace = false);
+                // Build a new database.
+                TTDB(const std::string &file, const std::string &layer, const std::string &driver, int srid = 0, bool replace = false);
 
+                // Open an existing database
                 TTDB(const std::string &file, const std::string &layer);
 
+                // Add a single treetop
                 void addTop(const std::unique_ptr<Top> &top);
 
+                // Add a list of treetops.
                 void addTops(const std::list<std::unique_ptr<Top> > &tops);
 
+                // Return the treetops within the given bounds
                 void getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds);
 
+                // Update a treetop.
                 void updateTop(const std::unique_ptr<Top> &top);
 
+                // Update a list of treetops
                 void updateTops(std::list<std::unique_ptr<Top> > &tops);
 
             };
