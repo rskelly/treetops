@@ -306,21 +306,45 @@ void TreetopsConfig::parseThresholds(const std::string &str) {
 
 // Top implementation
 
-Top::Top(uint64_t id, uint64_t parentID, double ox, double oy, double oz, double sx, double sy, double sz, int sc, int sr) :
-	id(id), parentID(parentID), ox(ox), oy(oy), oz(oz), sx(sx), sy(sy), sz(sz), sc(sc), sr(sr) {
+Top::Top(uint64_t id, uint64_t parentID,
+		double ox, double oy, double oz,
+		double sx, double sy, double sz,
+		int sc, int sr) :
+	fid(0),
+	id(id), parentID(parentID),
+	ox(ox), oy(oy), oz(oz),
+	sx(sx), sy(sy), sz(sz),
+	sc(sc), sr(sr) {
 }
 
 Top::Top() :
-	id(0), parentID(0), ox(0), oy(0), oz(0), sx(0), sy(0), sz(0), sc(0), sr(0) {
+	fid(0),
+	id(0), parentID(0),
+	ox(0), oy(0), oz(0),
+	sx(0), sy(0), sz(0),
+	sc(0), sr(0) {
 }
 
 
 // TTDB implementation
+std::unordered_map<std::string, FieldType> TTDB::fields() {
+	std::unordered_map<std::string, FieldType> fields;
+	fields["id"] = FieldType::FTInt;
+	fields["parentID"] = FieldType::FTInt;
+	fields["origX"] = FieldType::FTDouble;
+	fields["origY"] = FieldType::FTDouble;
+	fields["origZ"] = FieldType::FTDouble;
+	fields["smoothX"] = FieldType::FTDouble;
+	fields["smoothY"] = FieldType::FTDouble;
+	fields["smoothZ"] = FieldType::FTDouble;
+	fields["smoothCol"] = FieldType::FTInt;
+	fields["smoothRow"] = FieldType::FTInt;
+	return fields;
+}
 
 TTDB::TTDB(const std::string &file, const std::string &layer, const std::string &driver,
-    const std::unordered_map<std::string, FieldType> &fields, GeomType type,
 	int srid, bool replace) :
-    DB(file, layer, driver, fields, type, srid, replace) {}
+    DB(file, layer, driver, TTDB::fields(), GeomType::GTPoint, srid, replace) {}
 
 TTDB::TTDB(const std::string &file, const std::string &layer) :
     DB(file, layer) {}
@@ -328,22 +352,21 @@ TTDB::TTDB(const std::string &file, const std::string &layer) :
 void TTDB::addTop(const std::unique_ptr<Top> &top) {
     if(m_type != GeomType::GTPoint)
         g_runerr("This dataset is not a point dataset.");
-    OGRFeature* feat = OGRFeature::CreateFeature(m_fdef);
-    feat->SetField("id", (GIntBig) top->id);
-    feat->SetField("parentId", (GIntBig) top->parentID);
-    feat->SetField("origX", top->ox);
-    feat->SetField("origY", top->oy);
-    feat->SetField("origZ", top->oz);
-    feat->SetField("smoothX", top->sx);
-    feat->SetField("smoothY", top->sy);
-    feat->SetField("smoothZ", top->sz);
-    feat->SetField("smoothCol", top->sc);
-    feat->SetField("smoothRow", top->sr);
-    OGRPoint geom(top->sx, top->sy, top->sz);
-    feat->SetGeometry(&geom);
-    if(OGRERR_NONE != m_layer->CreateFeature(feat))
+    OGRFeature feat(m_fdef);
+    feat.SetField("id", (GIntBig) top->id);
+    feat.SetField("parentId", (GIntBig) top->parentID);
+    feat.SetField("origX", top->ox);
+    feat.SetField("origY", top->oy);
+    feat.SetField("origZ", top->oz);
+    feat.SetField("smoothX", top->sx);
+    feat.SetField("smoothY", top->sy);
+    feat.SetField("smoothZ", top->sz);
+    feat.SetField("smoothCol", top->sc);
+    feat.SetField("smoothRow", top->sr);
+	OGRPoint geom(top->sx, top->sy, top->sz);
+	feat.SetGeometry(&geom);
+    if(OGRERR_NONE != m_layer->CreateFeature(&feat))
         g_runerr("Failed to add feature to " << m_file << ".");
-    OGRFeature::DestroyFeature(feat);
 }
 
 void TTDB::addTops(const std::list<std::unique_ptr<Top> > &tops) {
@@ -355,13 +378,8 @@ void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util:
     if(m_type != GeomType::GTPoint)
         g_runerr("This dataset is not a point dataset.");
     m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
-    //m_layer->ResetReading();
     OGRFeature *feat;
     while((feat = m_layer->GetNextFeature())) {
-    	//OGRPoint* pt = (OGRPoint*) feat->GetGeometryRef();
-    	//std::cerr << pt->getX() << ", " << pt->getY() << "\n";
-    	//if(!bounds.contains(pt->getX(), pt->getY()))
-    	//	continue;
         std::unique_ptr<Top> t(new Top(
             feat->GetFieldAsInteger64("id"),
             feat->GetFieldAsInteger64("parentID"),
@@ -374,6 +392,7 @@ void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util:
             feat->GetFieldAsInteger("smoothCol"),
             feat->GetFieldAsInteger("smoothRow")
         ));
+        t->fid = feat->GetFID();
         tops.push_back(std::move(t));
         OGRFeature::DestroyFeature(feat);
     }
@@ -381,12 +400,9 @@ void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util:
 }
 
 void TTDB::updateTop(const std::unique_ptr<Top> &top) {
-    std::stringstream ss;
-    ss << "\"id\"=" << top->id;
-    m_layer->SetAttributeFilter(ss.str().c_str());
-    OGRFeature *feat = m_layer->GetNextFeature();
+    OGRFeature *feat = m_layer->GetFeature(top->fid);
     if(!feat)
-        g_runerr("Failed to find feature with ID: id=" << top->id);
+        g_runerr("Failed to find feature with ID: id=" << top->fid);
     feat->SetField("parentID", (GIntBig) top->parentID);
     feat->SetField("origX", top->ox);
     feat->SetField("origY", top->oy);
@@ -399,7 +415,6 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     if(OGRERR_NONE != m_layer->SetFeature(feat))
         g_runerr("Failed to save feature: " << top->id << ".");
     OGRFeature::DestroyFeature(feat);
-    m_layer->SetAttributeFilter(NULL);
 }
 
 void TTDB::updateTops(std::list<std::unique_ptr<Top> > &tops) {
@@ -458,34 +473,10 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	// Initialize input rasters.
 	Raster smoothed(config.topsSmoothedCHM);
-
-	if (*cancel)
-		return;
-
-	std::unordered_map<std::string, FieldType> fields;
-	fields["id"] = FieldType::FTInt;
-	fields["parentID"] = FieldType::FTInt;
-	fields["origX"] = FieldType::FTDouble;
-	fields["origY"] = FieldType::FTDouble;
-	fields["origZ"] = FieldType::FTDouble;
-	fields["smoothX"] = FieldType::FTDouble;
-	fields["smoothY"] = FieldType::FTDouble;
-	fields["smoothZ"] = FieldType::FTDouble;
-	fields["smoothCol"] = FieldType::FTInt;
-	fields["smoothRow"] = FieldType::FTInt;
-	
-	TTDB db(config.topsTreetopsDatabase, "data", config.topsTreetopsDatabaseDriver,
-			fields, GeomType::GTPoint, config.srid, true);
-
-	if (*cancel)
-		return;
-
-	if (m_callbacks) {
-		m_callbacks->stepCallback(0.02f);
-		m_callbacks->statusCallback("Treetops: Starting...");
-	}
-
 	GridProps pr = GridProps(smoothed.props());
+
+	// Initialize the DB
+	TTDB db(config.topsTreetopsDatabase, "data", config.topsTreetopsDatabaseDriver, config.srid, true);
 
 	// This raster tracks the size of the window
 	// that was used to identify a top.
@@ -498,13 +489,22 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	MemRaster topsIDGrid(pr, true);
 	topsIDGrid.fillInt(0);
 
-	uint64_t topId = 0;
+	// Counter to create unique treetop IDs.
+	std::atomic<uint64_t> topId(0);
+	// Raster buffer height.
 	int bufSize = 256; // TODO: Configurable or dynamic buffer size.
-
+	int rows = smoothed.props().rows();
+	int cols = smoothed.props().cols();
+	double nodata = smoothed.props().nodata();
 	// The total number of actions to perform, and a status
 	// variable to keep track of them. (For status updates).
-	uint64_t total = config.topsThresholds.size() * smoothed.props().rows();
+	uint64_t total = config.topsThresholds.size() * rows;
 	std::atomic<uint64_t> status(0);
+
+	if (m_callbacks) {
+		m_callbacks->stepCallback(0.02f);
+		m_callbacks->statusCallback("Treetops: Starting...");
+	}
 
 	// Iterate over the thresholds from lowest height to highest.
 	for(const auto &it : config.topsThresholds) {
@@ -518,10 +518,11 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			// Prepare a buffer for the smoothing.
 			GridProps pr = GridProps(smoothed.props());
 			pr.setDataType(DataType::Float64);
-			MemRaster smooth(pr, true);
+			pr.setSize(cols, bufSize);
+			MemRaster smooth(pr, false);
 
 			#pragma omp for
-			for(int j = 0; j < smoothed.props().rows() / bufSize + 1; ++j) {
+			for(int j = 0; j < rows / bufSize + 1; ++j) {
 
 				if (*cancel)
 					continue;
@@ -534,9 +535,9 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 				int readOffset = b > 0 ? b - window / 2 : 0;  // If this is the first row, read from zero, otherwise -(size / 2)
 				int writeOffset = b > 0 ? 0 : window / 2;     // If this is the first row, write to (size / 2), otherwise 0.
-				smooth.fillFloat(smooth.props().nodata());
+				smooth.fillFloat(nodata);
 				#pragma omp critical(__tops_read)
-				smoothed.write(smooth, smooth.props().cols(), smooth.props().rows(),
+				smoothed.write(smooth, cols, g_min(bufSize, rows - b),
 						0, readOffset, 0, writeOffset);
 
 				std::list<std::tuple<int, int, int> > tops;
@@ -545,8 +546,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 					m_callbacks->statusCallback("Treetops: Finding tops...");
 
 				// Iterate over the raster, applying the kernel to find the maxium at the centre.
-				for (int row = window / 2; row < g_min(bufSize, smoothed.props().rows() - b) - window / 2; ++row) {
-					for (int col = window / 2; col < smooth.props().cols() - window / 2; ++col) {
+				for (int row = window / 2; row < g_min(bufSize, rows - b) - window / 2; ++row) {
+					for (int col = window / 2; col < cols - window / 2; ++col) {
 
 						double v = smooth.getFloat(col, row);
 						if(v < threshold) continue;
@@ -583,30 +584,38 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 	// A new buffer to keep track of parent top IDs.
 	pr = GridProps(smoothed.props());
+	pr.setDataType(DataType::UInt32);
 	MemRaster topsParentGrid(pr, true);
 	topsParentGrid.fillInt(0);
 
 	// The smallest window used in this job.
 	int minWindow = config.topsThresholds.begin()->second;
+	int window, window0;
 
-	for(int row = 0; row < pr.rows(); ++row) {
+	#pragma omp parallel for
+	for(int row = 0; row < rows; ++row) {
 
 		if (*cancel)
-			return;
+			continue;
 
 		for(int col = 0; col < pr.cols(); ++col) {
 
-			int window = topsWindowGrid.getInt(col, row);
+			#pragma omp critical(__read_tops_window)
+			window = topsWindowGrid.getInt(col, row);
 			if(window <= minWindow) continue; 			// If the top was found by the smallest window, skip it.
 
 			// Find the tops which are inside of the window of another top's window.
-			for(int r = g_max(0, row - window / 2); r < g_min(pr.rows(), row + window / 2 + 1); ++r) {
-				for(int c = g_max(0, col - window / 2); c < g_min(pr.cols(), col + window / 2 + 1); ++c) {
+			for(int r = g_max(0, row - window / 2); r < g_min(rows, row + window / 2 + 1); ++r) {
+				for(int c = g_max(0, col - window / 2); c < g_min(cols, col + window / 2 + 1); ++c) {
 					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) continue;
 
-					int window0 = topsWindowGrid.getInt(c, r);
-					if(window0 < window && !topsParentGrid.getInt(c, r))
-						topsParentGrid.setInt(c, r, topsIDGrid.getInt(col, row)); //  Save the ID of the parent.
+					#pragma omp critical(__read_tops_window)
+					window0 = topsWindowGrid.getInt(c, r);
+					#pragma omp critical(__write_tops_parent)
+					{
+						if(window0 < window && !topsParentGrid.getInt(c, r))
+							topsParentGrid.setInt(c, r, topsIDGrid.getInt(col, row)); //  Save the ID of the parent.
+					}
 				}
 			}
 		}
@@ -618,23 +627,26 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	if(m_callbacks)
 		m_callbacks->statusCallback("Treetops: Saving tops...");
 
-	total = topsIDGrid.props().rows();
 	status = 0;
+
+	db.begin();
 
 	#pragma omp parallel
 	{
 
 		std::list<std::unique_ptr<Top> > tops;
+		int window;
 
 		#pragma omp for
-		for(int row = 0; row < topsIDGrid.props().rows(); ++row) {
+		for(int row = 0; row < rows; ++row) {
 
 			if(*cancel)
 				continue;
 
-			for(int col = 0; col < topsIDGrid.props().cols(); ++col) {
+			for(int col = 0; col < cols; ++col) {
 
-				int window = topsWindowGrid.getInt(col, row);
+				#pragma omp critical(__read_tops_windows)
+				window = topsWindowGrid.getInt(col, row);
 				if(!window) continue;
 
 				double z;
@@ -659,25 +671,19 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 
 			if (tops.size() >= 1000) {
 				#pragma omp critical(__save_points)
-				{
-					db.begin();
-					db.addTops(tops);
-					db.commit();
-					tops.clear();
-				}
+				db.addTops(tops);
+				tops.clear();
 				if (m_callbacks)
 					m_callbacks->stepCallback(0.66f + (float) status / total * 0.32f);
 			}
 		}
 
 		#pragma omp critical(__save_points)
-		{
-			db.begin();
-			db.addTops(tops);
-			db.commit();
-			tops.clear();
-		}
+		db.addTops(tops);
+		tops.clear();
 	}
+
+	db.commit();
 
 	if (m_callbacks)
 		m_callbacks->stepCallback(0.99f);
@@ -725,8 +731,11 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	if(m_callbacks)
 		m_callbacks->statusCallback("Crowns: Updating tops...");
 
+	db.begin();
+
 	int bufSize = g_max(1, (int) ((double) cprops.rows() * 1000.0 / db.getGeomCount()));
 	int steps = cprops.rows() / bufSize + 1;
+	#pragma omp parallel for
 	for(int i = 0; i < steps; ++i) {
 
 		if (*cancel)
@@ -737,6 +746,7 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 				cprops.toX(cprops.cols()), cprops.toY(b + bufSize + radius));
 
 		std::list<std::unique_ptr<Top> > tops;
+		#pragma omp critical(__update_tops)
 		db.getTops(tops, bounds);
 		if(tops.empty())
 			continue;
@@ -751,14 +761,14 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 			}
 		}
 
-		db.begin();
+		#pragma omp critical(__update_tops)
 		db.updateTops(tops);
-		db.commit();
 
 		if(m_callbacks)
 			m_callbacks->stepCallback(start + (end - start) * (i + 1) / steps);
 	}
 
+	db.commit();
 }
 
 void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float start, float end) {
