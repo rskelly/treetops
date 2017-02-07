@@ -21,6 +21,8 @@
 #include <geos/geom/Polygon.h>
 #include <geos/geom/CoordinateSequence.h>
 
+#include "omp.h"
+
 #include "geotools.hpp"
 #include "util.hpp"
 #include "raster.hpp"
@@ -1521,10 +1523,11 @@ void Raster::setFloat(double x, double y, double v, int band) {
 
 class Poly {
 public:
+	int thread;
 	int minRow, maxRow;
 	std::unique_ptr<geos::geom::Geometry> poly;
-	Poly(geos::geom::Geometry *poly, int row) :
-		minRow(row), maxRow(row) {
+	Poly(geos::geom::Geometry *poly, int thread, int row) :
+		thread(thread), minRow(row), maxRow(row) {
 		this->poly.reset(poly);
 	}
 	void update(const geos::geom::Geometry *upoly, int minRow, int maxRow) {
@@ -1541,7 +1544,7 @@ public:
 	// Returns true if the range of rows given by start and end was finalized
 	// within the given thread. The checked range includes one row above and one below,
 	// which is required to guarantee that a polygon is completed.
-	bool isRangeFinalized(const std::vector<int> &finalRows, int thread) const {
+	bool isRangeFinalized(const std::vector<int> &finalRows) const {
 		int start = g_max(minRow - 1, 0);
 		int end = g_min(maxRow + 2, (int) finalRows.size());
 		for(int i = start; i < end; ++i)
@@ -1571,10 +1574,10 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		g_runerr("Failed to create dataset " << filename << ".");
 
 	// Create the layer.
-	OGRSpatialReference* sr = new OGRSpatialReference();
-	sr->importFromEPSG(srid);
+	OGRSpatialReference sr;
+	sr.importFromEPSG(srid);
 	char **lopts = NULL;
-	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), sr, wkbMultiPolygon, lopts);
+	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), &sr, wkbMultiPolygon, lopts);
 	CPLFree(lopts);
 	if(!layer) {
 		GDALClose(ds);
@@ -1648,7 +1651,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 						double y1 = gp.toY(r) + gp.resolutionY();
 
 						// Build the geometry.
-						geos::geom::CoordinateSequence* seq = gf->getCoordinateSequenceFactory()->create();
+						geos::geom::CoordinateSequence* seq = gf->getCoordinateSequenceFactory()->create((size_t) 0, 2);
 						seq->add(geos::geom::Coordinate(x0, y0));
 						seq->add(geos::geom::Coordinate(x1, y0));
 						seq->add(geos::geom::Coordinate(x1, y1));
@@ -1659,7 +1662,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 							
 						// If it's already in the list, union it, otherwise add it.
 						if(polys.find(id0) == polys.end()) {
-							std::unique_ptr<Poly> pp(new Poly(p, r));
+							std::unique_ptr<Poly> pp(new Poly(p, thread, r));
 							polys[id0] = std::move(pp);
 						} else {
 							polys[id0]->update(p, r, r);
@@ -1682,13 +1685,14 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 			#pragma omp critical(__write_layer)
 			{
 				for(const auto &it : polys) {
-					if(it.second->isRangeFinalized(finalRows, thread)) {
+					if(it.second->isRangeFinalized(finalRows)) {
 						remove.insert(it.first);
 						OGRFeature feat(layer->GetLayerDefn());
 						OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second->poly.get());
 						feat.SetGeometry(geom);
 						feat.SetField("id", (GIntBig) it.first);
 						feat.SetFID(++fid);
+						delete geom;
 						if(OGRERR_NONE != layer->CreateFeature(&feat))
 							g_runerr("Failed to add geometry.");
 					}
@@ -1726,6 +1730,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		feat.SetGeometry(geom);
 		feat.SetField("id", (GIntBig) it.first);
 		feat.SetFID(++fid);
+		delete geom;
 		if(OGRERR_NONE != layer->CreateFeature(&feat))
 			g_runerr("Failed to add geometry.");
 	}
@@ -1734,8 +1739,6 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		g_runerr("Failed to commit transation.");
 
 	GDALClose(ds);
-
-	sr->Release();
 }
 
 void Raster::flush() {
