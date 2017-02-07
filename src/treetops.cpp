@@ -48,7 +48,7 @@ namespace geotools {
 
 		namespace util {
 
-			// Represents a grid cell, and maintains some properties of the
+			// Represents a grid cell and maintains some properties of the
 			// seed that originated it.
 			class Node {
 			public:
@@ -327,6 +327,7 @@ Top::Top() :
 
 
 // TTDB implementation
+
 std::unordered_map<std::string, FieldType> TTDB::fields() {
 	std::unordered_map<std::string, FieldType> fields;
 	fields["id"] = FieldType::FTInt;
@@ -350,8 +351,6 @@ TTDB::TTDB(const std::string &file, const std::string &layer) :
     DB(file, layer) {}
 
 void TTDB::addTop(const std::unique_ptr<Top> &top) {
-    if(m_type != GeomType::GTPoint)
-        g_runerr("This dataset is not a point dataset.");
     OGRFeature feat(m_fdef);
     feat.SetField("id", (GIntBig) top->id);
     feat.SetField("parentId", (GIntBig) top->parentID);
@@ -375,8 +374,6 @@ void TTDB::addTops(const std::list<std::unique_ptr<Top> > &tops) {
 }
 
 void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
-    if(m_type != GeomType::GTPoint)
-        g_runerr("This dataset is not a point dataset.");
     m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
     OGRFeature *feat;
     while((feat = m_layer->GetNextFeature())) {
@@ -402,7 +399,8 @@ void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util:
 void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     OGRFeature *feat = m_layer->GetFeature(top->fid);
     if(!feat)
-        g_runerr("Failed to find feature with ID: id=" << top->fid);
+        g_runerr("Failed to find feature with fID: id=" << top->fid);
+    feat->SetField("id", (GIntBig) top->id);
     feat->SetField("parentID", (GIntBig) top->parentID);
     feat->SetField("origX", top->ox);
     feat->SetField("origY", top->oy);
@@ -413,7 +411,7 @@ void TTDB::updateTop(const std::unique_ptr<Top> &top) {
     feat->SetField("smoothCol", top->sc);
     feat->SetField("smoothRow", top->sr);
     if(OGRERR_NONE != m_layer->SetFeature(feat))
-        g_runerr("Failed to save feature: " << top->id << ".");
+        g_runerr("Failed to save feature: " << top->fid << ".");
     OGRFeature::DestroyFeature(feat);
 }
 
@@ -451,10 +449,9 @@ void Treetops::smooth(const TreetopsConfig &config, bool *cancel) {
 
 	in.smooth(out, config.smoothSigma, config.smoothWindowSize,
 			config.smoothOriginalCHMBand, m_callbacks, cancel);
-	out.flush();
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.01f);
+		m_callbacks->stepCallback(1.0f);
 		m_callbacks->statusCallback("Smoothing: Done.");
 	}
 }
@@ -592,6 +589,8 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 	int minWindow = config.topsThresholds.begin()->second;
 	int window, window0;
 
+	status = 0;
+
 	#pragma omp parallel for
 	for(int row = 0; row < rows; ++row) {
 
@@ -605,14 +604,21 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			if(window <= minWindow) continue; 			// If the top was found by the smallest window, skip it.
 
 			// Find the tops which are inside of the window of another top's window.
-			for(int r = g_max(0, row - window / 2); r < g_min(rows, row + window / 2 + 1); ++r) {
-				for(int c = g_max(0, col - window / 2); c < g_min(cols, col + window / 2 + 1); ++c) {
-					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) continue;
+			int startRow = g_max(0, row - window / 2);
+			int startCol = g_max(0, col - window / 2);
+			int endRow = g_min(rows, row + window / 2 + 1);
+			int endCol = g_min(cols, col + window / 2 + 1);
+			
+			for(int r = startRow; r < endRow; ++r) {
+				for(int c = startCol; c < endCol; ++c) {
+					
+					if(c == col || r == row || (g_sq(c - col) + g_sq(r - row)) > g_sq(window)) 
+						continue;
 
+					// TODO: Buffer this to get rid of the lock.
 					#pragma omp critical(__read_tops_window)
-					window0 = topsWindowGrid.getInt(c, r);
-					#pragma omp critical(__write_tops_parent)
 					{
+						window0 = topsWindowGrid.getInt(c, r);
 						if(window0 < window && !topsParentGrid.getInt(c, r))
 							topsParentGrid.setInt(c, r, topsIDGrid.getInt(col, row)); //  Save the ID of the parent.
 					}
@@ -620,7 +626,7 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 			}
 		}
 		if (m_callbacks)
-			m_callbacks->stepCallback(0.33f + (float) row / pr.rows() * 0.33f);
+			m_callbacks->stepCallback(0.33f + (float) ++status / rows * 0.33f);
 	}
 
 	// Finally, scrape up all the tops and put them in the DB.
@@ -667,15 +673,13 @@ void Treetops::treetops(const TreetopsConfig &config, bool *cancel) {
 				tops.push_back(std::move(t));
 			}
 
-			++status;
-
 			if (tops.size() >= 1000) {
 				#pragma omp critical(__save_points)
 				db.addTops(tops);
 				tops.clear();
-				if (m_callbacks)
-					m_callbacks->stepCallback(0.66f + (float) status / total * 0.32f);
 			}
+			if (m_callbacks)
+				m_callbacks->stepCallback(0.66f + (float) ++status / rows * 0.32f);
 		}
 
 		#pragma omp critical(__save_points)
@@ -731,10 +735,12 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	if(m_callbacks)
 		m_callbacks->statusCallback("Crowns: Updating tops...");
 
-	db.begin();
-
 	int bufSize = g_max(1, (int) ((double) cprops.rows() * 1000.0 / db.getGeomCount()));
 	int steps = cprops.rows() / bufSize + 1;
+	std::atomic<int> stat(0);
+
+	db.begin();
+
 	#pragma omp parallel for
 	for(int i = 0; i < steps; ++i) {
 
@@ -765,7 +771,7 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 		db.updateTops(tops);
 
 		if(m_callbacks)
-			m_callbacks->stepCallback(start + (end - start) * (i + 1) / steps);
+			m_callbacks->stepCallback(start + (end - start) * (float) ++stat / steps);
 	}
 
 	db.commit();
@@ -805,8 +811,8 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 	int offsets[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
 
 	// Values for status indicator.
-	uint64_t geomCount = db.getGeomCount();
-	std::atomic<uint64_t> status(0);
+	int total = inrast.props().rows() / bufSize + 1;
+	std::atomic<int> status(0);
 
 	#pragma omp parallel
 	{
@@ -823,27 +829,26 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 		blk.fillInt(0);
 
 		#pragma omp for
-		for(int i = 0; i < inrast.props().rows() / bufSize + 1; ++i) {
+		for(int r = 0; r < total; ++r) {
 
 			if (*cancel)
 				continue;
 
-			int b = i * bufSize;
-
+			int b = r * bufSize;
 			std::list<std::unique_ptr<Top> > tops;
 
+			// Create a ROI for this chunk.
 			Bounds bounds(iprops.toX(0), iprops.toY(b - radius),
 					iprops.toX(iprops.cols()), iprops.toY(b + bufSize + radius));
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Crowns: Loading tops...");
 
+			// Load the Tops in the ROI.
 			#pragma omp critical(__crowns_db)
 			db.getTops(tops, bounds);
 			if(tops.empty())
 				continue;
-
-			status += tops.size();
 
 			// Convert the Tops to Nodes.
 			std::queue<std::unique_ptr<Node> > q;
@@ -859,19 +864,26 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 			if (m_callbacks)
 				m_callbacks->statusCallback("Crowns: Loading raster...");
 
+			// To track visited pixels.
 			std::vector<bool> visited((size_t) iprops.cols() * (bufSize + radius * 2 + 1));
 
+			// Clean the buffers.
 			int readOffset = b > 0 ? b - radius : 0;
 			int writeOffset = b > 0 ? 0 : radius;
 			buf.fillFloat(iprops.nodata());
 			blk.fillInt(0);
 
+			// Load the input raster into the buffer.
 			#pragma omp critical(__crowns_in)
 			inrast.write(buf, buf.props().cols(), buf.props().rows(),
 					0, readOffset, 0, writeOffset);
 
 			if (m_callbacks)
 				m_callbacks->statusCallback("Crowns: Delineating crowns...");
+
+			int bcols = blk.props().cols();
+			int brows = blk.props().rows();
+			int icols = iprops.cols();
 
 			// Run through the queue.
 			while (!*cancel && q.size()) {
@@ -880,19 +892,22 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 
 				int c = n->c;
 				int r = n->r - b + radius;
-				if(c < 0 || r < 0 || c >= blk.props().cols() || r >= blk.props().rows())
+				// The extra 1 padding is to account for the kernel.
+				if(c < 1 || r < 1 || c >= bcols - 1 || r >= brows - 1)
 					continue;
 
+				// Set the ID at the current pixel.
 				blk.setInt(c, r, (uint32_t) n->id); // TODO: Data loss here if ID gets too high.
+
+				// Execute the kernel.
 				for(size_t i = 0; i < offsetCount; ++i) {
 					c = n->c + offsets[i][0];
 					r = n->r + offsets[i][1];
 
-					if ((r - b + radius) < 0 || c < 0 ||
-							(r - b + radius) >= buf.props().rows() || c >= buf.props().cols())
-						continue;
+					//if ((r - b + radius) < 0 || c < 0 || (r - b + radius) >= brows || c >= bcols)
+					//	continue;
 
-					long idx = (long) (r - b + radius) * iprops.cols() + c;
+					long idx = (long) (r - b + radius) * icols + c;
 					if (visited[idx])
 						continue;
 
@@ -903,21 +918,24 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 						&& (n->tz - v) / n->tz <= config.crownsHeightFraction 				// is greater than the threshold height
 						&& g_sq(n->tc - c) + g_sq(n->tr - r) <= g_sq(config.crownsRadius) 	// is within the radius
 					) {
-						blk.setInt(idx, (uint32_t) n->id); // TODO: Possible data loss if ID too big.
+						// Set the current pixel.
+						blk.setInt(idx, (uint32_t) n->id); // TODO: Possible data loss if ID too big. And is this call necessary?
 						visited[idx] = true;
 						std::unique_ptr<Node> n0(new Node(n->id, c, r, v, n->tc, n->tr, n->tz));
 						q.push(std::move(n0));
 					}
 				}
 			}
+
 			if(m_callbacks)
 				m_callbacks->statusCallback("Crowns: Writing output...");
 
+			// Write buffer to output.
 			#pragma omp critical(__crowns_out)
 			blk.write(outrast, iprops.cols(), bufSize, 0, radius, 0, b);
 
 			if(m_callbacks)
-				m_callbacks->stepCallback(start + (start - end) * (float) status / geomCount);
+				m_callbacks->stepCallback(start + (start - end) * (float) ++status / total);
 		}
 	}
 }
@@ -936,13 +954,6 @@ void Treetops::polygonizeCrowns(const TreetopsConfig &config, bool *cancel, floa
 	outrast.polygonize(config.crownsCrownsDatabase, "crowns", config.crownsCrownsDatabaseDriver,
 			config.srid, 1, &status, cancel);
 
-	if(m_callbacks)
-		m_callbacks->statusCallback("Crowns: Deleting invalid polygons...");
-
-	TTDB db(config.crownsCrownsDatabase, "crowns");
-	db.begin();
-	db.deleteFeature("id", 0);
-	db.commit();
 }
 
 void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {

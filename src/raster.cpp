@@ -1519,6 +1519,37 @@ void Raster::setFloat(double x, double y, double v, int band) {
 	setFloat(m_props.toCol(x), m_props.toRow(y), v, band);
 }
 
+class Poly {
+public:
+	int minRow, maxRow;
+	std::unique_ptr<geos::geom::Geometry> poly;
+	Poly(geos::geom::Geometry *poly, int row) :
+		minRow(row), maxRow(row) {
+		this->poly.reset(poly);
+	}
+	void update(const geos::geom::Geometry *upoly, int minRow, int maxRow) {
+		geos::geom::Geometry *u = poly->Union(upoly);
+		delete poly.release();
+		delete upoly;
+		poly.reset(u);
+		update(minRow, maxRow);
+	}
+	void update(int minRow, int maxRow) {
+		if(minRow < this->minRow) this->minRow = minRow;
+		if(maxRow > this->maxRow) this->maxRow = maxRow;
+	}
+	// Returns true if the range of rows given by start and end is finalized.
+	// The checked range includes one row above and one below, which is required
+	// to guarantee that a polygon is completed.
+	bool isRangeFinalized(const std::vector<bool> &finalRows) const {
+		int start = g_max(minRow - 1, 0);
+		int end = g_min(maxRow + 2, finalRows.size());
+		for(int i = start; i < end; ++i)
+			if(!finalRows[i]) return false;
+		return true;
+	}
+};
+
 void Raster::polygonize(const std::string &filename, const std::string &layerName,
 		const std::string &driver, uint16_t srid, uint16_t band, Status *status, bool *cancel) {
 
@@ -1548,13 +1579,19 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 
-	PolyProgressData pd(status, cancel);
 	int cols = m_props.cols();
 	int rows = m_props.rows();
+	// Generate a unique fID for each feature.
 	std::atomic<uint64_t> fid(0);
-	GEOSContextHandle_t gctx = OGRGeometry::createGEOSContext();
-	std::unordered_map<uint64_t, std::unique_ptr<geos::geom::Geometry> > extraPolys;
+	// Keeps track of extra polys leftover after each thread completes.
+	std::unordered_map<uint64_t, std::unique_ptr<Poly> > extraPolys;
+	// Keeps track of which rows are completed.
+	std::vector<bool> finalRows(rows);
+	std::fill(finalRows.begin(), finalRows.end(), false);
 
+	std::atomic<int> stat(0);
+
+	GEOSContextHandle_t gctx = OGRGeometry::createGEOSContext();
 	const geos::geom::GeometryFactory* gf = geos::geom::GeometryFactory::getDefaultInstance();
 
 	if(OGRERR_NONE != layer->StartTransaction())
@@ -1567,10 +1604,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		gp.setSize(cols, 1);
 		MemRaster rowBuf(gp);
 
-		std::unordered_set<uint64_t> atstart;
-		std::unordered_set<uint64_t> atend;
-		std::unordered_map<uint64_t, std::unique_ptr<geos::geom::Geometry> > polys;
-		bool first = true;
+		std::unordered_map<uint64_t, std::unique_ptr<Poly> > polys;
 
 		#pragma omp for
 		for(int r = 0; r < rows; ++r) {
@@ -1581,15 +1615,9 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 			#pragma omp critical(__read_raster)
 			write(rowBuf, cols, 1, 0, r, 0, 0, band);
 
-			atend.clear();
-
 			for(int c = 0; c < cols; ++c) {
 				uint64_t id0 = rowBuf.getInt(c, 0);
 				if(!id0) continue;
-
-				if(first)
-					atstart.insert(id0);
-				atend.insert(id0);
 
 				double x0 = gp.toX(c);
 				double y0 = gp.toY(r);
@@ -1599,7 +1627,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 					if(id0 > 0 && id1 != id0) {
 						double x1 = gp.toX(c);
 						double y1 = gp.toY(r) + gp.resolutionY();
-						//std::cerr << "adding block " << id0 << ": " << x0 << ", " << y0 << "; " << x1 << ", " << y1 << "\n";
+
 						geos::geom::CoordinateSequence* seq = gf->getCoordinateSequenceFactory()->create();
 						seq->add(geos::geom::Coordinate(x0, y0));
 						seq->add(geos::geom::Coordinate(x1, y0));
@@ -1608,103 +1636,73 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 						seq->add(geos::geom::Coordinate(x0, y0));
 						geos::geom::LinearRing* ring = gf->createLinearRing(seq);
 						geos::geom::Polygon* p = gf->createPolygon(ring, nullptr);
+							
 						if(polys.find(id0) == polys.end()) {
-							std::unique_ptr<geos::geom::Polygon> pn(p);
-							polys[id0] = std::move(pn);
+							std::unique_ptr<Poly> pp(new Poly(p, r));
+							polys[id0] = std::move(pp);
 						} else {
-							geos::geom::Geometry* u = polys[id0]->Union(p);
-							delete polys[id0].release();
-							delete p;
-							polys[id0].reset(u);
+							polys[id0]->update(p, r, r);
 						}
+
 						--c;
 						break;
 					}
 					id0 = id1;
 				}
+
 			}
 
-			first = false;
-
-			if(r % 128 == 0) {
-				std::unordered_set<uint64_t> remove;
+			std::unordered_set<uint64_t> remove;
+			#pragma omp critical(__write_layer)
+			{
 				for(const auto &it : polys) {
-					if(*cancel)
-						break;
-					// Only write polygons that are not represented (by ID) in the first or last rows
-					// of the current chunk.
-					if(atstart.find(it.first) == atstart.end() && atend.find(it.first) == atend.end()) {
+					if(it.second->isRangeFinalized(finalRows)) {
+						remove.insert(it.first);
 						OGRFeature feat(layer->GetLayerDefn());
-						OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
+						OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second->poly.get());
 						feat.SetGeometry(geom);
 						feat.SetField("id", (GIntBig) it.first);
 						feat.SetFID(++fid);
-						#pragma omp critical(__write_layer)
-						{
-							if(OGRERR_NONE != layer->CreateFeature(&feat))
-								g_runerr("Failed to add geometry.");
-						}
-						remove.insert(it.first);
+						if(OGRERR_NONE != layer->CreateFeature(&feat))
+							g_runerr("Failed to add geometry.");
 					}
 				}
-				// Remove any polys that were written.
-				for(const uint64_t &id : remove)
-					polys.erase(id);
 			}
+			// Remove any polys that were written.
+			for(const uint64_t &id : remove)
+				polys.erase(id);
+
+			#pragma omp critical(__finalize_rows)
+			finalRows[r] = true;
+
+			status->update((float) ++stat / rows);
 		}
 
-		std::unordered_set<uint64_t> remove;
-		for(const auto &it : polys) {
-			if(*cancel)
-				break;
-			// Only write polygons that are not represented (by ID) in the first or last rows
-			// of the current chunk.
-			if(atstart.find(it.first) == atstart.end() && atend.find(it.first) == atend.end()) {
-				OGRFeature feat(layer->GetLayerDefn());
-				OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
-				feat.SetGeometry(geom);
-				feat.SetField("id", (GIntBig) it.first);
-				feat.SetFID(++fid);
-				#pragma omp critical(__write_layer)
-				{
-					if(OGRERR_NONE != layer->CreateFeature(&feat))
-						g_runerr("Failed to add geometry.");
+		std::cerr << polys.size() << " left\n";
+		#pragma omp critical(__merge_polys)
+		{
+			for(auto &it : polys) {
+				if(extraPolys.find(it.first) != extraPolys.end()) {
+					std::unique_ptr<Poly> &p = it.second;
+					extraPolys[it.first]->update(p->poly.release(), p->minRow, p->maxRow);
+				} else {
+					extraPolys[it.first] = std::move(it.second);
 				}
-				remove.insert(it.first);
-			}
-		}
-		// Remove any polys that were written.
-		for(const uint64_t &id : remove)
-			polys.erase(id);
-		// If there are any polygons left when this thread quits,
-		// union them into the left-over polygons map
-		for(auto &it : polys) {
-			if(extraPolys.find(it.first) != extraPolys.end()) {
-				std::unique_ptr<geos::geom::Geometry> u(extraPolys[it.first]->Union(it.second.get()));
-				extraPolys[it.first] = std::move(u);
-			} else {
-				extraPolys[it.first] = std::move(it.second);
 			}
 		}
 	}
 
-	// TODO: Make a row-range tracker and finalize polygons when there's at least one completed
-	// row above and below, and a contiguous completed range between. Should reduce
-	// the number of left-over polys.
-	std::cerr << extraPolys.size() << " left\n";
 	for(const auto &it : extraPolys) {
 		if(*cancel)
 			break;
+		const std::unique_ptr<Poly> &p = it.second;
 		OGRFeature feat(layer->GetLayerDefn());
-		OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second.get());
+		OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) p->poly.get());
 		feat.SetGeometry(geom);
 		feat.SetField("id", (GIntBig) it.first);
 		feat.SetFID(++fid);
-		#pragma omp critical(__write_layer)
-		{
-			if(OGRERR_NONE != layer->CreateFeature(&feat))
-				g_runerr("Failed to add geometry.");
-		}
+		if(OGRERR_NONE != layer->CreateFeature(&feat))
+			g_runerr("Failed to add geometry.");
 	}
 
 	if(OGRERR_NONE != layer->CommitTransaction())
