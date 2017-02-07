@@ -1547,8 +1547,10 @@ public:
 	bool isRangeFinalized(const std::vector<int> &finalRows) const {
 		int start = g_max(minRow - 1, 0);
 		int end = g_min(maxRow + 2, (int) finalRows.size());
-		for(int i = start; i < end; ++i)
-			if(finalRows[i] != thread) return false;
+		for (int i = start; i < end; ++i) {
+			if (finalRows[i] != thread) 
+				return false;
+		}
 		return true;
 	}
 };
@@ -1596,7 +1598,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	std::unordered_map<uint64_t, std::unique_ptr<Poly> > extraPolys;
 	// Keeps track of which rows are completed.
 	std::vector<int> finalRows(rows);
-	std::fill(finalRows.begin(), finalRows.end(), 0);
+	std::fill(finalRows.begin(), finalRows.end(), -1);
 	// Status tracker.
 	std::atomic<int> stat(0);
 
