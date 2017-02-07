@@ -334,7 +334,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- callbacks
 	if (m_callbacks) {
 		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
-		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
+		//connect((TreetopsCallbacks *) m_callbacks, SIGNAL(overallProgress(int)), prgOverall, SLOT(setValue(int)));
 		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
 	}
 	// -- worker thread.
@@ -345,7 +345,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 void TreetopsForm::resetProgress() {
 	prgStep->setValue(0);
-	prgOverall->setValue(0);
+	//prgOverall->setValue(0);
 	lblStatus->setText("[Not Started]");
 }
 
