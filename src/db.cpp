@@ -95,10 +95,9 @@ DB::DB(const std::string &file, const std::string &layer, const std::string &dri
 		m_layerName = "data";
 
 	char **options = nullptr;
-	OGRSpatialReference* sr = new OGRSpatialReference();
-	sr->importFromEPSG(m_srid);
-	m_layer = m_ds->CreateLayer(m_layerName.c_str(), sr, geomType(m_type), options);
-	sr->Release();
+	OGRSpatialReference sr;
+	sr.importFromEPSG(m_srid);
+	m_layer = m_ds->CreateLayer(m_layerName.c_str(), &sr, geomType(m_type), options);
 
 	if(!m_layer)
 		g_runerr("Failed to create layer, " << m_layerName << ".");
