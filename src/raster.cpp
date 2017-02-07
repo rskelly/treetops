@@ -1538,14 +1538,14 @@ public:
 		if(minRow < this->minRow) this->minRow = minRow;
 		if(maxRow > this->maxRow) this->maxRow = maxRow;
 	}
-	// Returns true if the range of rows given by start and end is finalized.
-	// The checked range includes one row above and one below, which is required
-	// to guarantee that a polygon is completed.
-	bool isRangeFinalized(const std::vector<bool> &finalRows) const {
+	// Returns true if the range of rows given by start and end was finalized
+	// within the given thread. The checked range includes one row above and one below,
+	// which is required to guarantee that a polygon is completed.
+	bool isRangeFinalized(const std::vector<int> &finalRows, int thread) const {
 		int start = g_max(minRow - 1, 0);
-		int end = g_min(maxRow + 2, finalRows.size());
+		int end = g_min(maxRow + 2, (int) finalRows.size());
 		for(int i = start; i < end; ++i)
-			if(!finalRows[i]) return false;
+			if(finalRows[i] != thread) return false;
 		return true;
 	}
 };
@@ -1553,29 +1553,35 @@ public:
 void Raster::polygonize(const std::string &filename, const std::string &layerName,
 		const std::string &driver, uint16_t srid, uint16_t band, Status *status, bool *cancel) {
 
+	// Remove the original file; some can't be overwritten directly.
 	Util::rm(filename);
 
 	GDALAllRegister();
 
+	// Get the vector driver.
 	GDALDriver *drv = GetGDALDriverManager()->GetDriverByName(driver.c_str());
 	if(!drv)
 		g_runerr("Failed to find driver for " << driver << ".");
 
-	OGRSpatialReference* sr = new OGRSpatialReference();
-	sr->importFromEPSG(srid);
-
+	// Create an output dataset for the polygons.
 	char **dopts = NULL;
 	GDALDataset *ds = drv->Create(filename.c_str(), 0, 0, 0, GDT_Unknown, dopts);
+	CPLFree(dopts);
 	if(!ds)
 		g_runerr("Failed to create dataset " << filename << ".");
-	CPLFree(dopts);
 
+	// Create the layer.
+	OGRSpatialReference* sr = new OGRSpatialReference();
+	sr->importFromEPSG(srid);
 	char **lopts = NULL;
 	OGRLayer *layer = ds->CreateLayer(layerName.c_str(), sr, wkbMultiPolygon, lopts);
-	if(!layer)
-		g_runerr("Failed to create layer " << layerName << ".");
 	CPLFree(lopts);
+	if(!layer) {
+		GDALClose(ds);
+		g_runerr("Failed to create layer " << layerName << ".");
+	}
 
+	// There's only one field -- an ID.
 	OGRFieldDefn field( "id", OFTInteger);
 	layer->CreateField(&field);
 
@@ -1586,11 +1592,12 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	// Keeps track of extra polys leftover after each thread completes.
 	std::unordered_map<uint64_t, std::unique_ptr<Poly> > extraPolys;
 	// Keeps track of which rows are completed.
-	std::vector<bool> finalRows(rows);
-	std::fill(finalRows.begin(), finalRows.end(), false);
-
+	std::vector<int> finalRows(rows);
+	std::fill(finalRows.begin(), finalRows.end(), 0);
+	// Status tracker.
 	std::atomic<int> stat(0);
 
+	// For creating GEOS objects.
 	GEOSContextHandle_t gctx = OGRGeometry::createGEOSContext();
 	const geos::geom::GeometryFactory* gf = geos::geom::GeometryFactory::getDefaultInstance();
 
@@ -1600,11 +1607,13 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 	#pragma omp parallel
 	{
 
+		// Buffer for reading/polygonizing.
 		GridProps gp(m_props);
 		gp.setSize(cols, 1);
 		MemRaster rowBuf(gp);
-
+		// Keeps polygons created in thread.
 		std::unordered_map<uint64_t, std::unique_ptr<Poly> > polys;
+		int thread = omp_get_thread_num();
 
 		#pragma omp for
 		for(int r = 0; r < rows; ++r) {
@@ -1612,22 +1621,33 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 			if(*cancel)
 				continue;
 
+			// Write into the buffer.
 			#pragma omp critical(__read_raster)
 			write(rowBuf, cols, 1, 0, r, 0, 0, band);
 
 			for(int c = 0; c < cols; ++c) {
+
+				// Get the current ID, skip if zero.
 				uint64_t id0 = rowBuf.getInt(c, 0);
 				if(!id0) continue;
 
+				// Get the coord of one corner of the polygon.
 				double x0 = gp.toX(c);
 				double y0 = gp.toY(r);
 
+				// Scan right...
 				while(++c <= cols) {
+
 					uint64_t id1 = c < cols ? rowBuf.getInt(c, 0) : 0;
+
+					// If the ID changes, capture and output the polygon.
 					if(id0 > 0 && id1 != id0) {
+
+						// Coord of the other corner.
 						double x1 = gp.toX(c);
 						double y1 = gp.toY(r) + gp.resolutionY();
 
+						// Build the geometry.
 						geos::geom::CoordinateSequence* seq = gf->getCoordinateSequenceFactory()->create();
 						seq->add(geos::geom::Coordinate(x0, y0));
 						seq->add(geos::geom::Coordinate(x1, y0));
@@ -1637,6 +1657,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 						geos::geom::LinearRing* ring = gf->createLinearRing(seq);
 						geos::geom::Polygon* p = gf->createPolygon(ring, nullptr);
 							
+						// If it's already in the list, union it, otherwise add it.
 						if(polys.find(id0) == polys.end()) {
 							std::unique_ptr<Poly> pp(new Poly(p, r));
 							polys[id0] = std::move(pp);
@@ -1644,7 +1665,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 							polys[id0]->update(p, r, r);
 						}
 
-						--c;
+						--c; // Back up the counter by one, to start with the new ID.
 						break;
 					}
 					id0 = id1;
@@ -1652,11 +1673,16 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 
 			}
 
+			// Finalize the row.
+			#pragma omp critical(__finalize_rows)
+			finalRows[r] = thread;
+
+			// At the end of the row, write any finalizable polygons.
 			std::unordered_set<uint64_t> remove;
 			#pragma omp critical(__write_layer)
 			{
 				for(const auto &it : polys) {
-					if(it.second->isRangeFinalized(finalRows)) {
+					if(it.second->isRangeFinalized(finalRows, thread)) {
 						remove.insert(it.first);
 						OGRFeature feat(layer->GetLayerDefn());
 						OGRGeometry* geom = OGRGeometryFactory::createFromGEOS(gctx, (GEOSGeom) it.second->poly.get());
@@ -1672,13 +1698,11 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 			for(const uint64_t &id : remove)
 				polys.erase(id);
 
-			#pragma omp critical(__finalize_rows)
-			finalRows[r] = true;
-
 			status->update((float) ++stat / rows);
 		}
 
-		std::cerr << polys.size() << " left\n";
+		// If the thread completes and polygons are left over, merge into the
+		// extra dict.
 		#pragma omp critical(__merge_polys)
 		{
 			for(auto &it : polys) {
@@ -1692,6 +1716,7 @@ void Raster::polygonize(const std::string &filename, const std::string &layerNam
 		}
 	}
 
+	// Write all the remaining polygons to the output.
 	for(const auto &it : extraPolys) {
 		if(*cancel)
 			break;
