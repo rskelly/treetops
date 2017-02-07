@@ -58,6 +58,8 @@ void _loadConfig(TreetopsConfig &config) {
 			config.crownsHeightFraction).toDouble();
 	config.crownsMinHeight = qs.value("crownsMinHeight",
 			config.crownsMinHeight).toDouble();
+	config.crownsUpdateHeights = qs.value("crownsUpdateHeights",
+			config.crownsUpdateHeights).toBool();
 	config.crownsOriginalCHM = qs.value("crownsOriginalCHM",
 			qstr(config.crownsOriginalCHM)).toString().toStdString();
 	config.crownsSmoothedCHM = qs.value("crownsSmoothedCHM",
@@ -68,6 +70,8 @@ void _loadConfig(TreetopsConfig &config) {
 			qstr(config.crownsCrownsRaster)).toString().toStdString();
 	config.crownsCrownsRasterDriver = qs.value("crownsCrownsRasterDriver",
 			qstr(config.crownsCrownsRasterDriver)).toString().toStdString();
+	config.crownsDoDatabase = qs.value("crownsDoDatabase",
+			config.crownsDoDatabase).toBool();
 	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase)).toString().toStdString();
 	config.crownsCrownsDatabaseDriver = qs.value("crownsCrownsDatabaseDriver",
@@ -99,12 +103,14 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("crownsRadius", config.crownsRadius);
 	qs.setValue("crownsHeightFraction", config.crownsHeightFraction);
 	qs.setValue("crownsMinHeight", config.crownsMinHeight);
+	qs.setValue("crownsUpdateHeights", config.crownsUpdateHeights);
 	qs.setValue("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM));
 	qs.setValue("crownsOriginalCHM", qstr(config.crownsOriginalCHM));
 	qs.setValue("crownsTreetopsDatabase",
 			qstr(config.crownsTreetopsDatabase));
 	qs.setValue("crownsCrownsRaster", qstr(config.crownsCrownsRaster));
 	qs.setValue("crownsCrownsRasterDriver", qstr(config.crownsCrownsRasterDriver));
+	qs.setValue("crownsDoDatabase", config.crownsDoDatabase);
 	qs.setValue("crownsCrownsDatabase",
 			qstr(config.crownsCrownsDatabase));
 	qs.setValue("crownsCrownsDatabaseDriver",
@@ -281,6 +287,11 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
 	cboCrownsCrownsDatabaseDriver->addItems(vectorDrivers);
 	cboCrownsCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsCrownsDatabaseDriver));
+	chkCrownsDoDatabase->setChecked(m_config.crownsDoDatabase);
+	chkCrownsUpdateHeights->setChecked(m_config.crownsUpdateHeights);
+	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase);
+	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase);
+	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase);
 
 	// Connect events
 	// -- section toggles
@@ -326,6 +337,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(cboCrownsCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)),
 			this, SLOT(crownsCrownsDatabaseDriverChanged(QString)));
 	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), this, SLOT(topsTreetopsSRIDClicked()));
+	connect(chkCrownsDoDatabase, SIGNAL(toggled(bool)), this, SLOT(crownsDoDatabaseChanged(bool)));
+	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
+
 	// -- program buttons
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
 	connect(btnRun, SIGNAL(clicked()), this, SLOT(runClicked()));
@@ -458,6 +472,19 @@ void TreetopsForm::crownsCrownsDatabaseClicked() {
 
 void TreetopsForm::crownsCrownsDatabaseDriverChanged(QString text) {
 	m_config.crownsCrownsDatabaseDriver = text.toStdString();
+	checkRun();
+}
+
+void TreetopsForm::crownsDoDatabaseChanged(bool state) {
+	txtCrownsCrownsDatabase->setEnabled(state);
+	cboCrownsCrownsDatabaseDriver->setEnabled(state);
+	btnCrownsCrownsDatabase->setEnabled(state);
+	m_config.crownsDoDatabase = state;
+	checkRun();
+}
+
+void TreetopsForm::crownsUpdateHeightsChanged(bool state) {
+	m_config.crownsUpdateHeights = state;
 	checkRun();
 }
 

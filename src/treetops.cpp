@@ -188,7 +188,9 @@ TreetopsConfig::TreetopsConfig() :
 	doCrowns(false),
 	crownsRadius(10.0),
 	crownsHeightFraction(0.65),
-	crownsMinHeight(4.0) {
+	crownsMinHeight(4.0),
+	crownsUpdateHeights(true),
+	crownsDoDatabase(false) {
 }
 
 void TreetopsConfig::checkSmoothing() const {
@@ -245,10 +247,10 @@ void TreetopsConfig::checkCrowns() const {
 	if (crownsHeightFraction <= 0.0 || crownsHeightFraction > 1.0)
 		g_argerr("Crowns: The crown height fraction must be between 0 and 1. " << crownsHeightFraction << " given.");
 	if (crownsCrownsRaster.empty())
-		g_argerr("Crowns: Output raster filename must not be empty.")
+		g_argerr("Crowns: Output raster filename must not be empty.");
 	if (crownsCrownsRasterDriver.empty())
-		g_argerr("Crowns: Output raster driver must not be empty.")
-	if(!crownsCrownsDatabase.empty() && crownsCrownsDatabaseDriver.empty())
+		g_argerr("Crowns: Output raster driver must not be empty.");
+	if(crownsDoDatabase && !crownsCrownsDatabase.empty() && crownsCrownsDatabaseDriver.empty())
 		g_argerr("Crowns: If database file is given, driver must also be given.");
 	if (crownsTreetopsDatabase.empty())
 		g_argerr("Crowns: Treetops database filename must not be empty.");
@@ -716,6 +718,8 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	if (*cancel)
 		return;
 
+	float mid = start + (end - start) / 2.0f;
+
 	// Load the original CHM.
 	Raster chm(config.crownsOriginalCHM);
 	const GridProps &cprops = chm.props();
@@ -726,8 +730,9 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 	// Initialize the database.
 	TTDB db(config.crownsTreetopsDatabase, "data");
 
+	// Find the crown maximums.
 	std::unordered_map<uint64_t, std::tuple<double, double, double> > heights;
-	Status status(m_callbacks, 0.33f, 0.50f);
+	Status status(m_callbacks, start, mid);
 	findCrownMax(chm, outrast, heights, 1, 1, status, cancel);
 
 	int radius = (int) std::ceil(config.crownsRadius / g_abs(cprops.resolutionX()));
@@ -771,7 +776,7 @@ void Treetops::updateOriginalCHMHeights(const TreetopsConfig &config, bool *canc
 		db.updateTops(tops);
 
 		if(m_callbacks)
-			m_callbacks->stepCallback(start + (end - start) * (float) ++stat / steps);
+			m_callbacks->stepCallback(mid + (end - mid) * (float) ++stat / steps);
 	}
 
 	db.commit();
@@ -934,8 +939,10 @@ void Treetops::delineateCrowns(const TreetopsConfig &config, bool *cancel, float
 			#pragma omp critical(__crowns_out)
 			blk.write(outrast, iprops.cols(), bufSize, 0, radius, 0, b);
 
+			++status;
+
 			if(m_callbacks)
-				m_callbacks->stepCallback(start + (start - end) * (float) ++status / total);
+				m_callbacks->stepCallback(start + (end - start) * (float) status / total);
 		}
 	}
 }
@@ -963,15 +970,26 @@ void Treetops::treecrowns(const TreetopsConfig &config, bool *cancel) {
 		cancel = &__tt_cancel;
 
 	if (m_callbacks) {
-		m_callbacks->stepCallback(0.01f);
+		m_callbacks->stepCallback(0.00f);
 		m_callbacks->statusCallback("Crowns: Preparing...");
 	}
 
-	delineateCrowns(config, cancel, 0.02f, 0.25f);
+	int steps = 1;
+	if(config.crownsDoDatabase) ++steps;
+	if(config.crownsUpdateHeights) ++steps;
+	float x = 0.99f / steps;
+	int step = 0;
 
-	updateOriginalCHMHeights(config, cancel, 0.26f, 0.5f);
+	delineateCrowns(config, cancel, x * step, x * (step + 1));
+	++step;
 
-	polygonizeCrowns(config, cancel, 0.51f, 0.99f);
+	if(config.crownsUpdateHeights) {
+		updateOriginalCHMHeights(config, cancel, x * step, x * (step + 1));
+		++step;
+	}
+
+	if(config.crownsDoDatabase)
+		polygonizeCrowns(config, cancel, x * step, x * (step + 1));
 
 	if (m_callbacks) {
 		m_callbacks->stepCallback(1.0);

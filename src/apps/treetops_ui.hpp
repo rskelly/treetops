@@ -90,6 +90,8 @@ namespace geotools {
 			void crownsCrownsRasterDriverChanged(QString);
 			void crownsCrownsDatabaseChanged(QString);
 			void crownsCrownsDatabaseDriverChanged(QString);
+			void crownsDoDatabaseChanged(bool);
+			void crownsUpdateHeightsChanged(bool);
 
 			void exitClicked();
 			void runClicked();

@@ -98,6 +98,11 @@ namespace geotools {
                 // The maximum height of pixels to consider for inclusion.
                 double crownsMinHeight;
 
+                // If true, the heights of the treetops will be updated
+                // using values from the original CHM within the bounds
+                // of the crowns
+                bool crownsUpdateHeights;
+
                 // The input raster -- ideally the same one used for tops.
                 std::string crownsSmoothedCHM;
 
@@ -109,6 +114,9 @@ namespace geotools {
 
                 // The path to the crowns raster.
                 std::string crownsCrownsRaster;
+
+                // If true, a crowns database will be produced
+                bool crownsDoDatabase;
 
                 // The path to the crowns database.
                 std::string crownsCrownsDatabase;

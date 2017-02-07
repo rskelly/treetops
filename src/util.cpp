@@ -34,7 +34,7 @@ Status::Status(Callbacks *callbacks, float start, float end) :
 	callbacks(callbacks), start(start), end(end) {
 }
 void Status::update(float s) {
-	callbacks->stepCallback(start + s * (end - start));
+	callbacks->stepCallback(start + (end - start) * s);
 }
 
 Point::Point(double x, double y, double z) :
