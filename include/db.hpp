@@ -77,30 +77,13 @@ namespace geotools {
 
             void clear();
 
-            void addPoint(double x, double y, double z, const std::unordered_map<std::string, std::string> &fields);
-
-            void addPoints(std::vector<geotools::util::Point*> &points);
-
             void setCacheSize(size_t size);
 
             void dropGeomIndex();
 
             void createGeomIndex();
 
-            void getPoints(std::vector<geotools::util::Point*> &points,
-                    const geotools::util::Bounds &bounds);
-
-            void getPoints(std::vector<geotools::util::Point*> &points,
-                    int count, int offset = 0);
-
-            void getNearestPoints(const geotools::util::Point &target, int count,
-            		std::vector<std::unique_ptr<geotools::util::Point> > &points);
-
             uint64_t getGeomCount() const;
-
-            void updateFeature(const std::string &idField, uint64_t id, std::unordered_map<std::string, void*> &values);
-
-            void deleteFeature(const std::string &idField, uint64_t id);
 
             void execute(std::string &sql);
 

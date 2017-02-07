@@ -54,61 +54,6 @@ namespace geotools {
 				}
 			}
 
-			void addFields(OGRFeature *feat, geotools::util::Point *pt, OGRFeatureDefn *ftdef) {
-				for(int i = 0; i < feat->GetFieldCount(); ++i) {
-					OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
-					OGRField *fld = feat->GetRawFieldRef(i);
-					switch(fdef->GetType()) {
-					case OFTInteger:
-					case OFTInteger64:
-						pt->fields[fdef->GetNameRef()] = fld->Integer64;
-						break;
-					case OFTReal:
-						pt->fields[fdef->GetNameRef()] = fld->Real;
-						break;
-					case OFTString:
-						pt->fields[fdef->GetNameRef()] = fld->String;
-						break;
-					case OFTBinary:
-						g_runerr("Binary fields not implemented.");
-						break;
-					default:
-						g_runerr("Field type " << fdef->GetType() << " not implemented.");
-						break;
-					}
-				}
-			}
-
-			void updateFields(OGRFeature *feat, std::unordered_map<std::string, void*> &values, OGRFeatureDefn *ftdef) {
-				for(int i = 0; i < feat->GetFieldCount(); ++i) {
-					OGRFieldDefn *fdef = ftdef->GetFieldDefn(i);
-					OGRField *fld = feat->GetRawFieldRef(i);
-					std::string *v;
-					switch(fdef->GetType()) {
-					case OFTInteger:
-					case OFTInteger64:
-						fld->Integer64 = *((int *) values[fdef->GetNameRef()]);
-					std::cerr << fdef->GetNameRef() << ", " << fld->Integer64 << ", " << values[fdef->GetNameRef()] << "\n";
-						break;
-					case OFTReal:
-						fld->Real = *((double *) values[fdef->GetNameRef()]);
-					std::cerr << fdef->GetNameRef() << ", " << fld->Real << ", " << values[fdef->GetNameRef()] << "\n";
-						break;
-					case OFTString:
-						v = (std::string *) values[fdef->GetNameRef()];
-						std::strcpy(fld->String, v->c_str());
-					std::cerr << fdef->GetNameRef() << ", " << fld->String << ", " << values[fdef->GetNameRef()] << "\n";
-						break;
-					case OFTBinary:
-						g_runerr("Binary fields not implemented.");
-						break;
-					default:
-						g_runerr("Field type " << fdef->GetType() << " not implemented.");
-						break;
-					}
-				}
-			}
-
 			bool isRast(GDALDriver *drv) {
 				const char* cc = drv->GetMetadataItem(GDAL_DCAP_RASTER);
 				return cc != NULL && std::strncmp(cc, "YES", 3) == 0;
@@ -264,38 +209,6 @@ void DB::clear() {
 	g_runerr("Not implemented.");
 }
 
-void DB::addPoint(double x, double y, double z, const std::unordered_map<std::string, std::string> &fields) {
-	if(m_type != GeomType::GTPoint)
-		g_runerr("This dataset is not a point dataset.");
-	OGRFeature feat(m_fdef);
-	for(const auto &it : fields) {
-		switch(m_fieldTypes[it.first]) {
-		//case FieldType::Blob:
-		case FieldType::FTDouble:
-    		feat.SetField(it.first.c_str(), atof(it.second.c_str()));
-			break;
-		case FieldType::FTInt:
-    		feat.SetField(it.first.c_str(), atoi(it.second.c_str()));
-			break;
-		case FieldType::FTString:
-    		feat.SetField(it.first.c_str(), it.second.c_str());
-			break;
-		default:
-			g_runerr("Field type " << m_fieldTypes[it.first] << " is not currently supported.");
-		}
-	}
-	OGRPoint geom(x, y, z);
-	feat.SetGeometry(&geom);
-    if(CPLE_None != m_layer->CreateFeature(&feat))
-        g_runerr("Failed to add feature to " << m_file << ".");
-}
-
-void DB::addPoints(std::vector<geotools::util::Point*> &points) {
-    for (const geotools::util::Point *pt : points)
-        addPoint(pt->x, pt->y, pt->z, pt->fields);
-}
-
-
 void DB::setCacheSize(size_t size) {
 	g_runerr("Not implemented.");
 }
@@ -308,71 +221,8 @@ void DB::createGeomIndex() {
 	g_runerr("Not implemented.");
 }
 
-void DB::getPoints(std::vector<geotools::util::Point*> &points,
-        const geotools::util::Bounds &bounds) {
-	if(m_type != GeomType::GTPoint)
-		g_runerr("This dataset is not a point dataset.");
-	m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
-	OGRFeature *feat;
-	while((feat = m_layer->GetNextFeature())) {
-		OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
-		geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
-		addFields(feat, pt, m_fdef);
-		points.push_back(pt);
-        OGRFeature::DestroyFeature(feat);
-	}
-	m_layer->SetSpatialFilter(NULL);
-}
-
-void DB::getPoints(std::vector<geotools::util::Point*> &points,
-        int count, int offset) {
-	if(m_type != GeomType::GTPoint)
-		g_runerr("This dataset is not a point dataset.");
-	long total = m_layer->GetFeatureCount(1);
-	if(offset > total) return;
-	if(count > total - offset) count = total - offset;
-	for(long i = offset; i < offset + count; ++i) {
-    	OGRFeature *feat = m_layer->GetFeature(i);
-		OGRPoint *opt = (OGRPoint *) feat->GetGeometryRef();
-		geotools::util::Point *pt = new Point(opt->getX(), opt->getY(), opt->getZ());
-		addFields(feat, pt, m_fdef);
-		points.push_back(pt);
-        OGRFeature::DestroyFeature(feat);
-	}
-}
-
-void DB::getNearestPoints(const geotools::util::Point &target, int count,
-		std::vector<std::unique_ptr<geotools::util::Point> > &points) {
-	g_runerr("Not implemented.");
-}
-
 uint64_t DB::getGeomCount() const {
 	return m_layer->GetFeatureCount(1);
-}
-
-void DB::updateFeature(const std::string &idField, uint64_t id, std::unordered_map<std::string, void*> &values) {
-	std::stringstream ss;
-	ss << "\"" << idField << "\"=" << id;
-	m_layer->SetAttributeFilter(ss.str().c_str());
-	OGRFeature *feat;
-	if((feat = m_layer->GetNextFeature())) {
-	   updateFields(feat, values, m_fdef);
-       if(CPLE_None != m_layer->SetFeature(feat))
-            g_runerr("Failed to update feature on " << m_file << ".");
-	} else {
-		g_runerr("Failed to find feature with ID: " << idField << "=" << id);
-	}
-}
-
-void DB::deleteFeature(const std::string &idField, uint64_t id) {
-    std::stringstream ss;
-    ss << "\"" << idField << "\"=" << id;
-    m_layer->SetAttributeFilter(ss.str().c_str());
-    OGRFeature *feat;
-    while((feat = m_layer->GetNextFeature())) {
-        if(CPLE_None != m_layer->DeleteFeature(feat->GetFID()))
-            g_runerr("Failed to delete feature with ID: " << idField << "=" << id << ". Deletion may not be implemented for this file type.");
-    }
 }
 
 void DB::execute(std::string &sql) {
