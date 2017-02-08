@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>682</width>
-    <height>718</height>
+    <height>757</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -342,13 +342,67 @@
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <layout class="QGridLayout" name="crownsGrid">
-        <item row="4" column="1">
+        <item row="2" column="0" colspan="2">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Original CHM</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QLabel" name="label_13">
+          <property name="text">
+           <string>Smoothed CHM</string>
+          </property>
+          <property name="buddy">
+           <cstring>txtCrownsSmoothedCHM</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_19">
+          <property name="text">
+           <string>Crowns Database</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>&amp;Crown Height Fraction</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnCrownsHeightFraction</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="2">
          <widget class="QLabel" name="label_15">
           <property name="text">
            <string>&amp;Treetops Database</string>
           </property>
           <property name="buddy">
            <cstring>txtCrownsTreetopsDatabase</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>&amp;Crowns Raster</string>
+          </property>
+          <property name="buddy">
+           <cstring>txtCrownsCrownsRaster</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>Mi&amp;n. Crown Height</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnCrownsMinHeight</cstring>
           </property>
          </widget>
         </item>
@@ -359,16 +413,6 @@
           </property>
           <property name="buddy">
            <cstring>spnCrownsRadius</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Smoothed CHM</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtCrownsSmoothedCHM</cstring>
           </property>
          </widget>
         </item>
@@ -427,16 +471,6 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>&amp;Crown Height Fraction</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnCrownsHeightFraction</cstring>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="6" colspan="3">
          <widget class="QDoubleSpinBox" name="spnCrownsRadius">
           <property name="mouseTracking">
@@ -453,32 +487,8 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
-         <widget class="QLabel" name="label_10">
-          <property name="text">
-           <string>&amp;Crowns Raster</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtCrownsCrownsRaster</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Mi&amp;n. Crown Height</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnCrownsMinHeight</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Original CHM</string>
-          </property>
-         </widget>
+        <item row="5" column="7">
+         <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
         </item>
         <item row="2" column="8">
          <widget class="QToolButton" name="btnCrownsOriginalCHM">
@@ -486,9 +496,6 @@
            <string>...</string>
           </property>
          </widget>
-        </item>
-        <item row="5" column="7">
-         <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
         </item>
         <item row="0" column="2" colspan="3">
          <widget class="QDoubleSpinBox" name="spnCrownsHeightFraction">
@@ -509,9 +516,22 @@
           </property>
          </widget>
         </item>
+        <item row="2" column="2" colspan="6">
+         <widget class="QLineEdit" name="txtCrownsOriginalCHM"/>
+        </item>
         <item row="6" column="7">
          <widget class="QComboBox" name="cboCrownsCrownsDatabaseDriver">
           <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2" colspan="6">
+         <widget class="QLineEdit" name="txtCrownsSmoothedCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
            <bool>false</bool>
           </property>
          </widget>
@@ -529,19 +549,6 @@
           </property>
           <property name="value">
            <double>4.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2" colspan="6">
-         <widget class="QLineEdit" name="txtCrownsOriginalCHM"/>
-        </item>
-        <item row="3" column="2" colspan="6">
-         <widget class="QLineEdit" name="txtCrownsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -578,13 +585,10 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
-         <widget class="QCheckBox" name="chkCrownsDoDatabase">
-          <property name="layoutDirection">
-           <enum>Qt::RightToLeft</enum>
-          </property>
+        <item row="1" column="6" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
           <property name="text">
-           <string>Crowns Database</string>
+           <string/>
           </property>
          </widget>
         </item>
@@ -595,8 +599,29 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="6" colspan="3">
-         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
+        <item row="6" column="1">
+         <widget class="QCheckBox" name="chkCrownsDoDatabase">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>19</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
           <property name="text">
            <string/>
           </property>
