@@ -92,24 +92,25 @@ if(OPENMP_FOUND)
 endif()
 
 project (geotools)
+add_subdirectory (geolibs)
 
 # Configure directories
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
-include_directories(include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
+include_directories(geolibs/include include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
 
 
 # Build support libraries ############################################################################################
 
-add_library (geotools STATIC src/geotools.cpp)
+#add_library (geotools STATIC src/geotools.cpp)
 
-add_library (util STATIC src/util.cpp)
-target_link_libraries (util ${Boost_LIBRARIES} geotools)
+#add_library (util STATIC src/util.cpp)
+#target_link_libraries (util ${Boost_LIBRARIES} geotools)
 
-add_library (db STATIC src/db.cpp)
-target_link_libraries (db ${GDAL_LIBRARY} geotools)
+#add_library (db STATIC src/db.cpp)
+#target_link_libraries (db ${GDAL_LIBRARY} geotools)
 
-add_library (raster STATIC src/raster.cpp)
-target_link_libraries (raster ${GDAL_LIBRARY} util geotools db)
+#add_library (raster STATIC src/raster.cpp)
+#target_link_libraries (raster ${GDAL_LIBRARY} util geotools db)
 
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/apps/ui_util.cpp)
