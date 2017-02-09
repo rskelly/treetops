@@ -58,7 +58,6 @@ elseif(${WIN32})
 else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
-		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/home/rob/Qt5.7.0/5.7/gcc_64/lib/cmake/Qt5Widgets/")
 	endif()
 	option(CGAL_DISABLE_ROUNDING_MATH_CHECK "Disable rounding math check in CGAL. This permits Valgrind to run." ON)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
@@ -72,10 +71,12 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-set (CMAKE_AUTOUIC ON)
-set (CMAKE_AUTOMOC ON)
-set (CMAKE_INCLUDE_CURRENT_DIR ON)
-set (CMAKE_AUTOMOC_OPTIONS "-Iinclude")
+if(${WITH_GUI})
+	set (CMAKE_AUTOUIC ON)
+	set (CMAKE_AUTOMOC ON)
+	set (CMAKE_INCLUDE_CURRENT_DIR ON)
+	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc/apps")
+endif()
 
 find_package (OpenMP REQUIRED)
 find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
@@ -96,24 +97,13 @@ add_subdirectory (geolibs)
 
 # Configure directories
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
-include_directories(geolibs/include include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
+include_directories(geolibs/include include src/apps ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
 
 
 # Build support libraries ############################################################################################
 
-#add_library (geotools STATIC src/geotools.cpp)
-
-#add_library (util STATIC src/util.cpp)
-#target_link_libraries (util ${Boost_LIBRARIES} geotools)
-
-#add_library (db STATIC src/db.cpp)
-#target_link_libraries (db ${GDAL_LIBRARY} geotools)
-
-#add_library (raster STATIC src/raster.cpp)
-#target_link_libraries (raster ${GDAL_LIBRARY} util geotools db)
-
 if(${WITH_GUI})
-	add_library (ui_util STATIC src/apps/ui_util.cpp)
+	add_library (ui_util STATIC src/apps/ui_util.cpp src/apps/crs_selector_ui.cpp src/apps/tops_thresholds_ui.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
 endif()
 
@@ -124,7 +114,7 @@ add_library (treetops SHARED src/treetops.cpp)
 target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
 
 if(${WITH_GUI})
-	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp src/apps/crs_selector_ui.cpp src/apps/tops_thresholds_ui.cpp)
+	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp )
 	target_link_libraries (treetops-app PUBLIC treetops Qt5::Gui Qt5::Core Qt5::Widgets ui_util)
 else()
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.hpp)
