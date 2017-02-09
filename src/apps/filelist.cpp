@@ -14,12 +14,22 @@
 #include <set>
 
 #include <QFileDialog>
+#include <QDir>
+#include <QPushButton>
+#include <QListWidget>
+#include <QString>
+#include <QWidget>
 
 #include "filelist.hpp"
 
 using namespace geotools::ui;
 
-FileList::FileList() {
+FileList::FileList() :
+	m_btnAddFiles(nullptr),
+	m_btnRemoveSelectedFiles(nullptr),
+	m_btnRemoveAllFiles(nullptr),
+	m_lstFiles(nullptr),
+	m_parent(nullptr) {
 }
 
 void FileList::init(QWidget *parent, QPushButton *btnAddFiles,
