@@ -111,7 +111,7 @@ endif()
 # Build programs #####################################################################################################
 
 add_library (treetops SHARED src/treetops.cpp)
-target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
+target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} raster util geotools db)
 
 if(${WITH_GUI})
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp )
@@ -122,7 +122,7 @@ else()
 endif()
 
 #add_library (spectral SHARED src/spectral.cpp)
-#target_link_libraries (spectral ${GDAL_LIBRARY} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} raster util geotools db)
+#target_link_libraries (spectral ${GDAL_LIBRARY} raster util geotools db)
 #add_executable (spectral-app src/apps/spectral.cpp)
 #target_link_libraries (spectral-app PUBLIC spectral)
 
