@@ -289,9 +289,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	cboCrownsCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsCrownsDatabaseDriver));
 	chkCrownsDoDatabase->setChecked(m_config.crownsDoDatabase);
 	chkCrownsUpdateHeights->setChecked(m_config.crownsUpdateHeights);
-	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase);
-	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase);
-	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase);
+	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 
 	// Connect events
 	// -- section toggles
@@ -476,10 +476,10 @@ void TreetopsForm::crownsCrownsDatabaseDriverChanged(QString text) {
 }
 
 void TreetopsForm::crownsDoDatabaseChanged(bool state) {
-	txtCrownsCrownsDatabase->setEnabled(state);
-	cboCrownsCrownsDatabaseDriver->setEnabled(state);
-	btnCrownsCrownsDatabase->setEnabled(state);
 	m_config.crownsDoDatabase = state;
+	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	checkRun();
 }
 
@@ -503,6 +503,9 @@ void TreetopsForm::doTopsChanged(bool v) {
 void TreetopsForm::doCrownsChanged(bool v) {
 	m_config.doCrowns = v;
 	grpCrowns->layout()->setEnabled(v);
+	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	checkRun();
 }
 
