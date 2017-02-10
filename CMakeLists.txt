@@ -76,14 +76,14 @@ endif()
 # Build programs #####################################################################################################
 
 if(${WITH_GUI})
-	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp )
-	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util)
+	add_executable (treetops src/apps/treetops.cpp src/apps/treetops_ui.cpp )
+	target_link_libraries (treetops PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets libtreetops ui_util)
 else()
-	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.hpp)
-	target_link_libraries (treetops-app PUBLIC treetops)
+	add_executable (treetops src/apps/treetops.cpp src/apps/treetops_ui.hpp)
+	target_link_libraries (treetops PUBLIC treetops)
 endif()
 
 
 # Install ###########################################################################################################
 
-install (TARGETS treetops-app DESTINATION bin)
+install (TARGETS treetops DESTINATION bin)
