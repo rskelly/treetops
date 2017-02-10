@@ -7,41 +7,19 @@ if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
 
-set (Boost_DEBUG OFF)
-set (Boost_USE_STATIC_LIBS OFF)
-set (Boost_USE_STATIC_RUNTIME OFF)
-
-set (GEOS_LIBRARY geos)
-
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
 
 if (${APPLE})
-
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
 	endif()
-
-	# For GDAL2
 	set (GDAL_LIBRARY /usr/local/opt/gdal2/lib/libgdal.dylib)
 	set (GDAL_INCLUDE_DIR /usr/local/opt/gdal2/include)
 	set (CMAKE_C_COMPILER /usr/local/bin/clang-omp CACHE STRING "C compiler" FORCE)
 	set (CMAKE_CXX_COMPILER /usr/local/bin/clang-omp++ CACHE STRING "C++ compiler" FORCE)
 	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-
 elseif(${WIN32})
-	
-	# Preparing to build on Windows
-	# 1) download and install vs 2015
-	# 2) use web installer to install qt5
-	# 3) download prebuild boost for vs msvc-14 -- build using bootstrap, b2
-	# 3) download gisinternals lib and headers zips for msvc-12 -- unzip to C:\opt
-	# 4) download and install cmake
-	# 5) download and install git
-	# --- 6) checkout liblas from git
-	# 7) download eigen -- extract to c:\opt\include -- rename folder to eigen3
-	
-	# Configure boost.
 	set (Boost_COMPILER -vc140)
 	set (Boost_NO_SYSTEM_PATHS  ON)
 	set (BOOST_INCLUDEDIR "E:\\boost_1_63_0")
@@ -53,8 +31,6 @@ elseif(${WIN32})
 	set (GDAL_LIBRARY "E:\\opt\\lib\\gdal_i.lib")
 	set (libLAS_INCLUDE_DIR "E:\\opt\\include")
 	set (libLAS_LIBRARY_DIRS "E:\\opt\\lib")
-	#set (libLAS_BINARY_DIRS "E:\\opt\\bin")
-	
 else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
@@ -78,26 +54,17 @@ if(${WITH_GUI})
 	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc/apps")
 endif()
 
-find_package (OpenMP REQUIRED)
-find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
-find_package (GDAL 2.1 REQUIRED)
-find_package (libLAS 1.8) # Will fail on windows with gisinternals linkage; ignore.
-
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
 endif()
 
-if(OPENMP_FOUND)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set (CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-endif()
-
-project (geotools)
-add_subdirectory (geolibs)
+project (treetops)
+add_subdirectory (libtreetops)
 
 # Configure directories
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
-include_directories(geolibs/include include src/apps ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
+include_directories(libtreetops/libgeo/include libtreetops/include src/apps include 
+	${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
 
 
 # Build support libraries ############################################################################################
@@ -110,36 +77,15 @@ endif()
 
 # Build programs #####################################################################################################
 
-add_library (treetops SHARED src/treetops.cpp)
-target_link_libraries (treetops ${Boost_LIBRARIES} ${GDAL_LIBRARY} ${GEOS_LIBRARY} raster util geotools db)
-
 if(${WITH_GUI})
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp )
-	target_link_libraries (treetops-app PUBLIC treetops Qt5::Gui Qt5::Core Qt5::Widgets ui_util)
+	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util)
 else()
 	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.hpp)
 	target_link_libraries (treetops-app PUBLIC treetops)
 endif()
 
-#add_library (spectral SHARED src/spectral.cpp)
-#target_link_libraries (spectral ${GDAL_LIBRARY} raster util geotools db)
-#add_executable (spectral-app src/apps/spectral.cpp)
-#target_link_libraries (spectral-app PUBLIC spectral)
 
 # Install ###########################################################################################################
 
-install (TARGETS treetops DESTINATION lib)
 install (TARGETS treetops-app DESTINATION bin)
-install (FILES include/treetops.hpp DESTINATION include)
-
-set (APP_BUNDLE_NAME "Treetops.app")
-set (APPS "./${APP_BUNDLE_NAME}")
-set (DIRS .)
-install (CODE "
-	include(BundleUtilities) 
-	fixup_bundle(\"${APPS}\" \"*.dylib\" \"${DIRS}\")
-	" COMPONENT Runtime)
-
-#install (TARGETS spectral DESTINATION lib)
-#install (TARGETS spectral-app DESTINATION bin)
-#install (FILES include/spectra.hpp DESTINATION include)

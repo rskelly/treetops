@@ -13,7 +13,7 @@
 
 #include "ui_crs_selector.h"
 
-namespace geotools {
+namespace geo {
 
 	namespace ui {
 

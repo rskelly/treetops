@@ -6,17 +6,17 @@
 #include <QDesktopServices>
 #include <QUrl>
 
-#include "geotools.hpp"
+#include "geo.hpp"
 #include "raster.hpp"
 #include "treetops.hpp"
 #include "treetops_ui.hpp"
 #include "crs_selector_ui.hpp"
 #include "ui_util.hpp"
 
-using namespace geotools::ui;
-using namespace geotools::ui::util;
-using namespace geotools::treetops;
-using namespace geotools::treetops::config;
+using namespace geo::ui;
+using namespace geo::ui::util;
+using namespace geo::treetops;
+using namespace geo::treetops::config;
 
 QSettings _settings("Treetops", "dijital.ca");
 
@@ -138,8 +138,8 @@ void TreetopsCallbacks::statusCallback(const std::string &msg) const {
 
 void TTWorkerThread::run() {
 
-	using namespace geotools::treetops;
-	using namespace geotools::treetops::config;
+	using namespace geo::treetops;
+	using namespace geo::treetops::config;
 
 	try {
 		Treetops t;
@@ -239,12 +239,12 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	QStringList rasterDrivers;
 	rasterDrivers << "";
-	for(const auto &it : geotools::raster::Raster::drivers())
+	for(const auto &it : geo::raster::Raster::drivers())
 		rasterDrivers << qstr(it.first);
 
 	QStringList vectorDrivers;
 	vectorDrivers << "";
-	for(const auto &it : geotools::db::DB::drivers())
+	for(const auto &it : geo::db::DB::drivers())
 		vectorDrivers << qstr(it.first);
 
 	QStringList smoothMethods;
@@ -578,7 +578,7 @@ void TreetopsForm::smoothOriginalCHMChanged(QString file) {
 
 void TreetopsForm::smoothSmoothedCHMChanged(QString file) {
 	m_config.smoothSmoothedCHM = file.toStdString();
-	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(geotools::raster::Raster::getDriverForFilename(file.toStdString())));
+	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(geo::raster::Raster::getDriverForFilename(file.toStdString())));
 	checkRun();
 }
 
@@ -616,7 +616,7 @@ void TreetopsForm::cancelClicked() {
 
 void TreetopsForm::helpClicked() {
 	g_debug("help");
-	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/geotools/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
+	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/geo/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
 }
 
 void TreetopsForm::checkRun() {

@@ -20,7 +20,7 @@
 #define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
 #define ALL_PATTERN "All Files (*)"
 
-namespace geotools {
+namespace geo {
 
 	namespace ui {
 

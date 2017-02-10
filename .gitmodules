@@ -1,3 +1,3 @@
-[submodule "geolibs"]
-	path = geolibs
-	url = git@github.com:rskelly/geolibs
+[submodule "libtreetops"]
+	path = libtreetops
+	url = git@github.com:rskelly/libtreetops

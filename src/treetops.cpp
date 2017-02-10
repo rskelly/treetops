@@ -27,22 +27,22 @@
 #include <memory>
 #include <omp.h>
 
-#include "geotools.hpp"
+#include "geo.hpp"
 #include "util.hpp"
 #include "raster.hpp"
 #include "treetops.hpp"
 
-using namespace geotools::raster;
-using namespace geotools::util;
+using namespace geo::raster;
+using namespace geo::util;
 
-using namespace geotools::treetops::config;
-using namespace geotools::treetops::util;
-using namespace geotools::treetops;
+using namespace geo::treetops::config;
+using namespace geo::treetops::util;
+using namespace geo::treetops;
 
 // Dummy cancel variable.
 bool __tt_cancel = false;
 
-namespace geotools {
+namespace geo {
 
 	namespace treetops {
 
@@ -168,7 +168,7 @@ namespace geotools {
 
 	} // trees
 
-} // geotools
+} // geo
 
 
 // TreetopsConfig implementation
@@ -375,7 +375,7 @@ void TTDB::addTops(const std::list<std::unique_ptr<Top> > &tops) {
         addTop(t);
 }
 
-void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds) {
+void TTDB::getTops(std::list<std::unique_ptr<Top> > &tops, const geo::util::Bounds &bounds) {
     m_layer->SetSpatialFilterRect(bounds.minx(), bounds.miny(), bounds.maxx(), bounds.maxy());
     OGRFeature *feat;
     while((feat = m_layer->GetNextFeature())) {

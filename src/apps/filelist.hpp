@@ -20,7 +20,7 @@
 #include <QWidget>
 #include <QDir>
 
-namespace geotools {
+namespace geo {
 
 namespace ui {
 

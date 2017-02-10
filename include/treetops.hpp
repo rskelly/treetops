@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "geotools.hpp"
+#include "geo.hpp"
 #include "util.hpp"
 #include "db.hpp"
 
-namespace geotools {
+namespace geo {
 
     namespace treetops {
 
@@ -20,7 +20,7 @@ namespace geotools {
 
                 // Defines the boundaries of work to be performed. Every step of the process
                 // will be confined, including smoothing and searching.
-                geotools::util::Bounds bounds;
+                geo::util::Bounds bounds;
 
                 // A spatial reference ID for the output files.
                 int srid;
@@ -181,7 +181,7 @@ namespace geotools {
                 Top();
             };
 
-            using namespace geotools::db;
+            using namespace geo::db;
 
             // A subclass of DB with specific methods for managing treetops.
             class TTDB : public DB {
@@ -205,7 +205,7 @@ namespace geotools {
                 void addTops(const std::list<std::unique_ptr<Top> > &tops);
 
                 // Return the treetops within the given bounds
-                void getTops(std::list<std::unique_ptr<Top> > &tops, const geotools::util::Bounds &bounds);
+                void getTops(std::list<std::unique_ptr<Top> > &tops, const geo::util::Bounds &bounds);
 
                 // Update a treetop.
                 void updateTop(const std::unique_ptr<Top> &top);
@@ -219,43 +219,43 @@ namespace geotools {
 
         class G_DLL_EXPORT Treetops {
         private:
-            geotools::util::Callbacks *m_callbacks;
+            geo::util::Callbacks *m_callbacks;
 
-            void updateOriginalCHMHeights(const geotools::treetops::config::TreetopsConfig &config,
+            void updateOriginalCHMHeights(const geo::treetops::config::TreetopsConfig &config,
             		bool *cancel, float start, float end);
 
-            void delineateCrowns(const geotools::treetops::config::TreetopsConfig &config,
+            void delineateCrowns(const geo::treetops::config::TreetopsConfig &config,
             		bool *cancel, float start, float end);
 
-            void polygonizeCrowns(const geotools::treetops::config::TreetopsConfig &config,
+            void polygonizeCrowns(const geo::treetops::config::TreetopsConfig &config,
             		bool *cancel, float start, float end);
 
         public:
 
-            void setCallbacks(geotools::util::Callbacks *callbacks);
+            void setCallbacks(geo::util::Callbacks *callbacks);
 
             // A convenience method for smoothing the input raster before using it to generate crowns
             // or treetops.
-            void smooth(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
+            void smooth(const geo::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
             // Locates tree top points on a canopy height model.
-            void treetops(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
+            void treetops(const geo::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
             // Performs tree crown delineation using a (preferrably smoothed) input raster and a
             // vector file (sqlite) containing tree tops as seeds. Output is an integer raster with 
             // cell values representing tree top IDs, and an optional vector which is the polygonized 
             // version of the raster. The table should have been generated using the treetops() method
             // to ensure that its structure is correct.
-            void treecrowns(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
+            void treecrowns(const geo::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
             // Using predefined criteria, merge disparate tree crowns into single crowns,
             // potentially with more than one top.
-            void merge(const geotools::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
+            void merge(const geo::treetops::config::TreetopsConfig &config, bool *cancel = nullptr);
 
         };
 
     } // trees
 
-} // geotools
+} // geo
 
 #endif

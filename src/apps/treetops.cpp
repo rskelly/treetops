@@ -4,7 +4,7 @@
 
 #include "omp.h"
 
-#include "geotools.hpp"
+#include "geo.hpp"
 #include "treetops.hpp"
 
 #ifdef WITH_GUI
@@ -77,7 +77,7 @@ int runWithGui(int argc, char **argv) {
 	};
 
 	TTApplication q(argc, argv);
-	geotools::ui::TreetopsForm f;
+	geo::ui::TreetopsForm f;
 	f.show();
 	return q.exec();
 #else
@@ -88,9 +88,9 @@ int runWithGui(int argc, char **argv) {
 
 int main(int argc, char **argv) {
 
-	using namespace geotools::treetops;
-	using namespace geotools::treetops::util;
-	using namespace geotools::treetops::config;
+	using namespace geo::treetops;
+	using namespace geo::treetops::util;
+	using namespace geo::treetops::config;
 
 	try {
 

@@ -22,7 +22,7 @@
 
 #include "filelist.hpp"
 
-using namespace geotools::ui;
+using namespace geo::ui;
 
 FileList::FileList() :
 	m_btnAddFiles(nullptr),

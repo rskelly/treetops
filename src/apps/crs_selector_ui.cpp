@@ -12,9 +12,9 @@
 #include "csv.hpp"
 #include "crs_selector_ui.hpp"
 
-using namespace geotools::ui;
-using namespace geotools::util;
-using namespace geotools::csv;
+using namespace geo::ui;
+using namespace geo::util;
+using namespace geo::csv;
 
 CRSSelector::CRSSelector(QWidget *parent, Qt::WindowFlags f) :
 		QDialog(parent, f),

@@ -7,27 +7,27 @@
 
 #include "ui_util.hpp"
 #include "tops_thresholds_ui.hpp"
-#include "geotools.hpp"
+#include "geo.hpp"
 
-using namespace geotools::ui::util;
+using namespace geo::ui::util;
 
-QString geotools::ui::util::qstr(const std::string &str) {
+QString geo::ui::util::qstr(const std::string &str) {
 	return QString(str.c_str());
 }
 
-QString geotools::ui::util::qstr(int val) {
+QString geo::ui::util::qstr(int val) {
 	QString s;
 	s.setNum(val);
 	return s;
 }
 
-std::string geotools::ui::util::stripBoost(const std::string &msg) {
+std::string geo::ui::util::stripBoost(const std::string &msg) {
 	if (msg.substr(0, 7) == "boost::")
 		return msg.substr(msg.find(" ", 0));
 	return msg;
 }
 
-void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, const std::string &text,
+void geo::ui::util::errorDialog(QWidget *parent, const std::string &title, const std::string &text,
 	const std::string &detail) {
 	QMessageBox err(parent);
 	err.setWindowTitle(qstr(title));
@@ -37,7 +37,7 @@ void geotools::ui::util::errorDialog(QWidget *parent, const std::string &title, 
 	err.exec();
 }
 
-void geotools::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
+void geo::ui::util::getInputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
 	if(!res.isEmpty()) {
@@ -46,7 +46,7 @@ void geotools::ui::util::getInputFile(QWidget *form, const std::string &title, Q
 	}
 }
 
-void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
+void geo::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir &path,
 		const std::string &filter, std::string &filename) {
 	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
 	if(!res.isEmpty()) {
@@ -55,7 +55,7 @@ void geotools::ui::util::getOutputFile(QWidget *form, const std::string &title, 
 	}
 }
 
-void geotools::ui::util::getThresholds(QWidget *form, std::vector<std::pair<double, uint8_t> > &thresholds) {
+void geo::ui::util::getThresholds(QWidget *form, std::vector<std::pair<double, uint8_t> > &thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

@@ -10,13 +10,13 @@
 #include "treetops.hpp"
 #include "ui_treetops.h"
 
-using namespace geotools::treetops::config;
+using namespace geo::treetops::config;
 
-namespace geotools {
+namespace geo {
 
 	namespace treetops {
 
-		class TreetopsCallbacks: public QObject, public geotools::util::Callbacks {
+		class TreetopsCallbacks: public QObject, public geo::util::Callbacks {
 			Q_OBJECT
 		public:
 			void stepCallback(float status) const;
@@ -40,7 +40,7 @@ namespace geotools {
 		private:
 			bool m_cancel;
 			QWidget *m_form;
-			geotools::util::Callbacks *m_callbacks;
+			geo::util::Callbacks *m_callbacks;
 			TTWorkerThread *m_workerThread;
 			QDir m_last;
 			TreetopsConfig m_config;
