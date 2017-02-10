@@ -1,5 +1,3 @@
-# This is the geotools page. 
-
-It this software will soon be renamed, along with the name of the repository.
+# This is the Treetops utility page. 
 
 [Here's the wiki](https://github.com/rskelly/geotools/wiki)
