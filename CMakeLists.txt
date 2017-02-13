@@ -62,7 +62,6 @@ add_subdirectory (libgeo)
 
 # Configure directories
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
-include_directories(libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 
 
 # Build support libraries ############################################################################################
@@ -70,20 +69,24 @@ include_directories(libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/apps/ui_util.cpp src/apps/crs_selector_ui.cpp src/apps/tops_thresholds_ui.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
+	target_include_directories(ui_util PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 endif()
 
 
 # Build programs #####################################################################################################
 
 if(${WITH_GUI})
-	add_executable (treetops src/apps/treetops.cpp src/apps/treetops_ui.cpp )
-	target_link_libraries (treetops PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets libtreetops ui_util)
+	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.cpp )
+	target_include_directories(treetops-app PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util)
 else()
-	add_executable (treetops src/apps/treetops.cpp src/apps/treetops_ui.hpp)
-	target_link_libraries (treetops PUBLIC treetops)
+	add_executable (treetops-app src/apps/treetops.cpp src/apps/treetops_ui.hpp)
+	target_include_directories(treetops-app PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	target_link_libraries (treetops-app PUBLIC treetops)
 endif()
+set_target_properties (treetops-app PROPERTIES OUTPUT_NAME treetops)
 
 
 # Install ###########################################################################################################
 
-install (TARGETS treetops DESTINATION bin)
+install (TARGETS treetops-app DESTINATION bin)
