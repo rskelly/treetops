@@ -58,11 +58,11 @@ endif()
 
 project (treetops)
 add_subdirectory (libtreetops)
+add_subdirectory (libgeo)
 
 # Configure directories
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
-include_directories(libtreetops/libgeo/include libtreetops/include src/apps include 
-	${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${INC_PATH})
+include_directories(libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 
 
 # Build support libraries ############################################################################################
