@@ -92,7 +92,7 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void TopsThresholdsForm::setThresholds(const std::vector<std::pair<double, uint8_t> > &thresholds) {
+void TopsThresholdsForm::setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 }
@@ -115,15 +115,15 @@ void TopsThresholdsForm::sortItems() {
 	auto item = m_items.begin();
 	int i = 0;
 	for(auto &it : m_thresholds)
-		(*item++)->set(i++, it.first, it.second);
+		(*item++)->set(i++, std::get<0>(it), std::get<1>(it));
 }
 
-std::vector<std::pair<double, uint8_t> > TopsThresholdsForm::thresholds() const {
+std::vector<std::tuple<double, uint8_t> > TopsThresholdsForm::thresholds() const {
 	return m_thresholds;
 }
 
 void TopsThresholdsForm::btnAddItemClicked() {
-	m_thresholds.push_back(std::make_pair(0, 0));
+	m_thresholds.push_back(std::make_tuple(0, 0));
 	sortItems();
 	updateButtons();
 }
@@ -137,7 +137,7 @@ void TopsThresholdsForm::itemDelete(TopsThresholdItem *item) {
 }
 
 void TopsThresholdsForm::itemUpdate(TopsThresholdItem *item) {
-	m_thresholds[item->index()] = std::make_pair(item->height(), item->window());
+	m_thresholds[item->index()] = std::make_tuple(item->height(), item->window());
 	sortItems();
 	updateButtons();
 }
@@ -150,7 +150,7 @@ bool TopsThresholdsForm::valid() const {
 	if(m_thresholds.empty())
 		return false;
 	for(const auto &it : m_thresholds) {
-		if(it.first <= 0 || it.second % 2 == 0 || it.second < 3)
+		if(std::get<0>(it) <= 0 || std::get<1>(it) % 2 == 0 || std::get<1>(it) < 3)
 			return false;
 	}
 	return true;

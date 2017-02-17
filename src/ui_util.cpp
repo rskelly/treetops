@@ -56,7 +56,7 @@ void geo::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir 
 	}
 }
 
-void geo::ui::util::getTopsThresholds(QWidget *form, std::vector<std::pair<double, uint8_t> > &thresholds) {
+void geo::ui::util::getTopsThresholds(QWidget *form, std::vector<std::tuple<double, uint8_t> > &thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

@@ -54,12 +54,12 @@ public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
-	std::vector<std::pair<double, uint8_t> > m_thresholds;
+	std::vector<std::tuple<double, uint8_t> > m_thresholds;
 	bool m_confirm;
 
 	TopsThresholdsForm();
-	void setThresholds(const std::vector<std::pair<double, uint8_t> > &thresholds);
-	std::vector<std::pair<double, uint8_t> > thresholds() const;
+	void setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds);
+	std::vector<std::tuple<double, uint8_t> > thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~TopsThresholdsForm();

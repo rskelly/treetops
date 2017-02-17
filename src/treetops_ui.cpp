@@ -515,6 +515,7 @@ void TreetopsForm::topsThresholdsChanged(QString thresh) {
 }
 
 void TreetopsForm::crownsThresholdsChanged(QString thresh) {
+	std::cerr << thresh.toStdString() << "\n";
 	m_config.parseCrownsThresholds(thresh.toStdString());
 	checkRun();
 }
