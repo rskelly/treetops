@@ -24,58 +24,35 @@ QSettings _settings("Treetops", "dijital.ca");
 void _loadConfig(TreetopsConfig &config) {
 	QSettings qs("TreetopsConfig", "dijital.ca");
 	config.srid = qs.value("srid", config.srid).toInt();
-	config.buildIndex =
-			qs.value("buildIndex", config.buildIndex).toBool();
-	config.tableCacheSize = qs.value("tableCacheSize",
-			config.tableCacheSize).toInt();
-	config.rowCacheSize =
-			qs.value("rowCacheSize", config.rowCacheSize).toInt();
-	config.doSmoothing =
-			qs.value("doSmoothing", config.doSmoothing).toBool();
-	config.smoothWindowSize = qs.value("smoothingWindowSize",
-			config.smoothWindowSize).toInt();
-	config.smoothSigma =
-			qs.value("smoothSigma", config.smoothSigma).toDouble();
-	config.smoothOriginalCHM = qs.value("smoothOriginalCHM",
-			qstr(config.smoothOriginalCHM)).toString().toStdString();
-	config.smoothSmoothedCHM = qs.value("smoothSmoothedCHM",
-			qstr(config.smoothSmoothedCHM)).toString().toStdString();
-	config.smoothSmoothedCHMDriver = qs.value("smoothSmoothedCHMDriver",
-			qstr(config.smoothSmoothedCHMDriver)).toString().toStdString();
+	config.buildIndex = qs.value("buildIndex", config.buildIndex).toBool();
+	config.tableCacheSize = qs.value("tableCacheSize", config.tableCacheSize).toInt();
+	config.rowCacheSize = qs.value("rowCacheSize", config.rowCacheSize).toInt();
+	
+	config.doSmoothing = qs.value("doSmoothing", config.doSmoothing).toBool();
+	config.smoothWindowSize = qs.value("smoothingWindowSize", config.smoothWindowSize).toInt();
+	config.smoothSigma = qs.value("smoothSigma", config.smoothSigma).toDouble();
+	config.smoothOriginalCHM = qs.value("smoothOriginalCHM", qstr(config.smoothOriginalCHM)).toString().toStdString();
+	config.smoothSmoothedCHM = qs.value("smoothSmoothedCHM", qstr(config.smoothSmoothedCHM)).toString().toStdString();
+	config.smoothSmoothedCHMDriver = qs.value("smoothSmoothedCHMDriver", qstr(config.smoothSmoothedCHMDriver)).toString().toStdString();
+
 	config.doTops = qs.value("doTops", config.doTops).toBool();
-	config.parseThresholds(qs.value("topsThresholds", "").toString().toStdString());
-	config.topsSmoothedCHM = qs.value("topsSmoothedCHM",
-			qstr(config.topsSmoothedCHM)).toString().toStdString();
-	config.topsTreetopsDatabase = qs.value("topsTreetopsDatabase",
-			qstr(config.topsTreetopsDatabase)).toString().toStdString();
-	config.topsTreetopsDatabaseDriver = qs.value("topsTreetopsDatabaseDriver",
-			qstr(config.topsTreetopsDatabaseDriver)).toString().toStdString();
+	config.parseTopsThresholds(qs.value("topsThresholds", "").toString().toStdString());
+	config.topsSmoothedCHM = qs.value("topsSmoothedCHM", qstr(config.topsSmoothedCHM)).toString().toStdString();
+	config.topsTreetopsDatabase = qs.value("topsTreetopsDatabase", qstr(config.topsTreetopsDatabase)).toString().toStdString();
+	config.topsTreetopsDatabaseDriver = qs.value("topsTreetopsDatabaseDriver", qstr(config.topsTreetopsDatabaseDriver)).toString().toStdString();
 	config.topsMaxNulls = qs.value("topsMaxNulls", config.topsMaxNulls).toDouble();
+
 	config.doCrowns = qs.value("doCrowns", config.doCrowns).toBool();
-	config.crownsRadius =
-			qs.value("crownsRadius", config.crownsRadius).toDouble();
-	config.crownsHeightFraction = qs.value("crownsHeightFraction",
-			config.crownsHeightFraction).toDouble();
-	config.crownsMinHeight = qs.value("crownsMinHeight",
-			config.crownsMinHeight).toDouble();
-	config.crownsUpdateHeights = qs.value("crownsUpdateHeights",
-			config.crownsUpdateHeights).toBool();
-	config.crownsOriginalCHM = qs.value("crownsOriginalCHM",
-			qstr(config.crownsOriginalCHM)).toString().toStdString();
-	config.crownsSmoothedCHM = qs.value("crownsSmoothedCHM",
-			qstr(config.crownsSmoothedCHM)).toString().toStdString();
-	config.crownsTreetopsDatabase = qs.value("crownsTreetopsDatabase",
-			qstr(config.crownsTreetopsDatabase)).toString().toStdString();
-	config.crownsCrownsRaster = qs.value("crownsCrownsRaster",
-			qstr(config.crownsCrownsRaster)).toString().toStdString();
-	config.crownsCrownsRasterDriver = qs.value("crownsCrownsRasterDriver",
-			qstr(config.crownsCrownsRasterDriver)).toString().toStdString();
-	config.crownsDoDatabase = qs.value("crownsDoDatabase",
-			config.crownsDoDatabase).toBool();
-	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase",
-			qstr(config.crownsCrownsDatabase)).toString().toStdString();
-	config.crownsCrownsDatabaseDriver = qs.value("crownsCrownsDatabaseDriver",
-			qstr(config.crownsCrownsDatabaseDriver)).toString().toStdString();
+	config.parseCrownsThresholds(qs.value("crownsThresholds", "").toString().toStdString());
+	config.crownsUpdateHeights = qs.value("crownsUpdateHeights", config.crownsUpdateHeights).toBool();
+	config.crownsOriginalCHM = qs.value("crownsOriginalCHM", qstr(config.crownsOriginalCHM)).toString().toStdString();
+	config.crownsSmoothedCHM = qs.value("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM)).toString().toStdString();
+	config.crownsTreetopsDatabase = qs.value("crownsTreetopsDatabase", qstr(config.crownsTreetopsDatabase)).toString().toStdString();
+	config.crownsCrownsRaster = qs.value("crownsCrownsRaster", qstr(config.crownsCrownsRaster)).toString().toStdString();
+	config.crownsCrownsRasterDriver = qs.value("crownsCrownsRasterDriver", qstr(config.crownsCrownsRasterDriver)).toString().toStdString();
+	config.crownsDoDatabase = qs.value("crownsDoDatabase", config.crownsDoDatabase).toBool();
+	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase", qstr(config.crownsCrownsDatabase)).toString().toStdString();
+	config.crownsCrownsDatabaseDriver = qs.value("crownsCrownsDatabaseDriver", qstr(config.crownsCrownsDatabaseDriver)).toString().toStdString();
 }
 
 // Save the config settings for this app.
@@ -85,37 +62,35 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("buildIndex", config.buildIndex);
 	qs.setValue("tableCacheSize", config.tableCacheSize);
 	qs.setValue("rowCacheSize", config.rowCacheSize); //(24 * 1024 * 1024),
+
 	qs.setValue("doSmoothing", config.doSmoothing);
 	qs.setValue("smoothingWindowSize", config.smoothWindowSize);
 	qs.setValue("smoothSigma", config.smoothSigma);
 	qs.setValue("smoothOriginalCHM", qstr(config.smoothOriginalCHM));
 	qs.setValue("smoothSmoothedCHM", qstr(config.smoothSmoothedCHM));
 	qs.setValue("smoothSmoothedCHMDriver", qstr(config.smoothSmoothedCHMDriver));
+
 	qs.setValue("doTops", config.doTops);
-	qs.setValue("topsThresholds", qstr(config.thresholds()));
+	qs.setValue("topsThresholds", qstr(config.topsThresholdsList()));
 	qs.setValue("topsSmoothedCHM", qstr(config.topsSmoothedCHM));
-	qs.setValue("topsTreetopsDatabase",
-			qstr(config.topsTreetopsDatabase));
-	qs.setValue("topsTreetopsDatabaseDriver",
-			qstr(config.topsTreetopsDatabaseDriver));
+	qs.setValue("topsTreetopsDatabase", qstr(config.topsTreetopsDatabase));
+	qs.setValue("topsTreetopsDatabaseDriver", qstr(config.topsTreetopsDatabaseDriver));
 	qs.setValue("topsMaxNulls", config.topsMaxNulls);
+
 	qs.setValue("doCrowns", config.doCrowns);
+	qs.setValue("crownsThresholds", config.crownsThresholdsList());
 	qs.setValue("crownsRadius", config.crownsRadius);
 	qs.setValue("crownsHeightFraction", config.crownsHeightFraction);
 	qs.setValue("crownsMinHeight", config.crownsMinHeight);
 	qs.setValue("crownsUpdateHeights", config.crownsUpdateHeights);
 	qs.setValue("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM));
 	qs.setValue("crownsOriginalCHM", qstr(config.crownsOriginalCHM));
-	qs.setValue("crownsTreetopsDatabase",
-			qstr(config.crownsTreetopsDatabase));
+	qs.setValue("crownsTreetopsDatabase", qstr(config.crownsTreetopsDatabase));
 	qs.setValue("crownsCrownsRaster", qstr(config.crownsCrownsRaster));
 	qs.setValue("crownsCrownsRasterDriver", qstr(config.crownsCrownsRasterDriver));
 	qs.setValue("crownsDoDatabase", config.crownsDoDatabase);
-	qs.setValue("crownsCrownsDatabase",
-			qstr(config.crownsCrownsDatabase));
-	qs.setValue("crownsCrownsDatabaseDriver",
-			qstr(config.crownsCrownsDatabaseDriver));
-
+	qs.setValue("crownsCrownsDatabase", qstr(config.crownsCrownsDatabase));
+	qs.setValue("crownsCrownsDatabaseDriver", qstr(config.crownsCrownsDatabaseDriver));
 }
 
 
@@ -265,7 +240,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops);
-	txtTopsThresholds->setText(qstr(m_config.thresholds()));
+	txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	cboTopsTreetopsDatabaseDriver->addItems(vectorDrivers);
@@ -275,9 +250,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// -- crowns
 	grpCrowns->setChecked(m_config.doCrowns);
-	spnCrownsHeightFraction->setValue(m_config.crownsHeightFraction);
-	spnCrownsRadius->setValue(m_config.crownsRadius);
-	spnCrownsMinHeight->setValue(m_config.crownsMinHeight);
+	txtCrownsThresholds->setText(m_config.crownsThresholdsList());
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
@@ -319,9 +292,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 			this, SLOT(topsTreetopsDatabaseDriverChanged(QString)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
 	// -- crowns
-	connect(spnCrownsRadius, SIGNAL(valueChanged(double)), this, SLOT(crownsRadiusChanged(double)));
-	connect(spnCrownsHeightFraction, SIGNAL(valueChanged(double)), this, SLOT(crownsHeightFractionChanged(double)));
-	connect(spnCrownsMinHeight, SIGNAL(valueChanged(double)), this, SLOT(crownsMinHeightChanged(double)));
+	connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
 	connect(txtCrownsOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsOriginalCHMChanged(QString)));
 	connect(txtCrownsSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(crownsSmoothedCHMChanged(QString)));
 	connect(txtCrownsTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsTreetopsDatabaseChanged(QString)));
@@ -339,6 +310,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), this, SLOT(topsTreetopsSRIDClicked()));
 	connect(chkCrownsDoDatabase, SIGNAL(toggled(bool)), this, SLOT(crownsDoDatabaseChanged(bool)));
 	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
+	connect(btnCrownsThresholds, SIGNAL(clicked()), this, SLOT(crownsThresholdsClicked()));
 
 	// -- program buttons
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
@@ -429,8 +401,14 @@ void TreetopsForm::topsTreetopsDatabaseDriverChanged(QString text) {
 }
 
 void TreetopsForm::topsThresholdsClicked() {
-	getThresholds(m_form, m_config.topsThresholds);
-	txtTopsThresholds->setText(qstr(m_config.thresholds()));
+	getTopsThresholds(m_form, m_config.topsThresholds);
+	txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
+	checkRun();
+}
+
+void TreetopsForm::crownsThresholdsClicked() {
+	getCrownsThresholds(m_form, m_config.crownsThresholds);
+	txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
 	checkRun();
 }
 
@@ -509,21 +487,6 @@ void TreetopsForm::doCrownsChanged(bool v) {
 	checkRun();
 }
 
-void TreetopsForm::crownsRadiusChanged(double radius) {
-	m_config.crownsRadius = radius;
-	checkRun();
-}
-
-void TreetopsForm::crownsHeightFractionChanged(double frac) {
-	m_config.crownsHeightFraction = frac;
-	checkRun();
-}
-
-void TreetopsForm::crownsMinHeightChanged(double height) {
-	m_config.crownsMinHeight = height;
-	checkRun();
-}
-
 void TreetopsForm::crownsOriginalCHMChanged(QString file) {
 	m_config.crownsOriginalCHM = file.toStdString();
 	checkRun();
@@ -550,7 +513,12 @@ void TreetopsForm::crownsCrownsDatabaseChanged(QString file) {
 }
 
 void TreetopsForm::topsThresholdsChanged(QString thresh) {
-	m_config.parseThresholds(thresh.toStdString());
+	m_config.parseTopsThresholds(thresh.toStdString());
+	checkRun();
+}
+
+void TreetopsForm::crownsThresholdsChanged(QString thresh) {
+	m_config.parseCrownsThresholds(thresh.toStdString());
 	checkRun();
 }
 

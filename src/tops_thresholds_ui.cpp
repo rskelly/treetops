@@ -66,7 +66,7 @@ uint8_t TopsThresholdItem::window() const {
 }
 
 bool TopsThresholdItem::operator<(const TopsThresholdItem &other) const {
-	return window() < other.window();
+	return height() < other.height();
 }
 
 TopsThresholdsForm::TopsThresholdsForm() :

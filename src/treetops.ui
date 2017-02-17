@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>689</width>
-    <height>718</height>
+    <height>747</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -342,10 +342,20 @@
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <layout class="QGridLayout" name="crownsGrid">
-        <item row="2" column="0" colspan="2">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Original CHM</string>
+        <item row="3" column="2" colspan="4">
+         <widget class="QLineEdit" name="txtCrownsSmoothedCHM">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="5">
+         <widget class="QComboBox" name="cboCrownsCrownsDatabaseDriver">
+          <property name="enabled">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -371,8 +381,15 @@
           <property name="text">
            <string>&amp;Crown Height Fraction</string>
           </property>
-          <property name="buddy">
-           <cstring>spnCrownsHeightFraction</cstring>
+         </widget>
+        </item>
+        <item row="2" column="2" colspan="4">
+         <widget class="QLineEdit" name="txtCrownsOriginalCHM"/>
+        </item>
+        <item row="2" column="6">
+         <widget class="QToolButton" name="btnCrownsOriginalCHM">
+          <property name="text">
+           <string>...</string>
           </property>
          </widget>
         </item>
@@ -396,27 +413,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Mi&amp;n. Crown Height</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnCrownsMinHeight</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="5">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Ma&amp;x. Crown Radius</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnCrownsRadius</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="8">
+        <item row="3" column="6">
          <widget class="QToolButton" name="btnCrownsSmoothedCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -429,33 +426,7 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="8">
-         <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="8">
-         <widget class="QToolButton" name="btnCrownsCrownsRaster">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="8">
+        <item row="6" column="6">
          <widget class="QToolButton" name="btnCrownsCrownsDatabase">
           <property name="enabled">
            <bool>false</bool>
@@ -471,88 +442,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="6" colspan="3">
-         <widget class="QDoubleSpinBox" name="spnCrownsRadius">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="minimum">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>10.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="7">
-         <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
-        </item>
-        <item row="2" column="8">
-         <widget class="QToolButton" name="btnCrownsOriginalCHM">
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2" colspan="3">
-         <widget class="QDoubleSpinBox" name="spnCrownsHeightFraction">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.650000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2" colspan="6">
-         <widget class="QLineEdit" name="txtCrownsOriginalCHM"/>
-        </item>
-        <item row="6" column="7">
-         <widget class="QComboBox" name="cboCrownsCrownsDatabaseDriver">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2" colspan="6">
-         <widget class="QLineEdit" name="txtCrownsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2" colspan="3">
-         <widget class="QDoubleSpinBox" name="spnCrownsMinHeight">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <double>300.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>4.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="2" colspan="6">
+        <item row="4" column="2" colspan="4">
          <widget class="QLineEdit" name="txtCrownsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -562,7 +452,7 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="2" colspan="5">
+        <item row="5" column="2" colspan="3">
          <widget class="QLineEdit" name="txtCrownsCrownsRaster">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -572,7 +462,40 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="2" colspan="5">
+        <item row="4" column="6">
+         <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="6">
+         <widget class="QToolButton" name="btnCrownsCrownsRaster">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Original CHM</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="2" colspan="3">
          <widget class="QLineEdit" name="txtCrownsCrownsDatabase">
           <property name="enabled">
            <bool>false</bool>
@@ -582,20 +505,6 @@
           </property>
           <property name="acceptDrops">
            <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="6" colspan="3">
-         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="5">
-         <widget class="QLabel" name="label_14">
-          <property name="text">
-           <string>Update Heights</string>
           </property>
          </widget>
         </item>
@@ -624,6 +533,33 @@
           </property>
           <property name="text">
            <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="5">
+         <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
+        </item>
+        <item row="0" column="2" colspan="4">
+         <widget class="QLineEdit" name="txtCrownsThresholds"/>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QLabel" name="label_14">
+          <property name="text">
+           <string>Update Heights</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2" colspan="5">
+         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QToolButton" name="btnCrownsThresholds">
+          <property name="text">
+           <string>...</string>
           </property>
          </widget>
         </item>
@@ -767,9 +703,6 @@
   <tabstop>spnTopsTreetopsSRID</tabstop>
   <tabstop>btnTopsTreetopsSRID</tabstop>
   <tabstop>grpCrowns</tabstop>
-  <tabstop>spnCrownsHeightFraction</tabstop>
-  <tabstop>spnCrownsRadius</tabstop>
-  <tabstop>spnCrownsMinHeight</tabstop>
   <tabstop>txtCrownsOriginalCHM</tabstop>
   <tabstop>btnCrownsOriginalCHM</tabstop>
   <tabstop>txtCrownsSmoothedCHM</tabstop>

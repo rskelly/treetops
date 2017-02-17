@@ -80,9 +80,7 @@ namespace geo {
 			void topsTreetopsSRIDChanged(int);
 			void topsMaxNullsChanged(double);
 
-			void crownsRadiusChanged(double);
-			void crownsHeightFractionChanged(double);
-			void crownsMinHeightChanged(double);
+			void crownsThresholdsChanged(QString);
 			void crownsTreetopsDatabaseChanged(QString);
 			void crownsSmoothedCHMChanged(QString);
 			void crownsOriginalCHMChanged(QString);
@@ -110,6 +108,7 @@ namespace geo {
 			void crownsTreetopsDatabaseClicked();
 			void crownsSmoothedCHMClicked();
 			void crownsOriginalCHMClicked();
+			void crownsThresholdsClicked();
 
 			void done();
 		};
