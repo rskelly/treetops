@@ -78,10 +78,7 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("topsMaxNulls", config.topsMaxNulls);
 
 	qs.setValue("doCrowns", config.doCrowns);
-	qs.setValue("crownsThresholds", config.crownsThresholdsList());
-	qs.setValue("crownsRadius", config.crownsRadius);
-	qs.setValue("crownsHeightFraction", config.crownsHeightFraction);
-	qs.setValue("crownsMinHeight", config.crownsMinHeight);
+	qs.setValue("crownsThresholds", qstr(config.crownsThresholdsList()));
 	qs.setValue("crownsUpdateHeights", config.crownsUpdateHeights);
 	qs.setValue("crownsSmoothedCHM", qstr(config.crownsSmoothedCHM));
 	qs.setValue("crownsOriginalCHM", qstr(config.crownsOriginalCHM));
@@ -250,7 +247,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// -- crowns
 	grpCrowns->setChecked(m_config.doCrowns);
-	txtCrownsThresholds->setText(m_config.crownsThresholdsList());
+	txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
@@ -587,7 +584,7 @@ void TreetopsForm::cancelClicked() {
 
 void TreetopsForm::helpClicked() {
 	g_debug("help");
-	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/geo/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
+	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/treetops/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
 }
 
 void TreetopsForm::checkRun() {

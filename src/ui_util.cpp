@@ -7,6 +7,7 @@
 
 #include "ui_util.hpp"
 #include "tops_thresholds_ui.hpp"
+#include "crowns_thresholds_ui.hpp"
 #include "geo.hpp"
 
 using namespace geo::ui::util;

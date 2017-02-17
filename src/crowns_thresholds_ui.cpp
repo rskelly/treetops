@@ -5,6 +5,8 @@
  *      Author: rob
  */
 
+#include <iostream>
+
 #include "crowns_thresholds_ui.hpp"
 
 CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
@@ -20,6 +22,7 @@ CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
 	spnFraction->setDecimals(2);
 	spnFraction->setMinimum(0.0);
 	spnFraction->setMaximum(1.0);
+	spnFraction->setSingleStep(0.1);
 	spnRadius = new QDoubleSpinBox();
 	spnRadius->setDecimals(2);
 	spnRadius->setMinimum(0.0);
@@ -34,7 +37,8 @@ CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
 	setLayout(layout);
 	connect(btnDelete, SIGNAL(clicked()), this, SLOT(itemDeleteClicked()));
 	connect(spnHeight, SIGNAL(valueChanged(double)), this, SLOT(itemHeightChanged(double)));
-	connect(spnWindow, SIGNAL(valueChanged(int)), this, SLOT(itemWindowChanged(int)));
+	connect(spnRadius, SIGNAL(valueChanged(double)), this, SLOT(itemRadiusChanged(double)));
+	connect(spnFraction, SIGNAL(valueChanged(double)), this, SLOT(itemFractionChanged(double)));
 }
 
 void CrownsThresholdItem::itemDeleteClicked() {
@@ -45,18 +49,25 @@ void CrownsThresholdItem::itemHeightChanged(double) {
 	emit itemUpdate(this);
 }
 
-void CrownsThresholdItem::itemWindowChanged(int) {
+void CrownsThresholdItem::itemFractionChanged(double) {
 	emit itemUpdate(this);
 }
 
-void CrownsThresholdItem::set(int index, double height, uint8_t window) {
+void CrownsThresholdItem::itemRadiusChanged(double) {
+	emit itemUpdate(this);
+}
+
+void CrownsThresholdItem::set(int index, double height, double fraction, double radius) {
 	m_index = index;
 	spnHeight->blockSignals(true);
-	spnWindow->blockSignals(true);
+	spnFraction->blockSignals(true);
+	spnRadius->blockSignals(true);
 	spnHeight->setValue(height);
-	spnWindow->setValue(window);
+	spnFraction->setValue(fraction);
+	spnRadius->setValue(radius);
 	spnHeight->blockSignals(false);
-	spnWindow->blockSignals(false);
+	spnFraction->blockSignals(false);
+	spnRadius->blockSignals(false);
 }
 
 int CrownsThresholdItem::index() const {
@@ -125,7 +136,7 @@ void CrownsThresholdsForm::sortItems() {
 	auto item = m_items.begin();
 	int i = 0;
 	for(auto &it : m_thresholds)
-		(*item++)->set(i++, it.first, it.second);
+		(*item++)->set(i++, std::get<0>(it), std::get<1>(it), std::get<2>(it));
 }
 
 std::vector<std::tuple<double, double, double> > CrownsThresholdsForm::thresholds() const {

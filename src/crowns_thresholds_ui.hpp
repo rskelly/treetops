@@ -13,7 +13,7 @@
 #include <QToolButton>
 #include <QWidget>
 
-#include "ui_tops_thresholds.h"
+#include "ui_crowns_thresholds.h"
 
 // Represents a single line in the crowns thresholds dialog.
 class CrownsThresholdItem : public QWidget {
@@ -36,8 +36,9 @@ public:
 
 public slots:
 	void itemDeleteClicked();
-	void itemWindowChanged(int);
 	void itemHeightChanged(double);
+	void itemFractionChanged(double);
+	void itemRadiusChanged(double);
 
 signals:
 	void itemUpdate(CrownsThresholdItem *item);
@@ -55,7 +56,7 @@ private:
 public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
-	std::list<TopsThresholdItem*> m_items;
+	std::list<CrownsThresholdItem*> m_items;
 	std::vector<std::tuple<double, double, double> > m_thresholds;
 	bool m_confirm;
 
