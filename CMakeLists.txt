@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.1)
 
+enable_language(C)
+enable_language(CXX)
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_CXX_EXTENSIONS OFF)
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
+
 set (WITH_GUI true CACHE BOOL "If true, will build the Qt GUI.")
 
 if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
-
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -D_GLIBCXX_PARALLEL")
 
 if (${APPLE})
 	if(${WITH_GUI})
@@ -39,18 +44,21 @@ else()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 endif()
 
-enable_language(C)
-enable_language(CXX)
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
-
 if(${WITH_GUI})
 	set (CMAKE_AUTOUIC ON)
 	set (CMAKE_AUTOMOC ON)
 	set (CMAKE_INCLUDE_CURRENT_DIR ON)
 	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc")
 endif()
+
+set (Boost_DEBUG OFF)
+set (Boost_USE_STATIC_LIBS OFF)
+set (Boost_USE_STATIC_RUNTIME OFF)
+
+find_package (OpenMP REQUIRED)
+find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
+find_package (GDAL 2.1 REQUIRED)
+set (GEOS_LIBRARY geos)
 
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
@@ -69,7 +77,7 @@ link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/ui_util.cpp src/crs_selector_ui.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
-	target_include_directories(ui_util PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	target_include_directories(ui_util PUBLIC libgeo/include include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 endif()
 
 
