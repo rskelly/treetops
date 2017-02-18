@@ -75,7 +75,7 @@
 
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="ProductLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E81">
-        <File Source="..\..\makefiles\Release\treetops.dll" />
+        <File Source="..\..\makefiles\libtreetops\Release\treetops.dll" />
       </Component>
       <Component Id="ProductComponent" Guid="0AFB8DFB-CB83-4C31-AA6B-42032B5EEA96">
         <File Source="..\..\makefiles\Release\treetops.exe">
