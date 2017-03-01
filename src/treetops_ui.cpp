@@ -249,6 +249,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	grpCrowns->setChecked(m_config.doCrowns);
 	txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
+	txtCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
+	btnCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
@@ -460,6 +462,8 @@ void TreetopsForm::crownsDoDatabaseChanged(bool state) {
 
 void TreetopsForm::crownsUpdateHeightsChanged(bool state) {
 	m_config.crownsUpdateHeights = state;
+	txtCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
+	btnCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
 	checkRun();
 }
 
