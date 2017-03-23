@@ -54,7 +54,6 @@ namespace geo {
 			// Reset the progress bars and status message.
 			void resetProgress();
 
-
 		public:
 			TreetopsForm();
 			void setupUi(QWidget *parent);

@@ -113,8 +113,8 @@ void TTWorkerThread::run() {
 	using namespace geo::treetops;
 	using namespace geo::treetops::config;
 
+	Treetops t;
 	try {
-		Treetops t;
 		t.setCallbacks(m_parent->m_callbacks);
 		const TreetopsConfig &config = m_parent->m_config;
 		const TreetopsCallbacks *cb = (TreetopsCallbacks *) m_parent->m_callbacks;
@@ -149,6 +149,11 @@ void TTWorkerThread::run() {
 	} catch (const std::exception &e) {
 		m_message = stripBoost(e.what());
 		m_isError = true;
+		try {
+			t.cleanup();
+		} catch(std::exception& ex) {
+			g_warn(ex.what());
+		}
 	}
 }
 
