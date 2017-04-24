@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QString>
 
 #include "geo.hpp"
 #include "raster.hpp"
