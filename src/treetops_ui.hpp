@@ -89,6 +89,8 @@ namespace geo {
 			void crownsCrownsDatabaseDriverChanged(QString);
 			void crownsDoDatabaseChanged(bool);
 			void crownsUpdateHeightsChanged(bool);
+			void crownsRemoveHolesChanged(bool);
+			void crownsRemoveDanglesChanged(bool);
 
 			void exitClicked();
 			void runClicked();

@@ -54,6 +54,8 @@ void _loadConfig(TreetopsConfig &config) {
 	config.crownsDoDatabase = qs.value("crownsDoDatabase", config.crownsDoDatabase).toBool();
 	config.crownsCrownsDatabase = qs.value("crownsCrownsDatabase", qstr(config.crownsCrownsDatabase)).toString().toStdString();
 	config.crownsCrownsDatabaseDriver = qs.value("crownsCrownsDatabaseDriver", qstr(config.crownsCrownsDatabaseDriver)).toString().toStdString();
+	config.crownsRemoveHoles = qs.value("crownsRemoveHoles", config.crownsRemoveHoles).toBool();
+	config.crownsRemoveDangles = qs.value("crownsRemoveDangles", config.crownsRemoveDangles).toBool();
 }
 
 // Save the config settings for this app.
@@ -89,6 +91,8 @@ void _saveConfig(TreetopsConfig &config) {
 	qs.setValue("crownsDoDatabase", config.crownsDoDatabase);
 	qs.setValue("crownsCrownsDatabase", qstr(config.crownsCrownsDatabase));
 	qs.setValue("crownsCrownsDatabaseDriver", qstr(config.crownsCrownsDatabaseDriver));
+	qs.setValue("crownsRemoveHoles", config.crownsRemoveHoles);
+	qs.setValue("crownsRemoveDangles", config.crownsRemoveDangles);
 }
 
 
@@ -270,7 +274,10 @@ void TreetopsForm::setupUi(QWidget *form) {
 	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
-
+	chkCrownsRemoveHoles->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	chkCrownsRemoveDangles->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
+	chkCrownsRemoveHoles->setChecked(m_config.crownsRemoveHoles);
+	chkCrownsRemoveDangles->setChecked(m_config.crownsRemoveDangles);
 	// Connect events
 	// -- section toggles
 	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
@@ -317,6 +324,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
 	connect(btnCrownsThresholds, SIGNAL(clicked()), this, SLOT(crownsThresholdsClicked()));
 
+	connect(chkCrownsRemoveHoles, SIGNAL(toggled(bool)), this, SLOT(crownsRemoveHolesChanged(bool)));
+	connect(chkCrownsRemoveDangles, SIGNAL(toggled(bool)), this, SLOT(crownsRemoveDanglesChanged(bool)));
+
 	// -- program buttons
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
 	connect(btnRun, SIGNAL(clicked()), this, SLOT(runClicked()));
@@ -347,6 +357,16 @@ void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
 
 void TreetopsForm::topsMaxNullsChanged(double maxNulls) {
 	m_config.topsMaxNulls = maxNulls;
+	checkRun();
+}
+
+void TreetopsForm::crownsRemoveHolesChanged(bool on) {
+	m_config.crownsRemoveHoles = on;
+	checkRun();
+}
+
+void TreetopsForm::crownsRemoveDanglesChanged(bool on) {
+	m_config.crownsRemoveDangles = on;
 	checkRun();
 }
 
