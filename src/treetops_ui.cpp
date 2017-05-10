@@ -111,6 +111,31 @@ void TreetopsCallbacks::statusCallback(const std::string &msg) const {
 }
 
 
+void TTClockThread::init(TreetopsForm *parent) {
+	m_parent = parent;
+}
+
+void TTClockThread::start() {
+	m_running = true;
+	QThread::start();
+}
+
+void TTClockThread::stop() {
+	m_running = false;
+}
+
+void TTClockThread::run() {
+	m_sw.reset();
+	m_sw.start();
+	while(m_running) {
+		m_parent->setRunTime(m_sw.time());
+		sleep(1);
+	}
+}
+
+TTClockThread::~TTClockThread() {
+}
+
 // WorkerThread implementation
 
 void TTWorkerThread::run() {
@@ -186,14 +211,22 @@ TreetopsForm::TreetopsForm() :
 	m_cancel(false),
 	m_form(nullptr),
 	m_callbacks(nullptr),
-	m_workerThread(nullptr) {
+	m_workerThread(nullptr),
+	m_clockThread(nullptr) {
 }
 
+void TreetopsForm::setRunTime(const std::string& time) {
+	lblRunTime->setText(QString(time.c_str()));
+}
 TreetopsForm::~TreetopsForm() {
 	_settings.setValue("last_dir", QVariant(m_last.path()));
 	_saveConfig(m_config);
 	delete m_form;
 	delete m_callbacks;
+	if(m_clockThread) {
+		m_clockThread->exit(0);
+		delete m_clockThread;
+	}
 	if (m_workerThread) {
 		m_workerThread->exit(0);
 		delete m_workerThread;
@@ -218,6 +251,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	m_callbacks = new TreetopsCallbacks();
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
+	m_clockThread = new TTClockThread();
+	m_clockThread->init(this);
 
 	QStringList rasterDrivers;
 	rasterDrivers << "";
@@ -592,13 +627,14 @@ void TreetopsForm::runClicked() {
 	btnRun->setEnabled(false);
 	btnCancel->setEnabled(true);
 	btnExit->setEnabled(false);
-	m_workerThread->init(this);
+	m_clockThread->start();
 	m_workerThread->start();
 	resetProgress();
 	checkRun();
 }
 
 void TreetopsForm::done() {
+	m_clockThread->stop();
 	if (m_workerThread->isError()) {
 		errorDialog(m_form, "Error", m_workerThread->message());
 		resetProgress();

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>757</width>
-    <height>713</height>
+    <height>603</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -736,7 +736,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>00:00</string>
+        <string>0:00:00</string>
        </property>
       </widget>
      </item>
@@ -833,6 +833,7 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>grpSmoothing</tabstop>
   <tabstop>cboSmoothMethod</tabstop>
   <tabstop>spnSmoothWindow</tabstop>
   <tabstop>spnSmoothSigma</tabstop>
@@ -853,6 +854,9 @@
   <tabstop>spnTopsTreetopsSRID</tabstop>
   <tabstop>btnTopsTreetopsSRID</tabstop>
   <tabstop>grpCrowns</tabstop>
+  <tabstop>txtCrownsThresholds</tabstop>
+  <tabstop>btnCrownsThresholds</tabstop>
+  <tabstop>chkCrownsUpdateHeights</tabstop>
   <tabstop>txtCrownsOriginalCHM</tabstop>
   <tabstop>btnCrownsOriginalCHM</tabstop>
   <tabstop>txtCrownsSmoothedCHM</tabstop>
@@ -862,14 +866,16 @@
   <tabstop>txtCrownsCrownsRaster</tabstop>
   <tabstop>cboCrownsCrownsRasterDriver</tabstop>
   <tabstop>btnCrownsCrownsRaster</tabstop>
+  <tabstop>chkCrownsDoDatabase</tabstop>
   <tabstop>txtCrownsCrownsDatabase</tabstop>
   <tabstop>cboCrownsCrownsDatabaseDriver</tabstop>
   <tabstop>btnCrownsCrownsDatabase</tabstop>
+  <tabstop>chkCrownsRemoveHoles</tabstop>
+  <tabstop>chkCrownsRemoveDangles</tabstop>
+  <tabstop>btnHelp</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnCancel</tabstop>
   <tabstop>btnExit</tabstop>
-  <tabstop>btnHelp</tabstop>
-  <tabstop>grpSmoothing</tabstop>
  </tabstops>
  <resources/>
  <connections/>

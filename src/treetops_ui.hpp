@@ -33,6 +33,7 @@ namespace geo {
 	namespace ui {
 
 		class TTWorkerThread;
+		class TTClockThread;
 
 		class TreetopsForm: public QObject, public Ui::TreetopsForm {
 			friend class TTWorkerThread;
@@ -42,6 +43,7 @@ namespace geo {
 			QWidget *m_form;
 			geo::util::Callbacks *m_callbacks;
 			TTWorkerThread *m_workerThread;
+			TTClockThread *m_clockThread;
 			QDir m_last;
 			TreetopsConfig m_config;
 
@@ -58,6 +60,7 @@ namespace geo {
 			TreetopsForm();
 			void setupUi(QWidget *parent);
 			void show();
+			void setRunTime(const std::string& time);
 			virtual ~TreetopsForm();
 
 		public slots:
@@ -126,6 +129,22 @@ namespace geo {
 			virtual ~TTWorkerThread();
 			std::string message() const;
 			bool isError() const;
+		};
+
+		class TTClockThread: public QThread {
+		private:
+			TreetopsForm *m_parent;
+			geo::util::Stopwatch m_sw;
+			bool m_running;
+
+			void run();
+
+		public:
+			void init(TreetopsForm *parent);
+			virtual ~TTClockThread();
+			std::string time();
+			void start();
+			void stop();
 		};
 
 	}
