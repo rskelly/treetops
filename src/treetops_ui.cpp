@@ -579,14 +579,18 @@ void TreetopsForm::crownsTreetopsDatabaseChanged(QString file) {
 }
 
 void TreetopsForm::crownsCrownsRasterChanged(QString file) {
+	std::string oldExt = Util::extension(m_config.crownsCrownsRaster);
 	m_config.crownsCrownsRaster = file.toStdString();
-	cboCrownsCrownsRasterDriver->setCurrentText("");
+	if(oldExt != Util::extension(m_config.crownsCrownsRaster))
+		cboCrownsCrownsRasterDriver->setCurrentText("");
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsDatabaseChanged(QString file) {
+	std::string oldExt = Util::extension(m_config.crownsCrownsDatabase);
 	m_config.crownsCrownsDatabase = file.toStdString();
-	cboCrownsCrownsDatabaseDriver->setCurrentText("");
+	if(oldExt != Util::extension(m_config.crownsCrownsDatabase))
+		cboCrownsCrownsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -607,8 +611,10 @@ void TreetopsForm::topsSmoothedCHMChanged(QString file) {
 }
 
 void TreetopsForm::topsTreetopsDatabaseChanged(QString file) {
+	std::string oldExt = Util::extension(m_config.topsTreetopsDatabase);
 	m_config.topsTreetopsDatabase = file.toStdString();
-	cboTopsTreetopsDatabaseDriver->setCurrentText("");
+	if(oldExt != Util::extension(m_config.topsTreetopsDatabase))
+		cboTopsTreetopsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -628,8 +634,10 @@ void TreetopsForm::smoothOriginalCHMChanged(QString file) {
 }
 
 void TreetopsForm::smoothSmoothedCHMChanged(QString file) {
+	std::string oldExt = Util::extension(m_config.smoothSmoothedCHM);
 	m_config.smoothSmoothedCHM = file.toStdString();
-	cboSmoothSmoothedCHMDriver->setCurrentText("");
+	if(oldExt != Util::extension(m_config.smoothSmoothedCHM))
+		cboSmoothSmoothedCHMDriver->setCurrentText("");
 	checkRun();
 }
 
