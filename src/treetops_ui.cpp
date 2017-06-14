@@ -145,10 +145,16 @@ void TTWorkerThread::run() {
 
 	Treetops t;
 	try {
+		// Reset error state.
+		reset();
+
+		// Set the pointer to the callback object.
 		t.setCallbacks(m_parent->m_callbacks);
+
 		const TreetopsConfig &config = m_parent->m_config;
 		const TreetopsCallbacks *cb = (TreetopsCallbacks *) m_parent->m_callbacks;
 
+		// Calculate the number of steps to complete the job(s).
 		int steps = (((int)config.doSmoothing) + ((int)config.doTops) + ((int)config.doCrowns)) * 2;
 		int step = 0;
 
@@ -189,6 +195,10 @@ void TTWorkerThread::run() {
 
 void TTWorkerThread::init(TreetopsForm *parent) {
 	m_parent = parent;
+	reset();
+}
+
+void TTWorkerThread::reset() {
 	m_isError = false;
 	m_message.clear();
 }
