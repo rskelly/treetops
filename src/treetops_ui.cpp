@@ -435,12 +435,15 @@ void TreetopsForm::smoothOriginalCHMClicked() {
 }
 
 void TreetopsForm::smoothSmoothedCHMClicked() {
+	std::string oldExt = Util::extension(m_config.smoothSmoothedCHM);
 	getOutputFile(m_form, "Smoothed CHM", m_last, ALL_PATTERN, m_config.smoothSmoothedCHM);
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	m_config.topsSmoothedCHM = m_config.smoothSmoothedCHM;
 	txtTopsSmoothedCHM->setText(qstr(m_config.topsSmoothedCHM));
 	m_config.crownsSmoothedCHM = m_config.smoothSmoothedCHM;
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
+	if(oldExt != Util::extension(m_config.smoothSmoothedCHM))
+		cboSmoothSmoothedCHMDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -458,10 +461,13 @@ void TreetopsForm::topsSmoothedCHMClicked() {
 }
 
 void TreetopsForm::topsTreetopsDatabaseClicked() {
+	std::string oldExt = Util::extension(m_config.topsTreetopsDatabase);
 	getOutputFile(m_form, "Treetops Database", m_last, ALL_PATTERN, m_config.topsTreetopsDatabase);
 	txtTopsTreetopsDatabase->setText(qstr(m_config.topsTreetopsDatabase));
 	m_config.crownsTreetopsDatabase = m_config.topsTreetopsDatabase;
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
+	if(oldExt != Util::extension(m_config.topsTreetopsDatabase))
+		cboTopsTreetopsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -501,8 +507,11 @@ void TreetopsForm::crownsTreetopsDatabaseClicked() {
 }
 
 void TreetopsForm::crownsCrownsRasterClicked() {
+	std::string oldExt = Util::extension(m_config.crownsCrownsRaster);
 	getOutputFile(m_form, "Crowns Raster", m_last, ALL_PATTERN, m_config.crownsCrownsRaster);
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
+	if(oldExt != Util::extension(m_config.crownsCrownsRaster))
+		cboCrownsCrownsRasterDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -513,8 +522,11 @@ void TreetopsForm::crownsCrownsRasterDriverChanged(QString text) {
 
 
 void TreetopsForm::crownsCrownsDatabaseClicked() {
+	std::string oldExt = Util::extension(m_config.crownsCrownsDatabase);
 	getOutputFile(m_form, "Crowns Database", m_last, ALL_PATTERN, m_config.crownsCrownsDatabase);
 	txtCrownsCrownsDatabase->setText(qstr(m_config.crownsCrownsDatabase));
+	if(oldExt != Util::extension(m_config.crownsCrownsDatabase))
+		cboCrownsCrownsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
