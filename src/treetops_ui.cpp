@@ -22,7 +22,7 @@ using namespace geo::treetops::config;
 QSettings _settings("Treetops", "dijital.ca");
 
 // Load the config settings for this app.
-void _loadConfig(TreetopsConfig &config) {
+static void _loadConfig(TreetopsConfig &config) {
 	QSettings qs("TreetopsConfig", "dijital.ca");
 	config.srid = qs.value("srid", config.srid).toInt();
 	config.buildIndex = qs.value("buildIndex", config.buildIndex).toBool();
@@ -59,7 +59,7 @@ void _loadConfig(TreetopsConfig &config) {
 }
 
 // Save the config settings for this app.
-void _saveConfig(TreetopsConfig &config) {
+static void _saveConfig(TreetopsConfig &config) {
 	QSettings qs("TreetopsConfig", "dijital.ca");
 	qs.setValue("srid", config.srid);
 	qs.setValue("buildIndex", config.buildIndex);
@@ -570,11 +570,13 @@ void TreetopsForm::crownsTreetopsDatabaseChanged(QString file) {
 
 void TreetopsForm::crownsCrownsRasterChanged(QString file) {
 	m_config.crownsCrownsRaster = file.toStdString();
+	cboCrownsCrownsRasterDriver->setCurrentText("");
 	checkRun();
 }
 
 void TreetopsForm::crownsCrownsDatabaseChanged(QString file) {
 	m_config.crownsCrownsDatabase = file.toStdString();
+	cboCrownsCrownsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -596,6 +598,7 @@ void TreetopsForm::topsSmoothedCHMChanged(QString file) {
 
 void TreetopsForm::topsTreetopsDatabaseChanged(QString file) {
 	m_config.topsTreetopsDatabase = file.toStdString();
+	cboTopsTreetopsDatabaseDriver->setCurrentText("");
 	checkRun();
 }
 
@@ -616,7 +619,7 @@ void TreetopsForm::smoothOriginalCHMChanged(QString file) {
 
 void TreetopsForm::smoothSmoothedCHMChanged(QString file) {
 	m_config.smoothSmoothedCHM = file.toStdString();
-	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(geo::raster::Raster::getDriverForFilename(file.toStdString())));
+	cboSmoothSmoothedCHMDriver->setCurrentText("");
 	checkRun();
 }
 
