@@ -243,7 +243,7 @@ TreetopsForm::~TreetopsForm() {
 	}
 }
 
-void TreetopsForm::show() {
+void TreetopsForm::showForm() {
 	if(!m_form) {
 		m_form = new QWidget();
 		this->setupUi(m_form);
@@ -276,6 +276,12 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	QStringList smoothMethods;
 	smoothMethods << "Gaussian";
+
+#ifdef _MSC_VER
+	lblCrownsRemove->setVisible(false);
+	chkCrownsRemoveDangles->setVisible(false);
+	chkCrownsRemoveHoles->setVisible(false);
+#endif
 
 	// Populate fields with saved or default values.
 	// -- smoothing

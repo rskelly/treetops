@@ -78,7 +78,7 @@ int runWithGui(int argc, char **argv) {
 
 	TTApplication q(argc, argv);
 	geo::ui::TreetopsForm f;
-	f.show();
+	f.showForm();
 	return q.exec();
 #else
 	std::cerr << "GUI not enabled." << std::endl;

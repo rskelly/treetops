@@ -35,7 +35,7 @@ namespace geo {
 		class TTWorkerThread;
 		class TTClockThread;
 
-		class TreetopsForm: public QObject, public Ui::TreetopsForm {
+		class TreetopsForm: public QDialog, public Ui::TreetopsForm {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
@@ -59,7 +59,7 @@ namespace geo {
 		public:
 			TreetopsForm();
 			void setupUi(QWidget *parent);
-			void show();
+			void showForm();
 			void setRunTime(const std::string& time);
 			virtual ~TreetopsForm();
 
