@@ -16,8 +16,6 @@ endif()
 
 message(STATUS "WITH_GUI: ${WITH_GUI}")
 
-set (GEOS_LIBRARY geos)
-
 if (${APPLE})
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
@@ -43,10 +41,12 @@ elseif(${WIN32})
 	set (libLAS_LIBRARY_DIRS "C:\\dev\\gisinternals\\lib")
 else()
 	if(${WITH_GUI})
-		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
+		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
-	option(CGAL_DISABLE_ROUNDING_MATH_CHECK "Disable rounding math check in CGAL. This permits Valgrind to run." ON)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+	include_directories (BEFORE SYSTEM /usr/include/eigen3)
+	include_directories (BEFORE SYSTEM /opt/include)
+	link_directories (BEFORE SYSTEM /opt/lib)
 endif()
 
 if(${WITH_GUI})
@@ -63,6 +63,9 @@ set (Boost_USE_STATIC_RUNTIME OFF)
 find_package (OpenMP REQUIRED)
 find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2.1 REQUIRED)
+
+find_library(GEOS_LIBRARY geos)
+message (STATUS "GEOS: ${GEOS_LIBRARY}")
 
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
