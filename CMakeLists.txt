@@ -44,7 +44,7 @@ else()
 		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-	include_directories (BEFORE SYSTEM include build/ui_util_autogen/include /usr/include/eigen3  /opt/include)
+	include_directories (BEFORE SYSTEM include build/ui_util_autogen/include /usr/include/eigen3 /opt/include)
 	link_directories (BEFORE SYSTEM /opt/lib)
 endif()
 
