@@ -47,7 +47,7 @@ namespace geo {
 					const std::string &filter, std::string &filename);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getTopsThresholds(QWidget *form, std::vector<std::tuple<double, uint8_t> > &thresholds);
+			void getTopsThresholds(QWidget *form, std::vector<std::tuple<double, int> > &thresholds);
 
 			void getCrownsThresholds(QWidget *form, std::vector<std::tuple<double, double, double> > &thresholds);
 		}

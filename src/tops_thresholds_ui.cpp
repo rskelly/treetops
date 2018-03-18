@@ -43,7 +43,7 @@ void TopsThresholdItem::itemWindowChanged(int) {
 	emit itemUpdate(this);
 }
 
-void TopsThresholdItem::set(int index, double height, uint8_t window) {
+void TopsThresholdItem::set(int index, double height, int window) {
 	m_index = index;
 	spnHeight->blockSignals(true);
 	spnWindow->blockSignals(true);
@@ -61,7 +61,7 @@ double TopsThresholdItem::height() const {
 	return spnHeight->value();
 }
 
-uint8_t TopsThresholdItem::window() const {
+int TopsThresholdItem::window() const {
 	return spnWindow->value();
 }
 
@@ -92,7 +92,7 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void TopsThresholdsForm::setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds) {
+void TopsThresholdsForm::setThresholds(const std::vector<std::tuple<double, int> > &thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 }
@@ -118,7 +118,7 @@ void TopsThresholdsForm::sortItems() {
 		(*item++)->set(i++, std::get<0>(it), std::get<1>(it));
 }
 
-std::vector<std::tuple<double, uint8_t> > TopsThresholdsForm::thresholds() const {
+std::vector<std::tuple<double, int> > TopsThresholdsForm::thresholds() const {
 	return m_thresholds;
 }
 

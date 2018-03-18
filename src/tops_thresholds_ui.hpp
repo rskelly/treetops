@@ -26,9 +26,9 @@ public:
 	QSpinBox *spnWindow;
 	QToolButton *btnDelete;
 	TopsThresholdItem(QWidget *parent = 0);
-	void set(int index, double height, uint8_t window);
+	void set(int index, double height, int window);
 	double height() const;
-	uint8_t window() const;
+	int window() const;
 	bool operator<(const TopsThresholdItem &other) const;
 	int index() const;
 
@@ -54,12 +54,12 @@ public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
-	std::vector<std::tuple<double, uint8_t> > m_thresholds;
+	std::vector<std::tuple<double, int> > m_thresholds;
 	bool m_confirm;
 
 	TopsThresholdsForm();
-	void setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds);
-	std::vector<std::tuple<double, uint8_t> > thresholds() const;
+	void setThresholds(const std::vector<std::tuple<double, int> > &thresholds);
+	std::vector<std::tuple<double, int> > thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~TopsThresholdsForm();
