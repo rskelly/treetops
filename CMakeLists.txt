@@ -44,7 +44,8 @@ else()
 		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-	include_directories (BEFORE SYSTEM include build/ui_util_autogen/include /usr/include/eigen3 /opt/include)
+	include_directories (BEFORE SYSTEM include libtreetops/include 
+		libgeo/include libgeo/ann/include build/ui_util_autogen/include /usr/include/eigen3 /opt/include)
 	link_directories (BEFORE SYSTEM /opt/lib)
 endif()
 
@@ -64,7 +65,7 @@ find_package (Boost COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2.1 REQUIRED)
 
 find_library(GEOS_LIBRARY geos)
-message (STATUS "GEOS: ${GEOS_LIBRARY}")
+
 
 if(${WITH_GUI})
 	find_package(Qt5Widgets REQUIRED)
@@ -75,7 +76,7 @@ add_subdirectory (libtreetops)
 add_subdirectory (libgeo)
 
 # Configure directories
-link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
+link_directories(. ./libgeo/build ./libtreetops/build ${Boost_LIBRARY_DIRS} ${LIB_PATH})
 
 
 # Build support libraries ############################################################################################
@@ -83,7 +84,7 @@ link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
 if(${WITH_GUI})
 	add_library (ui_util STATIC src/ui_util.cpp src/crs_selector_ui.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
 	target_link_libraries(ui_util Qt5::Widgets)
-	target_include_directories(ui_util PUBLIC libgeo/include ui_util_autogen/include include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	target_include_directories(ui_util PUBLIC ui_util_autogen/include include ${Boost_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 endif()
 
 
@@ -92,11 +93,11 @@ endif()
 if(${WITH_GUI})
 	add_executable (treetops-app src/treetops.cpp src/treetops_ui.cpp)
 	target_include_directories(treetops-app PUBLIC libgeo/include include ${INC_PATH} ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
-	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util)
+	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util geo geoutil)
 else()
 	add_executable (treetops-app src/treetops.cpp src/treetops_ui.hpp)
 	target_include_directories(treetops-app PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
-	target_link_libraries (treetops-app PUBLIC treetops)
+	target_link_libraries (treetops-app PUBLIC treetops geo geoutil)
 endif()
 set_target_properties (treetops-app PROPERTIES OUTPUT_NAME treetops)
 
