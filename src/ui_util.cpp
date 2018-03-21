@@ -11,6 +11,7 @@
 #include "geo.hpp"
 
 using namespace geo::ui::util;
+using namespace geo::treetops::config;
 
 QString geo::ui::util::qstr(const std::string &str) {
 	return QString(str.c_str());
@@ -56,7 +57,7 @@ void geo::ui::util::getOutputFile(QWidget *form, const std::string &title, QDir 
 	}
 }
 
-void geo::ui::util::getTopsThresholds(QWidget *form, std::vector<std::tuple<double, int> > &thresholds) {
+void geo::ui::util::getTopsThresholds(QWidget *form, std::vector<TopThreshold> &thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);
@@ -66,7 +67,7 @@ void geo::ui::util::getTopsThresholds(QWidget *form, std::vector<std::tuple<doub
 		thresholds = tf.thresholds();
 }
 
-void geo::ui::util::getCrownsThresholds(QWidget *form, std::vector<std::tuple<double, double, double> > &thresholds) {
+void geo::ui::util::getCrownsThresholds(QWidget *form, std::vector<CrownThreshold> &thresholds) {
 	CrownsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

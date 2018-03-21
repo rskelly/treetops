@@ -7,7 +7,10 @@
 
 #include <iostream>
 
+#include "treetops.hpp"
 #include "crowns_thresholds_ui.hpp"
+
+using namespace geo::treetops::config;
 
 CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
 	QWidget(parent),
@@ -86,7 +89,7 @@ double CrownsThresholdItem::radius() const {
 	return spnRadius->value();
 }
 
-bool CrownsThresholdItem::operator<(const CrownsThresholdItem &other) const {
+bool CrownsThresholdItem::operator<(const CrownsThresholdItem& other) const {
 	return height() < other.height();
 }
 
@@ -113,7 +116,7 @@ void CrownsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void CrownsThresholdsForm::setThresholds(const std::vector<std::tuple<double, double, double> > &thresholds) {
+void CrownsThresholdsForm::setThresholds(const std::vector<CrownThreshold>& thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 }
@@ -135,16 +138,16 @@ void CrownsThresholdsForm::sortItems() {
 	}
 	auto item = m_items.begin();
 	int i = 0;
-	for(auto &it : m_thresholds)
-		(*item++)->set(i++, std::get<0>(it), std::get<1>(it), std::get<2>(it));
+	for(const CrownThreshold& c : m_thresholds)
+		(*item++)->set(i++, c.threshold, c.fraction, c.radius);
 }
 
-std::vector<std::tuple<double, double, double> > CrownsThresholdsForm::thresholds() const {
+std::vector<CrownThreshold> CrownsThresholdsForm::thresholds() const {
 	return m_thresholds;
 }
 
 void CrownsThresholdsForm::btnAddItemClicked() {
-	m_thresholds.push_back(std::make_tuple(0, 0, 0));
+	m_thresholds.emplace_back(0, 0, 0);
 	sortItems();
 	updateButtons();
 }
@@ -158,7 +161,10 @@ void CrownsThresholdsForm::itemDelete(CrownsThresholdItem *item) {
 }
 
 void CrownsThresholdsForm::itemUpdate(CrownsThresholdItem *item) {
-	m_thresholds[item->index()] = std::make_tuple(item->height(), item->fraction(), item->radius());
+	CrownThreshold& c = m_thresholds[item->index()];
+	c.threshold = item->height();
+	c.fraction = item->fraction();
+	c.radius = item->radius();
 	sortItems();
 	updateButtons();
 }
@@ -170,8 +176,8 @@ void CrownsThresholdsForm::updateButtons() {
 bool CrownsThresholdsForm::valid() const {
 	if(m_thresholds.empty())
 		return false;
-	for(const auto &it : m_thresholds) {
-		if(std::get<0>(it) <= 0 || std::get<1>(it) <= 0 || std::get<2>(it) <= 0)
+	for(const CrownThreshold& c : m_thresholds) {
+		if(c.fraction <= 0 || c.radius <= 0 || c.threshold <= 0)
 			return false;
 	}
 	return true;

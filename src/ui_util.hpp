@@ -16,6 +16,8 @@
 #include <QMessageBox>
 #include <QDir>
 
+#include "treetops.hpp"
+
 #define VECTOR_PATTERN "Vector Files (*.sqlite *.shp)"
 #define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
 #define ALL_PATTERN "All Files (*)"
@@ -47,9 +49,9 @@ namespace geo {
 					const std::string &filter, std::string &filename);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getTopsThresholds(QWidget *form, std::vector<std::tuple<double, int> > &thresholds);
+			void getTopsThresholds(QWidget *form, std::vector<geo::treetops::config::TopThreshold> &thresholds);
 
-			void getCrownsThresholds(QWidget *form, std::vector<std::tuple<double, double, double> > &thresholds);
+			void getCrownsThresholds(QWidget *form, std::vector<geo::treetops::config::CrownThreshold> &thresholds);
 		}
 
 	}

@@ -13,6 +13,7 @@
 #include <QToolButton>
 #include <QWidget>
 
+#include "treetops.hpp"
 #include "ui_crowns_thresholds.h"
 
 // Represents a single line in the crowns thresholds dialog.
@@ -57,12 +58,12 @@ public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<CrownsThresholdItem*> m_items;
-	std::vector<std::tuple<double, double, double> > m_thresholds;
+	std::vector<geo::treetops::config::CrownThreshold> m_thresholds;
 	bool m_confirm;
 
 	CrownsThresholdsForm();
-	void setThresholds(const std::vector<std::tuple<double, double, double> > &thresholds);
-	std::vector<std::tuple<double, double, double> > thresholds() const;
+	void setThresholds(const std::vector<geo::treetops::config::CrownThreshold> &thresholds);
+	std::vector<geo::treetops::config::CrownThreshold> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~CrownsThresholdsForm();

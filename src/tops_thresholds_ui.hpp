@@ -13,6 +13,7 @@
 #include <QToolButton>
 #include <QWidget>
 
+#include "treetops.hpp"
 #include "ui_tops_thresholds.h"
 
 // Represents a single line in the tops thresholds dialog.
@@ -54,12 +55,12 @@ public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
-	std::vector<std::tuple<double, int> > m_thresholds;
+	std::vector<geo::treetops::config::TopThreshold> m_thresholds;
 	bool m_confirm;
 
 	TopsThresholdsForm();
-	void setThresholds(const std::vector<std::tuple<double, int> > &thresholds);
-	std::vector<std::tuple<double, int> > thresholds() const;
+	void setThresholds(const std::vector<geo::treetops::config::TopThreshold> &thresholds);
+	std::vector<geo::treetops::config::TopThreshold> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~TopsThresholdsForm();

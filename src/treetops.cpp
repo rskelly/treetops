@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 					g_argerr("Too few parameters for -tt.");
 				float height = atof(argv[++i]);
 				uint8_t window = atoi(argv[++i]);
-				config.topsThresholds.push_back(std::make_pair(height, window));
+				config.topsThresholds.emplace_back(height, window);
 				config.doTops = true;
 			} else if (arg == "-td") {
 				config.topsTreetopsDatabase = argv[++i];
