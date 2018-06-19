@@ -1,20 +1,25 @@
 cmake_minimum_required(VERSION 3.1)
 
-enable_language(C)
-enable_language(CXX)
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
-set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D_GLIBCXX_PARALLEL")
-
 set (WITH_GUI true CACHE BOOL "If true, will build the Qt GUI.")
 
 if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
 
-message(STATUS "WITH_GUI: ${WITH_GUI}")
+enable_language(C)
+enable_language(CXX)
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_CXX_EXTENSIONS OFF)
+#set (CMAKE_POSITION_INDEPENDENT_CODE ON) # Qt complains if this is set and not -fPIC below...
+set (CMAKE_CXX_FLAGS "-fPIC -lpthread -fopenmp -Wno-unknown-pragmas -Wall -D_GLIBCXX_PARALLEL")
+
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set (CMAKE_INSTALL_RPATH "/opt/lib;/usr/local/lib")
+set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set (CMAKE_CXX_COMPILER_LAUNCHER ccache)
 
 if (${APPLE})
 	if(${WITH_GUI})
@@ -41,7 +46,7 @@ elseif(${WIN32})
 	set (libLAS_LIBRARY_DIRS "C:\\dev\\gisinternals\\lib")
 else()
 	if(${WITH_GUI})
-		#set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
+		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 	include_directories (BEFORE SYSTEM include build/ui_util_autogen/include /usr/include/eigen3  /opt/include)
@@ -75,6 +80,8 @@ add_subdirectory (libtreetops)
 add_subdirectory (libgeo)
 
 # Configure directories
+
+include_directories(./libtreetops/include ./build/ui_util_autogen/include)
 link_directories(. ${Boost_LIBRARY_DIRS} ${LIB_PATH})
 
 
@@ -95,7 +102,7 @@ if(${WITH_GUI})
 	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets treetops ui_util)
 else()
 	add_executable (treetops-app src/treetops.cpp src/treetops_ui.hpp)
-	target_include_directories(treetops-app PUBLIC libgeo/include include ${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	target_include_directories(treetops-app PUBLIC libgeo/include include)
 	target_link_libraries (treetops-app PUBLIC treetops)
 endif()
 set_target_properties (treetops-app PROPERTIES OUTPUT_NAME treetops)
