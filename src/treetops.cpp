@@ -152,18 +152,19 @@ int main(int argc, char **argv) {
 		}
 
 		Treetops tu;
+		bool cancel = false;
 
 		// Create tree tops.
 		if (config.doSmoothing)
-			tu.smooth(config);
+			tu.smooth(config, cancel);
 
 		// Create treetops.
 		if (config.doTops)
-			tu.treetops(config);
+			tu.treetops(config, cancel);
 
 		// Create crowns.
 		if (config.doCrowns)
-			tu.treecrowns(config);
+			tu.treecrowns(config, cancel);
 
 		if (!config.doTops && !config.doSmoothing && !config.doCrowns)
 			return runWithGui(argc, argv);

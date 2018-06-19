@@ -1,10 +1,10 @@
 #ifndef __TREETOPS_UI_HPP__
 #define __TREETOPS_UI_HPP__
 
-#include <QWidget>
-#include <QMessageBox>
-#include <QtCore>
-#include <QDir>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QDir>
+#include <QtCore/QThread>
 
 #include "util.hpp"
 #include "treetops.hpp"

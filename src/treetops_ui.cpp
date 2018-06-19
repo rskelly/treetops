@@ -1,11 +1,12 @@
-#include <QWidget>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QDir>
-#include <QSettings>
-#include <QDesktopServices>
-#include <QUrl>
-#include <QString>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QDir>
+#include <QtCore/QSettings>
+#include <QtCore/QUrl>
+#include <QtCore/QString>
+#include <QtCore/QThread>
+#include <QtGui/QDesktopServices>
 
 #include "geo.hpp"
 #include "raster.hpp"
@@ -163,19 +164,19 @@ void TTWorkerThread::run() {
 
 		if (config.doSmoothing) {
 			cb->overallCallback((float) ++step / steps);
-			t.smooth(config, &(m_parent->m_cancel));
+			t.smooth(config, m_parent->m_cancel);
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doTops) {
 			cb->overallCallback((float) ++step / steps);
-			t.treetops(config, &(m_parent->m_cancel));
+			t.treetops(config, m_parent->m_cancel);
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doCrowns) {
 			cb->overallCallback((float) ++step / steps);
-			t.treecrowns(config, &(m_parent->m_cancel));
+			t.treecrowns(config, m_parent->m_cancel);
 			cb->overallCallback((float) ++step / steps);
 		}
 
