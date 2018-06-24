@@ -165,7 +165,7 @@
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
-          <property name="clearButtonEnabled" stdset="0">
+          <property name="clearButtonEnabled">
            <bool>false</bool>
           </property>
          </widget>
@@ -194,7 +194,7 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="currentText" stdset="0">
+          <property name="currentText">
            <string/>
           </property>
           <property name="currentIndex">
@@ -474,7 +474,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="7">
+        <item row="0" column="9">
          <widget class="QToolButton" name="btnCrownsThresholds">
           <property name="text">
            <string>...</string>
@@ -488,7 +488,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="7">
+        <item row="1" column="9">
          <widget class="QToolButton" name="btnCrownsOriginalCHM">
           <property name="enabled">
            <bool>false</bool>
@@ -498,7 +498,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="7">
+        <item row="2" column="9">
          <widget class="QToolButton" name="btnCrownsSmoothedCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -511,7 +511,7 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="7">
+        <item row="5" column="9">
          <widget class="QToolButton" name="btnCrownsCrownsDatabase">
           <property name="enabled">
            <bool>false</bool>
@@ -530,7 +530,7 @@
         <item row="4" column="6">
          <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
         </item>
-        <item row="3" column="7">
+        <item row="3" column="9">
          <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -543,7 +543,7 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="7">
+        <item row="4" column="9">
          <widget class="QToolButton" name="btnCrownsCrownsRaster">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -571,16 +571,6 @@
           <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2" colspan="5">
-         <widget class="QLineEdit" name="txtCrownsTreetopsDatabase">
           <property name="mouseTracking">
            <bool>false</bool>
           </property>
@@ -703,6 +693,16 @@
           </property>
           <property name="text">
            <string>Dangles</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2" colspan="5">
+         <widget class="QLineEdit" name="txtCrownsTreetopsDatabase">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
