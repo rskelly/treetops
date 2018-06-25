@@ -92,7 +92,7 @@ endif()
 # Build programs #####################################################################################################
 
 if(${WITH_GUI})
-	add_executable (treetops-app src/treetops.cpp src/treetops_ui.cpp)
+	add_executable (treetops-app src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
 	target_include_directories(treetops-app PUBLIC libgeo/include include ${INC_PATH} 
 		${Qt5_DIR}/include ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 	target_link_libraries (treetops-app PUBLIC Qt5::Gui Qt5::Core Qt5::Widgets geoutil georaster treetops ui_util)

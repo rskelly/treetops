@@ -1,13 +1,14 @@
 #ifndef __TREETOPS_UI_HPP__
 #define __TREETOPS_UI_HPP__
 
-#include <QWidget>
-#include <QMessageBox>
-#include <QtCore>
-#include <QDir>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QDir>
+#include <QtCore/QThread>
 
 #include "util.hpp"
 #include "treetops.hpp"
+#include "settings.hpp"
 #include "ui_treetops.h"
 
 using namespace geo::treetops::config;
@@ -44,8 +45,10 @@ namespace geo {
 			geo::util::Callbacks *m_callbacks;
 			TTWorkerThread *m_workerThread;
 			TTClockThread *m_clockThread;
-			QDir m_last;
 			TreetopsConfig m_config;
+
+			Settings m_settings;
+			std::string m_settingsFile;
 
 			// Check if the program is runnable; set buttons accordingly.
 			void checkRun();
@@ -61,9 +64,13 @@ namespace geo {
 			void setupUi(QWidget *parent);
 			void showForm();
 			void setRunTime(const std::string& time);
+			void loadSettings();
 			virtual ~TreetopsForm();
 
 		public slots:
+			void settingsFileClicked();
+			void settingsFileChanged(QString);
+
 			void doSmoothChanged(bool);
 			void doTopsChanged(bool);
 			void doCrownsChanged(bool);

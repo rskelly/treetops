@@ -38,6 +38,10 @@ int runWithGui(int argc, char **argv) {
 		}
 	};
 
+	QCoreApplication::setOrganizationName("Rob Skelly");
+	QCoreApplication::setOrganizationDomain("dijital.ca");
+	QCoreApplication::setApplicationName("Treetops");
+
 	TTApplication q(argc, argv);
 	geo::ui::TreetopsForm f;
 	f.showForm();
