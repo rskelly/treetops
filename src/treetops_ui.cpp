@@ -1,11 +1,11 @@
-#include <QWidget>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QDir>
-#include <QSettings>
-#include <QDesktopServices>
-#include <QUrl>
-#include <QString>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QDir>
+#include <QtCore/QSettings>
+#include <QtCore/QUrl>
+#include <QtCore/QString>
+#include <QtGui/QDesktopServices>
 
 #include "geo.hpp"
 #include "raster.hpp"

@@ -2,6 +2,9 @@
 #include <vector>
 #include <map>
 
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QMessageBox>
+
 #include "geo.hpp"
 #include "treetops.hpp"
 
