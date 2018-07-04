@@ -9,11 +9,11 @@
 
 #include "crowns_thresholds_ui.hpp"
 
-CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
+CrownsThresholdItem::CrownsThresholdItem(QWidget* parent) :
 	QWidget(parent),
 	m_index(0) {
 	setFixedHeight(30);
-	QGridLayout *layout = new QGridLayout();
+	QGridLayout* layout = new QGridLayout();
 	spnHeight = new QDoubleSpinBox();
 	spnHeight->setDecimals(2);
 	spnHeight->setMinimum(0);
@@ -86,7 +86,7 @@ double CrownsThresholdItem::radius() const {
 	return spnRadius->value();
 }
 
-bool CrownsThresholdItem::operator<(const CrownsThresholdItem &other) const {
+bool CrownsThresholdItem::operator<(const CrownsThresholdItem& other) const {
 	return height() < other.height();
 }
 
@@ -101,7 +101,7 @@ CrownsThresholdsForm::CrownsThresholdsForm() :
 CrownsThresholdsForm::~CrownsThresholdsForm() {
 }
 
-void CrownsThresholdsForm::setupUi(QWidget *form) {
+void CrownsThresholdsForm::setupUi(QWidget* form) {
 	Ui::CrownsThresholdsForm::setupUi(form);
 	m_form = form;
 	scrollLayout = new QVBoxLayout();
@@ -113,21 +113,21 @@ void CrownsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void CrownsThresholdsForm::setThresholds(const std::vector<std::tuple<double, double, double> > &thresholds) {
+void CrownsThresholdsForm::setThresholds(const std::vector<std::tuple<double, double, double> >& thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 }
 
 void CrownsThresholdsForm::sortItems() {
 	while(m_items.size() > m_thresholds.size()) {
-		CrownsThresholdItem *item = m_items.back(); m_items.pop_back();
+		CrownsThresholdItem* item = m_items.back(); m_items.pop_back();
 		scrollLayout->removeWidget(item);
 		disconnect(item, SIGNAL(itemDelete(CrownsThresholdItem*)), this, SLOT(itemDelete(CrownsThresholdItem*)));
 		disconnect(item, SIGNAL(itemUpdate(CrownsThresholdItem*)), this, SLOT(itemUpdate(CrownsThresholdItem*)));
 		delete item;
 	}
 	while(m_items.size() < m_thresholds.size()) {
-		CrownsThresholdItem *item = new CrownsThresholdItem(m_form);
+		CrownsThresholdItem* item = new CrownsThresholdItem(m_form);
 		m_items.push_back(item);
 		scrollLayout->insertWidget((int) m_items.size() - 1, item);
 		connect(item, SIGNAL(itemDelete(CrownsThresholdItem*)), this, SLOT(itemDelete(CrownsThresholdItem*)));
@@ -135,7 +135,7 @@ void CrownsThresholdsForm::sortItems() {
 	}
 	auto item = m_items.begin();
 	int i = 0;
-	for(auto &it : m_thresholds)
+	for(auto& it : m_thresholds)
 		(*item++)->set(i++, std::get<0>(it), std::get<1>(it), std::get<2>(it));
 }
 
@@ -149,7 +149,7 @@ void CrownsThresholdsForm::btnAddItemClicked() {
 	updateButtons();
 }
 
-void CrownsThresholdsForm::itemDelete(CrownsThresholdItem *item) {
+void CrownsThresholdsForm::itemDelete(CrownsThresholdItem* item) {
 	for(size_t i = item->index(); i < m_thresholds.size() - 1; ++i)
 		m_thresholds[i] = m_thresholds[i + 1];
 	m_thresholds.resize(m_thresholds.size() - 1);
@@ -157,7 +157,7 @@ void CrownsThresholdsForm::itemDelete(CrownsThresholdItem *item) {
 	updateButtons();
 }
 
-void CrownsThresholdsForm::itemUpdate(CrownsThresholdItem *item) {
+void CrownsThresholdsForm::itemUpdate(CrownsThresholdItem* item) {
 	m_thresholds[item->index()] = std::make_tuple(item->height(), item->fraction(), item->radius());
 	sortItems();
 	updateButtons();
@@ -170,7 +170,7 @@ void CrownsThresholdsForm::updateButtons() {
 bool CrownsThresholdsForm::valid() const {
 	if(m_thresholds.empty())
 		return false;
-	for(const auto &it : m_thresholds) {
+	for(const auto& it : m_thresholds) {
 		if(std::get<0>(it) <= 0 || std::get<1>(it) <= 0 || std::get<2>(it) <= 0)
 			return false;
 	}

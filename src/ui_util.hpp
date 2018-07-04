@@ -10,11 +10,11 @@
 
 #include <string>
 
-#include <QString>
-#include <QWidget>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QDir>
+#include <QtCore/QString>
+#include <QtCore/QDir>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
 
 #define VECTOR_PATTERN "Vector Files (*.sqlite *.shp)"
 #define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
@@ -27,29 +27,29 @@ namespace geo {
 		namespace util {
 
 			// Convenience: returns a QString from a std string.
-			QString qstr(const std::string &str);
+			QString qstr(const std::string& str);
 
 			// Convenience: returns a QString from an int.
 			QString qstr(int val);
 
 			// Hack to strip the boost::... part of an error message
-			std::string stripBoost(const std::string &msg);
+			std::string stripBoost(const std::string& msg);
 
-			void errorDialog(QWidget *parent, const std::string &title, const std::string &text, 
-				const std::string &detail = "");
+			void errorDialog(QWidget* parent, const std::string& title, const std::string& text,
+				const std::string& detail = "");
 
 			// Convenience: open an input file dialog and return the string.
-			void getInputFile(QWidget *form, const std::string &title, QDir &path,
-					const std::string &filter, std::string &filename);
+			void getInputFile(QWidget* form, const std::string& title, QDir& path,
+					const std::string& filter, std::string& filename);
 
 			// Convenience: open an output file dialog and return the string.
-			void getOutputFile(QWidget *form, const std::string &title, QDir &path,
-					const std::string &filter, std::string &filename);
+			void getOutputFile(QWidget* form, const std::string& title, QDir& path,
+					const std::string& filter, std::string& filename);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getTopsThresholds(QWidget *form, std::vector<std::tuple<double, uint8_t> > &thresholds);
+			void getTopsThresholds(QWidget* form, std::vector<std::tuple<double, uint8_t> >& thresholds);
 
-			void getCrownsThresholds(QWidget *form, std::vector<std::tuple<double, double, double> > &thresholds);
+			void getCrownsThresholds(QWidget* form, std::vector<std::tuple<double, double, double> >& thresholds);
 		}
 
 	}
