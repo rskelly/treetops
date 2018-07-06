@@ -18,6 +18,8 @@ namespace geo {
 namespace treetops {
 namespace config {
 
+typedef std::unordered_map<std::string, std::string> smap;
+
 /**
  * A class for loading and saving settings.
  */
@@ -25,6 +27,8 @@ class Settings {
 private:
 	QSettings m_settings;
 	std::string m_lastFile;
+	smap m_localSettings;
+	smap m_userSettings;
 
 public:
 	std::string topsDatabaseLastDir;
@@ -63,9 +67,10 @@ public:
 	 * Save the settings contained in the TreetopsConfig object to the filename.
 	 *
 	 * @param config A TreetopsConfig instance.
-	 * @param filename A path to a settings file.
 	 */
-	void save(geo::treetops::config::TreetopsConfig& config, const std::string& filename);
+	void save(geo::treetops::config::TreetopsConfig& config);
+
+	~Settings();
 };
 
 } // config

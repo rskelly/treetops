@@ -14,8 +14,6 @@
 
 using namespace geo::treetops::config;
 
-typedef std::unordered_map<std::string, std::string> smap;
-
 bool _load(const std::string& filename, smap& map) {
 	if(filename.empty())
 		return false;
@@ -33,7 +31,7 @@ bool _load(const std::string& filename, smap& map) {
 	return true;
 }
 
-void _save(smap& map, const std::string& filename) {
+void _save(const std::string& filename, smap& map) {
 	if(!filename.empty()) {
 		std::ofstream ofs(filename, std::ios::out);
 		if(ofs.good()) {
@@ -77,7 +75,7 @@ std::string _gets(smap& map, const std::string& key, const std::string& alt) {
 }
 
 Settings::Settings() {
-	m_lastFile = m_settings.value("settings", "").toString().toStdString();
+	m_lastFile = m_settings.value("local/settings", "").toString().toStdString();
 }
 
 const std::string& Settings::lastFile() const {
@@ -90,7 +88,7 @@ bool Settings::load(TreetopsConfig& config) {
 
 bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	m_lastFile = filename;
-	m_settings.setValue("settings", QString(filename.c_str()));
+	m_settings.setValue("local/settings", QString(filename.c_str()));
 	smap map;
 	if(!_load(filename, map))
 		return false;
@@ -127,19 +125,18 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	config.crownsRemoveHoles = _getb(map, "crownsRemoveHoles", config.crownsRemoveHoles);
 	config.crownsRemoveDangles = _getb(map, "crownsRemoveDangles", config.crownsRemoveDangles);
 
-	topsDatabaseLastDir = _gets(map, "_topsDatabaseLastDir", "");
-	originalCHMLastDir = _gets(map, "_originalCHMLastDir", "");
-	smoothedCHMLastDir = _gets(map, "_smoothedCHMLastDir", "");
-	crownsRasterLastDir = _gets(map, "_crownsRasterLastDir", "");
-	crownsDatabaseLastDir = _gets(map, "_crownsDatabaseLastDir", "");
-	outputLastDir = _gets(map, "_outputLastDir", "");
+	topsDatabaseLastDir = m_settings.value("local/topsDatabaseLastDir", "").toString().toStdString();
+	originalCHMLastDir = m_settings.value("local/originalCHMLastDir", "").toString().toStdString();
+	smoothedCHMLastDir = m_settings.value("local/smoothedCHMLastDir", "").toString().toStdString();
+	crownsRasterLastDir = m_settings.value("local/crownsRasterLastDir", "").toString().toStdString();
+	crownsDatabaseLastDir = m_settings.value("local/crownsDatabaseLastDir", "").toString().toStdString();
+	outputLastDir = m_settings.value("local/outputLastDir", "").toString().toStdString();
 
 	return true;
 }
 
-void Settings::save(TreetopsConfig& config, const std::string& filename) {
-	m_lastFile = filename;
-	m_settings.setValue("settings", QString(filename.c_str()));
+void Settings::save(TreetopsConfig& config) {
+	m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
 	smap map;
 	map["srid"] = std::to_string(config.srid);
 	map["buildIndex"] = std::to_string(config.buildIndex);
@@ -147,7 +144,7 @@ void Settings::save(TreetopsConfig& config, const std::string& filename) {
 	map["rowCacheSize"] = std::to_string(config.rowCacheSize); //(24 * 1024 * 1024),
 
 	map["doSmoothing"] = std::to_string(config.doSmoothing);
-	map["smoothingWindowSize"] = std::to_string(config.smoothWindowSize);
+	map["smoothWindowSize"] = std::to_string(config.smoothWindowSize);
 	map["smoothSigma"] = std::to_string(config.smoothSigma);
 	map["smoothOriginalCHM"] = config.smoothOriginalCHM;
 	map["smoothSmoothedCHM"] = config.smoothSmoothedCHM;
@@ -174,6 +171,18 @@ void Settings::save(TreetopsConfig& config, const std::string& filename) {
 	map["crownsRemoveHoles"] = std::to_string(config.crownsRemoveHoles);
 	map["crownsRemoveDangles"] = std::to_string(config.crownsRemoveDangles);
 
-	_save(map, filename);
+	_save(m_lastFile, map);
+
+}
+
+Settings::~Settings() {
+	m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
+	m_settings.setValue("local/topsDatabaseLastDir", QString(topsDatabaseLastDir.c_str()));
+	m_settings.setValue("local/originalCHMLastDir", QString(originalCHMLastDir.c_str()));
+	m_settings.setValue("local/smoothedCHMLastDir", QString(smoothedCHMLastDir.c_str()));
+	m_settings.setValue("local/crownsRasterLastDir", QString(crownsRasterLastDir.c_str()));
+	m_settings.setValue("local/crownsDatabaseLastDir", QString(crownsDatabaseLastDir.c_str()));
+	m_settings.setValue("local/outputLastDir", QString(outputLastDir.c_str()));
+
 }
 
