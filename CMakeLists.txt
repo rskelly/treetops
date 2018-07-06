@@ -6,7 +6,20 @@ if(${WITH_GUI})
 	add_definitions(-DWITH_GUI)
 endif()
 
-message(STATUS "WITH_GUI: ${WITH_GUI}")
+enable_language(C)
+enable_language(CXX)
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_CXX_EXTENSIONS OFF)
+#set (CMAKE_POSITION_INDEPENDENT_CODE ON) # Qt complains if this is set and not -fPIC below...
+set (CMAKE_CXX_FLAGS "-fPIC -lpthread -fopenmp -Wno-unknown-pragmas -Wall -D_GLIBCXX_PARALLEL")
+
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set (CMAKE_INSTALL_RPATH "/opt/lib;/usr/local/lib")
+set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set (CMAKE_CXX_COMPILER_LAUNCHER ccache)
 
 set (CMAKE_INCLUDE_DIRECTORIES_BEFORE ON)
 

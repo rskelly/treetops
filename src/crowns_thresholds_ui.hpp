@@ -8,10 +8,10 @@
 #ifndef __CROWNS_THRESHOLDS_UI_HPP__
 #define __CROWNS_THRESHOLDS_UI_HPP__
 
-#include <QDoubleSpinBox>
-#include <QSpinBox>
-#include <QToolButton>
-#include <QWidget>
+#include <QtWidgets/QDoubleSpinBox>
+#include <QtWidgets/QSpinBox>
+#include <QtWidgets/QToolButton>
+#include <QtWidgets/QWidget>
 
 #include "treetops.hpp"
 #include "ui_crowns_thresholds.h"
@@ -23,16 +23,16 @@ private:
 	int m_index;
 
 public:
-	QDoubleSpinBox *spnHeight;
-	QDoubleSpinBox *spnFraction;
-	QDoubleSpinBox *spnRadius;
-	QToolButton *btnDelete;
-	CrownsThresholdItem(QWidget *parent = 0);
+	QDoubleSpinBox* spnHeight;
+	QDoubleSpinBox* spnFraction;
+	QDoubleSpinBox* spnRadius;
+	QToolButton* btnDelete;
+	CrownsThresholdItem(QWidget* parent = 0);
 	void set(int index, double height, double fraction, double radius);
 	double height() const;
 	double fraction() const;
 	double radius() const;
-	bool operator<(const CrownsThresholdItem &other) const;
+	bool operator<(const CrownsThresholdItem& other) const;
 	int index() const;
 
 public slots:
@@ -42,8 +42,8 @@ public slots:
 	void itemRadiusChanged(double);
 
 signals:
-	void itemUpdate(CrownsThresholdItem *item);
-	void itemDelete(CrownsThresholdItem *item);
+	void itemUpdate(CrownsThresholdItem* item);
+	void itemDelete(CrownsThresholdItem* item);
 };
 
 // Represents the thresholds dialog.
@@ -55,8 +55,8 @@ private:
 	void updateButtons();
 
 public:
-	QWidget *m_form;
-	QVBoxLayout *scrollLayout;
+	QWidget* m_form;
+	QVBoxLayout* scrollLayout;
 	std::list<CrownsThresholdItem*> m_items;
 	std::vector<geo::treetops::config::CrownThreshold> m_thresholds;
 	bool m_confirm;
@@ -73,8 +73,8 @@ public slots:
 	void btnHelpClicked();
 	void btnCancelClicked();
 	void btnExitClicked();
-	void itemDelete(CrownsThresholdItem *item);
-	void itemUpdate(CrownsThresholdItem *item);
+	void itemDelete(CrownsThresholdItem* item);
+	void itemUpdate(CrownsThresholdItem* item);
 };
 
 #endif /* __CROWNS_THRESHOLDS_UI_HPP__ */

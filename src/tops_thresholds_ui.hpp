@@ -8,10 +8,10 @@
 #ifndef __TOPS_THRESHOLDS_UI_HPP__
 #define __TOPS_THRESHOLDS_UI_HPP__
 
-#include <QDoubleSpinBox>
-#include <QSpinBox>
-#include <QToolButton>
-#include <QWidget>
+#include <QtWidgets/QDoubleSpinBox>
+#include <QtWidgets/QSpinBox>
+#include <QtWidgets/QToolButton>
+#include <QtWidgets/QWidget>
 
 #include "treetops.hpp"
 #include "ui_tops_thresholds.h"

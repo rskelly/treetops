@@ -12,11 +12,11 @@
 
 using namespace geo::treetops::config;
 
-CrownsThresholdItem::CrownsThresholdItem(QWidget *parent) :
+CrownsThresholdItem::CrownsThresholdItem(QWidget* parent) :
 	QWidget(parent),
 	m_index(0) {
 	setFixedHeight(30);
-	QGridLayout *layout = new QGridLayout();
+	QGridLayout* layout = new QGridLayout();
 	spnHeight = new QDoubleSpinBox();
 	spnHeight->setDecimals(2);
 	spnHeight->setMinimum(0);
@@ -104,7 +104,7 @@ CrownsThresholdsForm::CrownsThresholdsForm() :
 CrownsThresholdsForm::~CrownsThresholdsForm() {
 }
 
-void CrownsThresholdsForm::setupUi(QWidget *form) {
+void CrownsThresholdsForm::setupUi(QWidget* form) {
 	Ui::CrownsThresholdsForm::setupUi(form);
 	m_form = form;
 	scrollLayout = new QVBoxLayout();
@@ -123,14 +123,14 @@ void CrownsThresholdsForm::setThresholds(const std::vector<CrownThreshold>& thre
 
 void CrownsThresholdsForm::sortItems() {
 	while(m_items.size() > m_thresholds.size()) {
-		CrownsThresholdItem *item = m_items.back(); m_items.pop_back();
+		CrownsThresholdItem* item = m_items.back(); m_items.pop_back();
 		scrollLayout->removeWidget(item);
 		disconnect(item, SIGNAL(itemDelete(CrownsThresholdItem*)), this, SLOT(itemDelete(CrownsThresholdItem*)));
 		disconnect(item, SIGNAL(itemUpdate(CrownsThresholdItem*)), this, SLOT(itemUpdate(CrownsThresholdItem*)));
 		delete item;
 	}
 	while(m_items.size() < m_thresholds.size()) {
-		CrownsThresholdItem *item = new CrownsThresholdItem(m_form);
+		CrownsThresholdItem* item = new CrownsThresholdItem(m_form);
 		m_items.push_back(item);
 		scrollLayout->insertWidget((int) m_items.size() - 1, item);
 		connect(item, SIGNAL(itemDelete(CrownsThresholdItem*)), this, SLOT(itemDelete(CrownsThresholdItem*)));
@@ -152,7 +152,7 @@ void CrownsThresholdsForm::btnAddItemClicked() {
 	updateButtons();
 }
 
-void CrownsThresholdsForm::itemDelete(CrownsThresholdItem *item) {
+void CrownsThresholdsForm::itemDelete(CrownsThresholdItem* item) {
 	for(size_t i = item->index(); i < m_thresholds.size() - 1; ++i)
 		m_thresholds[i] = m_thresholds[i + 1];
 	m_thresholds.resize(m_thresholds.size() - 1);

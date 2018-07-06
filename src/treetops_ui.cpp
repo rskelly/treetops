@@ -220,8 +220,8 @@ void TreetopsForm::loadSettings() {
 	grpCrowns->setChecked(m_config.doCrowns);
 	txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
 	txtCrownsOriginalCHM->setText(qstr(m_config.crownsOriginalCHM));
-	txtCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
-	btnCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights);
+	txtCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights & m_config.doCrowns);
+	btnCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights & m_config.doCrowns);
 	txtCrownsSmoothedCHM->setText(qstr(m_config.crownsSmoothedCHM));
 	txtCrownsTreetopsDatabase->setText(qstr(m_config.crownsTreetopsDatabase));
 	txtCrownsCrownsRaster->setText(qstr(m_config.crownsCrownsRaster));
@@ -514,6 +514,8 @@ void TreetopsForm::doTopsChanged(bool v) {
 void TreetopsForm::doCrownsChanged(bool v) {
 	m_config.doCrowns = v;
 	grpCrowns->layout()->setEnabled(v);
+	txtCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights && m_config.doCrowns);
+	btnCrownsOriginalCHM->setEnabled(m_config.crownsUpdateHeights && m_config.doCrowns);
 	txtCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	cboCrownsCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
 	btnCrownsCrownsDatabase->setEnabled(m_config.crownsDoDatabase && m_config.doCrowns);
