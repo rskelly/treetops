@@ -154,7 +154,7 @@ void TreetopsForm::setRunTime(const std::string& time) {
 
 TreetopsForm::~TreetopsForm() {
 	// Save the settings.
-	m_settings.save(m_config, m_settingsFile);
+	m_settings.save(m_config);
 
 	delete m_form;
 	delete m_callbacks;
@@ -332,7 +332,7 @@ void TreetopsForm::resetProgress() {
 
 void TreetopsForm::settingsFileClicked() {
 	std::string filename;
-	getOutputFile(m_form, "Settings File", m_settings.outputLastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Settings File", m_settings.outputLastDir, ALL_PATTERN, filename, false);
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
@@ -626,6 +626,7 @@ void TreetopsForm::done() {
 
 void TreetopsForm::exitClicked() {
 	g_debug("quit");
+	m_settings.save(m_config);
 	m_form->close();
 }
 
@@ -644,5 +645,5 @@ void TreetopsForm::checkRun() {
 	btnRun->setEnabled(m_config.canRun() && !m_workerThread->isRunning());
 	btnCancel->setEnabled(m_workerThread->isRunning());
 	btnExit->setEnabled(!m_workerThread->isRunning());
-	m_settings.save(m_config, txtSettingsFile->text().toStdString());
+	m_settings.save(m_config);
 }
