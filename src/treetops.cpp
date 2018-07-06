@@ -5,18 +5,16 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 
+#include <cpl_conv.h>
+
 #include "geo.hpp"
 #include "treetops.hpp"
 
-#ifdef WITH_GUI
 #include "treetops_ui.hpp"
-#include "cpl_conv.h"
-#endif
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
 int runWithGui(int argc, char **argv) {
-#ifdef WITH_GUI
 
 #ifdef _MSC_VER
 	CPLSetConfigOption("GDAL_DATA", "./gdal-data");
@@ -46,10 +44,6 @@ int runWithGui(int argc, char **argv) {
 	geo::ui::TreetopsForm f;
 	f.showForm();
 	return q.exec();
-#else
-	std::cerr << "GUI not enabled." << std::endl;
-	return 1;
-#endif
 }
 
 int main(int argc, char **argv) {
