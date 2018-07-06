@@ -49,8 +49,11 @@ void geo::ui::util::getInputFile(QWidget* form, const std::string& title, std::s
 }
 
 void geo::ui::util::getOutputFile(QWidget* form, const std::string& title, std::string& path,
-		const std::string& filter, std::string& filename) {
-	QString res = QFileDialog::getSaveFileName(form, qstr(title), QString(path.c_str()), qstr(filter));
+		const std::string& filter, std::string& filename, bool confirmOverwrite) {
+	QFileDialog::Option opt = (QFileDialog::Option) 0;
+	if(!confirmOverwrite)
+		opt = QFileDialog::DontConfirmOverwrite;
+	QString res = QFileDialog::getSaveFileName(form, qstr(title), QString(path.c_str()), qstr(filter), nullptr, opt);
 	if(!res.isEmpty()) {
 		path = res.toStdString();
 		filename = res.toStdString();

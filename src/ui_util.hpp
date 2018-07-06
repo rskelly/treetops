@@ -46,7 +46,7 @@ namespace geo {
 
 			// Convenience: open an output file dialog and return the string.
 			void getOutputFile(QWidget* form, const std::string& title, std::string& path,
-					const std::string& filter, std::string& filename);
+					const std::string& filter, std::string& filename, bool confirmOverwrite = true);
 
 			// Get the list of thresholds from the thresholds dialog.
 			void getTopsThresholds(QWidget* form, std::vector<geo::treetops::config::TopThreshold>& thresholds);
