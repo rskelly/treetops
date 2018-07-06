@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>757</width>
-    <height>814</height>
+    <height>748</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -57,10 +57,10 @@
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
        <layout class="QGridLayout" name="smoothGrid">
-        <item row="3" column="6">
+        <item row="2" column="5">
          <widget class="QComboBox" name="cboSmoothSmoothedCHMDriver"/>
         </item>
-        <item row="1" column="5" colspan="3">
+        <item row="0" column="4" colspan="3">
          <widget class="QDoubleSpinBox" name="spnSmoothSigma">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -79,7 +79,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="label_11">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -95,7 +95,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="4">
+        <item row="0" column="3">
          <widget class="QLabel" name="label_2">
           <property name="text">
            <string>Si&amp;gma</string>
@@ -105,7 +105,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="0" column="0">
          <widget class="QLabel" name="label">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -121,7 +121,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="2" column="0">
          <widget class="QLabel" name="label_12">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -137,7 +137,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="7">
+        <item row="2" column="6">
          <widget class="QToolButton" name="btnSmoothSmoothedCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -150,7 +150,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="7">
+        <item row="1" column="6">
          <widget class="QToolButton" name="btnSmoothOriginalCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -163,7 +163,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1" colspan="3">
+        <item row="0" column="1" colspan="2">
          <widget class="QSpinBox" name="spnSmoothWindow">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -173,7 +173,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="1" colspan="5">
+        <item row="2" column="1" colspan="4">
          <widget class="QLineEdit" name="txtSmoothSmoothedCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -183,7 +183,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="1" colspan="6">
+        <item row="1" column="1" colspan="5">
          <widget class="QLineEdit" name="txtSmoothOriginalCHM">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -193,38 +193,6 @@
           </property>
           <property name="clearButtonEnabled">
            <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Smoothing Method</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1" colspan="7">
-         <widget class="QComboBox" name="cboSmoothMethod">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="currentText">
-           <string/>
-          </property>
-          <property name="currentIndex">
-           <number>-1</number>
           </property>
          </widget>
         </item>
@@ -866,7 +834,6 @@
  </widget>
  <tabstops>
   <tabstop>grpSmoothing</tabstop>
-  <tabstop>cboSmoothMethod</tabstop>
   <tabstop>spnSmoothWindow</tabstop>
   <tabstop>spnSmoothSigma</tabstop>
   <tabstop>txtSmoothOriginalCHM</tabstop>

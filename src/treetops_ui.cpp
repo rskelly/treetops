@@ -188,9 +188,6 @@ void TreetopsForm::loadSettings() {
 	for(const auto &it : geo::db::DB::drivers())
 		vectorDrivers << qstr(it.first);
 
-	QStringList smoothMethods;
-	smoothMethods << "Gaussian";
-
 	txtSettingsFile->setText(QString(m_settings.lastFile().c_str()));
 
 	// Populate fields with saved or default values.
@@ -202,9 +199,6 @@ void TreetopsForm::loadSettings() {
 	txtSmoothSmoothedCHM->setText(qstr(m_config.smoothSmoothedCHM));
 	cboSmoothSmoothedCHMDriver->addItems(rasterDrivers);
 	cboSmoothSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothSmoothedCHMDriver));
-	// TODO: Temporary -- need to add smoothing methods.
-	cboSmoothMethod->addItems(smoothMethods);
-	cboSmoothMethod->setCurrentText("Gaussian");
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops);
