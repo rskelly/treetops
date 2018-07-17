@@ -36,7 +36,7 @@ namespace geo {
 		class TTWorkerThread;
 		class TTClockThread;
 
-		class TreetopsForm: public QDialog, public Ui::TreetopsForm {
+		class TreetopsForm: public QDialog, public Ui::TreetopsForm, public TreetopsConfigListener {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
@@ -58,6 +58,9 @@ namespace geo {
 
 			// Reset the progress bars and status message.
 			void resetProgress();
+
+			// Handle updates from the config.
+			void configUpdate(TreetopsConfig& config, TreetopsConfigField field);
 
 		public:
 			TreetopsForm();
