@@ -21,32 +21,6 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0">
    <item>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>Settings</string>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_6">
-      <item>
-       <widget class="QLabel" name="label_14">
-        <property name="text">
-         <string>Settings File</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txtSettingsFile"/>
-      </item>
-      <item>
-       <widget class="QToolButton" name="btnSettingsFile">
-        <property name="text">
-         <string>...</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <widget class="QGroupBox" name="grpSmoothing">
      <property name="title">
       <string>S&amp;mooth Raster</string>
@@ -701,6 +675,32 @@
          </widget>
         </item>
        </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Settings</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <item>
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>Settings File</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="txtSettingsFile"/>
+      </item>
+      <item>
+       <widget class="QToolButton" name="btnSettingsFile">
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

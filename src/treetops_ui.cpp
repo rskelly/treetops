@@ -188,8 +188,6 @@ void TreetopsForm::loadSettings() {
 	for(const auto &it : geo::db::DB::drivers())
 		vectorDrivers << qstr(it.first);
 
-	txtSettingsFile->setText(QString(m_settings.lastFile().c_str()));
-
 	// Populate fields with saved or default values.
 	// -- smoothing
 	grpSmoothing->setChecked(m_config.doSmoothing);
@@ -332,6 +330,13 @@ void TreetopsForm::settingsFileClicked() {
 
 void TreetopsForm::settingsFileChanged(QString value) {
 	std::string filename = txtSettingsFile->text().toStdString();
+	if(Util::exists(filename)) {
+		QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
+				"If you choose an extant file, existing settings will be replaced. Do you want to continue?",
+				QMessageBox::Yes|QMessageBox::No);
+		if(reply == QMessageBox::No)
+			return;
+	}
 	m_settings.load(m_config, filename);
 	loadSettings();
 }
