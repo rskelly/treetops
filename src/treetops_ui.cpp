@@ -178,16 +178,6 @@ void TreetopsForm::showForm() {
 
 void TreetopsForm::loadSettings() {
 
-	QStringList rasterDrivers;
-	rasterDrivers << "";
-	for(const auto &it : geo::raster::Raster::drivers())
-		rasterDrivers << qstr(it.first);
-
-	QStringList vectorDrivers;
-	vectorDrivers << "";
-	for(const auto &it : geo::db::DB::drivers())
-		vectorDrivers << qstr(it.first);
-
 	// Populate fields with saved or default values.
 	// -- smoothing
 	grpSmoothing->setChecked(m_config.doSmoothing());
@@ -196,22 +186,21 @@ void TreetopsForm::loadSettings() {
 
 	txtOriginalCHM->setText(qstr(m_config.originalCHM()));
 	txtSmoothedCHM->setText(qstr(m_config.smoothedCHM()));
-	cboSmoothedCHMDriver->addItems(rasterDrivers);
-	cboSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothedCHMDriver()));
+	if(!m_config.smoothedCHMDriver().empty())
+		cboSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothedCHMDriver()));
 
 	txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
-	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
-	cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
+	if(!m_config.treetopsDatabaseDriver().empty())
+		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
 
 	txtCrownsRaster->setText(qstr(m_config.crownsRaster()));
-	cboCrownsRasterDriver->addItems(rasterDrivers);
 	cboCrownsRasterDriver->setCurrentText(qstr(m_config.crownsRasterDriver()));
 	txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
-	cboCrownsDatabaseDriver->addItems(vectorDrivers);
-	cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
-	txtCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
-	cboCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
-	btnCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
+	if(!m_config.crownsDatabaseDriver().empty())
+		cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
+	//txtCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
+	//cboCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
+	//btnCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops());
@@ -233,11 +222,6 @@ void TreetopsForm::loadSettings() {
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
 	m_form = form;
-
-	if(!m_settings.load(m_config))
-		g_warn("No settings file remembered. Starting fresh.")
-
-	loadSettings();
 
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();
@@ -304,6 +288,24 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
+	QStringList rasterDrivers;
+	for(const auto &it : geo::raster::Raster::drivers({"GTiff", "HFA"}))
+		rasterDrivers << qstr(it.first);
+
+	QStringList vectorDrivers;
+	for(const auto &it : geo::db::DB::drivers({"ESRI Shapefile", "SQLite"}))
+		vectorDrivers << qstr(it.first);
+
+	cboSmoothedCHMDriver->addItems(rasterDrivers);
+	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
+	cboCrownsRasterDriver->addItems(rasterDrivers);
+	cboCrownsDatabaseDriver->addItems(vectorDrivers);
+
+	if(!m_settings.load(m_config))
+		g_warn("No settings file remembered. Starting fresh.")
+
+	//loadSettings();
+
 	m_config.setListener(this);
 	m_config.setActive(true);
 	checkRun();
@@ -321,17 +323,8 @@ void TreetopsForm::settingsFileClicked() {
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
-void TreetopsForm::settingsFileChanged(QString value) {
-	std::string filename = txtSettingsFile->text().toStdString();
-	if(Util::exists(filename)) {
-		QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
-				"If you choose an extant file, existing settings will be replaced. Do you want to continue?",
-				QMessageBox::Yes|QMessageBox::No);
-		if(reply == QMessageBox::No)
-			return;
-	}
-	m_settings.load(m_config, filename);
-	loadSettings();
+void TreetopsForm::settingsFileChanged(QString filename) {
+	m_config.setSettings(filename.toStdString());
 }
 
 void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
@@ -364,7 +357,17 @@ void TreetopsForm::updateView() {
 void TreetopsForm::originalCHMClicked() {
 	std::string filename;
 	getInputFile(m_form, "CHM for Smoothing", m_settings.originalCHMLastDir, ALL_PATTERN, filename);
-	m_config.setOriginalCHM(filename);
+	bool active = m_config.setActive(false);
+	if(m_config.smoothedCHMDriver().empty())
+		m_config.setSmoothedCHMDriver(cboSmoothedCHMDriver->currentText().toStdString());
+	if(m_config.treetopsDatabaseDriver().empty())
+		m_config.setTreetopsDatabaseDriver(cboTreetopsDatabaseDriver->currentText().toStdString());
+	if(m_config.crownsRasterDriver().empty())
+		m_config.setCrownsRasterDriver(cboCrownsRasterDriver->currentText().toStdString());
+	if(m_config.crownsDatabaseDriver().empty())
+		m_config.setCrownsDatabaseDriver(cboCrownsDatabaseDriver->currentText().toStdString());
+	m_config.setActive(active);
+	m_config.setOriginalCHM(filename, true);
 }
 
 void TreetopsForm::smoothedCHMClicked() {
@@ -529,10 +532,28 @@ void TreetopsForm::checkRun() {
 	btnRun->setEnabled(m_config.canRun() && m_workerThread && !m_workerThread->isRunning());
 	btnCancel->setEnabled(m_workerThread->isRunning());
 	btnExit->setEnabled(!m_workerThread->isRunning());
-	m_settings.save(m_config);
 }
 
 void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
+
+	if(field & SettingsFile) {
+		std::string filename = m_config.settings();
+		if(Util::exists(filename)) {
+			QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
+					"If you choose an existing file, the saved settings will replace the current settings.\n"
+					"Click 'Open' to use the saved settings or 'Reset' to overwrite the file.",
+					QMessageBox::Open|QMessageBox::Reset);
+			if(reply != QMessageBox::Reset) {
+				m_config.setActive(false);
+				m_settings.load(m_config, filename);
+				loadSettings();
+				m_config.setActive(true);
+			}
+		}
+		return;
+	}
+
+	config.lock();
 
 	if(field & DoSmoothing)
 		grpSmoothing->layout()->setEnabled(m_config.doSmoothing());
@@ -542,9 +563,6 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 
 	if(field & DoCrowns)
 		grpCrowns->layout()->setEnabled(m_config.doCrowns());
-
-	if(field & SettingsFile)
-		txtSettingsFile->setText(qstr(m_config.settings()));
 
 	if(field & OriginalCHM)
 		txtOriginalCHM->setText(qstr(m_config.originalCHM()));
@@ -575,6 +593,10 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 
 	if(field & CrownsThresholds)
 		txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
+
+	m_settings.save(config);
+
+	config.unlock();
 
 	checkRun();
 }

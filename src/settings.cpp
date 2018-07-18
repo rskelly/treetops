@@ -135,7 +135,7 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 }
 
 void Settings::save(TreetopsConfig& config) {
-	m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
+	//m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
 	smap map;
 	map["srid"] = std::to_string(config.srid());
 	map["buildIndex"] = std::to_string(config.buildIndex());
