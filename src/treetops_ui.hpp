@@ -60,7 +60,7 @@ namespace geo {
 			void resetProgress();
 
 			// Handle updates from the config.
-			void configUpdate(TreetopsConfig& config, TreetopsConfigField field);
+			void configUpdate(TreetopsConfig& config, long field);
 
 		public:
 			TreetopsForm();
@@ -78,28 +78,32 @@ namespace geo {
 			void doTopsChanged(bool);
 			void doCrownsChanged(bool);
 
+			void originalCHMChanged(QString);
+			void smoothedCHMChanged(QString);
+			void smoothedCHMDriverChanged(QString);
+			void treetopsDatabaseChanged(QString);
+			void treetopsDatabaseDriverChanged(QString);
+			void crownsRasterChanged(QString);
+			void crownsRasterDriverChanged(QString);
+			void crownsDatabaseChanged(QString);
+			void crownsDatabaseDriverChanged(QString);
+
+			void crownsDatabaseClicked();
+			void crownsRasterClicked();
+			void treetopsDatabaseClicked();
+			void smoothedCHMClicked();
+			void originalCHMClicked();
+
 			void smoothWindowSizeChanged(int);
 			void smoothSigmaChanged(double);
-			void smoothOriginalCHMChanged(QString);
-			void smoothSmoothedCHMChanged(QString);
-			void smoothSmoothedCHMDriverChanged(QString);
 
 			void topsThresholdsChanged(QString);
-			void topsSmoothedCHMChanged(QString);
-			void topsTreetopsDatabaseChanged(QString);
-			void topsTreetopsDatabaseDriverChanged(QString);
+			void topsThresholdsClicked();
 			void topsTreetopsSRIDClicked();
 			void topsTreetopsSRIDChanged(int);
 			void topsMaxNullsChanged(double);
 
 			void crownsThresholdsChanged(QString);
-			void crownsTreetopsDatabaseChanged(QString);
-			void crownsSmoothedCHMChanged(QString);
-			void crownsOriginalCHMChanged(QString);
-			void crownsCrownsRasterChanged(QString);
-			void crownsCrownsRasterDriverChanged(QString);
-			void crownsCrownsDatabaseChanged(QString);
-			void crownsCrownsDatabaseDriverChanged(QString);
 			void crownsDoDatabaseChanged(bool);
 			void crownsUpdateHeightsChanged(bool);
 			void crownsRemoveHolesChanged(bool);
@@ -110,18 +114,6 @@ namespace geo {
 			void cancelClicked();
 			void helpClicked();
 
-			void smoothOriginalCHMClicked();
-			void smoothSmoothedCHMClicked();
-
-			void topsThresholdsClicked();
-			void topsSmoothedCHMClicked();
-			void topsTreetopsDatabaseClicked();
-
-			void crownsCrownsDatabaseClicked();
-			void crownsCrownsRasterClicked();
-			void crownsTreetopsDatabaseClicked();
-			void crownsSmoothedCHMClicked();
-			void crownsOriginalCHMClicked();
 			void crownsThresholdsClicked();
 
 			void done();

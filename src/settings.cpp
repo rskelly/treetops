@@ -89,39 +89,38 @@ bool Settings::load(TreetopsConfig& config) {
 bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	m_lastFile = filename;
 	m_settings.setValue("local/settings", QString(filename.c_str()));
+
 	smap map;
 	if(!_load(filename, map))
 		return false;
+
 	config.setSRID(_geti(map, "srid", 0));
 	config.setBuildIndex(_getb(map, "buildIndex", config.buildIndex()));
 	config.setTableCacheSize(_geti(map, "tableCacheSize", config.tableCacheSize()));
 	config.setRowCacheSize(_geti(map, "rowCacheSize", config.rowCacheSize()));
 
+	config.setOriginalCHM(_gets(map, "originalCHM", config.originalCHM()));
+	config.setSmoothedCHM(_gets(map, "smoothedCHM", config.smoothedCHM()));
+	config.setSmoothedCHMDriver(_gets(map, "smoothedCHMDriver", config.smoothedCHMDriver()));
+	config.setTreetopsDatabase(_gets(map, "treetopsDatabase", config.treetopsDatabase()));
+	config.setTreetopsDatabaseDriver(_gets(map, "treetopsDatabaseDriver", config.treetopsDatabaseDriver()));
+	config.setCrownsRaster(_gets(map, "crownsRaster", config.crownsRaster()));
+	config.setCrownsRasterDriver(_gets(map, "crownsRasterDriver", config.crownsRasterDriver()));
+	config.setCrownsDatabase(_gets(map, "crownsDatabase", config.crownsDatabase()));
+	config.setCrownsDatabaseDriver(_gets(map, "crownsDatabaseDriver", config.crownsDatabaseDriver()));
+
 	config.setDoSmoothing(_getb(map, "doSmoothing", config.doSmoothing()));
 	config.setSmoothWindowSize(_geti(map, "smoothWindowSize", config.smoothWindowSize()));
 	config.setSmoothSigma(_getf(map, "smoothSigma", config.smoothSigma()));
-	config.setSmoothOriginalCHM(_gets(map, "smoothOriginalCHM", config.smoothOriginalCHM()));
-	config.setSmoothSmoothedCHM(_gets(map, "smoothSmoothedCHM", config.smoothSmoothedCHM()));
-	config.setSmoothSmoothedCHMDriver(_gets(map, "smoothSmoothedCHMDriver", config.smoothSmoothedCHMDriver()));
 
 	config.setDoTops(_getb(map, "doTops", config.doTops()));
 	config.parseTopsThresholds(_gets(map, "topsThresholds", ""));
-	config.setTopsSmoothedCHM(_gets(map, "topsSmoothedCHM", config.topsSmoothedCHM()));
-	config.setTopsTreetopsDatabase(_gets(map, "topsTreetopsDatabase", config.topsTreetopsDatabase()));
-	config.setTopsTreetopsDatabaseDriver(_gets(map, "topsTreetopsDatabaseDriver", config.topsTreetopsDatabaseDriver()));
 	config.setTopsMaxNulls(_getf(map, "topsMaxNulls", config.topsMaxNulls()));
 
 	config.setDoCrowns(_getb(map, "doCrowns", config.doCrowns()));
 	config.parseCrownsThresholds(_gets(map, "crownsThresholds", ""));
 	config.setCrownsUpdateHeights(_getb(map, "crownsUpdateHeights", config.crownsUpdateHeights()));
-	config.setCrownsOriginalCHM(_gets(map, "crownsOriginalCHM", config.crownsOriginalCHM()));
-	config.setCrownsSmoothedCHM(_gets(map, "crownsSmoothedCHM", config.crownsSmoothedCHM()));
-	config.setCrownsTreetopsDatabase(_gets(map, "crownsTreetopsDatabase", config.crownsTreetopsDatabase()));
-	config.setCrownsCrownsRaster(_gets(map, "crownsCrownsRaster", config.crownsCrownsRaster()));
-	config.setCrownsCrownsRasterDriver(_gets(map, "crownsCrownsRasterDriver", config.crownsCrownsRasterDriver()));
 	config.setCrownsDoDatabase(_getb(map, "crownsDoDatabase", config.crownsDoDatabase()));
-	config.setCrownsCrownsDatabase(_gets(map, "crownsCrownsDatabase", config.crownsCrownsDatabase()));
-	config.setCrownsCrownsDatabaseDriver(_gets(map, "crownsCrownsDatabaseDriver", config.crownsCrownsDatabaseDriver()));
 	config.setCrownsRemoveHoles(_getb(map, "crownsRemoveHoles", config.crownsRemoveHoles()));
 	config.setCrownsRemoveDangles(_getb(map, "crownsRemoveDangles", config.crownsRemoveDangles()));
 
@@ -143,31 +142,28 @@ void Settings::save(TreetopsConfig& config) {
 	map["tableCacheSize"] = std::to_string(config.tableCacheSize());
 	map["rowCacheSize"] = std::to_string(config.rowCacheSize()); //(24 * 1024 * 1024),
 
+	map["originalCHM"] = config.originalCHM();
+	map["smoothedCHM"] = config.smoothedCHM();
+	map["smoothedCHMDriver"] = config.smoothedCHMDriver();
+	map["treetopsDatabase"] = config.treetopsDatabase();
+	map["treetopsDatabaseDriver"] = config.treetopsDatabaseDriver();
+	map["crownsRaster"] = config.crownsRaster();
+	map["crownsRasterDriver"] = config.crownsRasterDriver();
+	map["crownsDatabase"] = config.crownsDatabase();
+	map["crownsDatabaseDriver"] = config.crownsDatabaseDriver();
+
 	map["doSmoothing"] = std::to_string(config.doSmoothing());
 	map["smoothWindowSize"] = std::to_string(config.smoothWindowSize());
 	map["smoothSigma"] = std::to_string(config.smoothSigma());
-	map["smoothOriginalCHM"] = config.smoothOriginalCHM();
-	map["smoothSmoothedCHM"] = config.smoothSmoothedCHM();
-	map["smoothSmoothedCHMDriver"] = config.smoothSmoothedCHMDriver();
 
 	map["doTops"] = std::to_string(config.doTops());
 	map["topsThresholds"] = config.topsThresholdsList();
-	map["topsSmoothedCHM"] = config.topsSmoothedCHM();
-	map["topsTreetopsDatabase"] = config.topsTreetopsDatabase();
-	map["topsTreetopsDatabaseDriver"] = config.topsTreetopsDatabaseDriver();
 	map["topsMaxNulls"] = std::to_string(config.topsMaxNulls());
 
 	map["doCrowns"] = std::to_string(config.doCrowns());
 	map["crownsThresholds"] = config.crownsThresholdsList();
 	map["crownsUpdateHeights"] = std::to_string(config.crownsUpdateHeights());
-	map["crownsSmoothedCHM"] = config.crownsSmoothedCHM();
-	map["crownsOriginalCHM"] = config.crownsOriginalCHM();
-	map["crownsTreetopsDatabase"] = config.crownsTreetopsDatabase();
-	map["crownsCrownsRaster"] = config.crownsCrownsRaster();
-	map["crownsCrownsRasterDriver"] = config.crownsCrownsRasterDriver();
 	map["crownsDoDatabase"] = std::to_string(config.crownsDoDatabase());
-	map["crownsCrownsDatabase"] = config.crownsCrownsDatabase();
-	map["crownsCrownsDatabaseDriver"] = config.crownsCrownsDatabaseDriver();
 	map["crownsRemoveHoles"] = std::to_string(config.crownsRemoveHoles());
 	map["crownsRemoveDangles"] = std::to_string(config.crownsRemoveDangles());
 
