@@ -184,6 +184,8 @@ void TreetopsForm::loadSettings() {
 	spnSmoothWindow->setValue(m_config.smoothWindowSize());
 	spnSmoothSigma->setValue(m_config.smoothSigma());
 
+	txtSettingsFile->setText(qstr(m_config.settings()));
+
 	txtOriginalCHM->setText(qstr(m_config.originalCHM()));
 	txtSmoothedCHM->setText(qstr(m_config.smoothedCHM()));
 	if(!m_config.smoothedCHMDriver().empty())
@@ -541,19 +543,22 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 		if(Util::exists(filename)) {
 			QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
 					"If you choose an existing file, the saved settings will replace the current settings.\n"
-					"Click 'Open' to use the saved settings or 'Reset' to overwrite the file.",
+					"Click 'Open' to use the saved settings or 'Reset' to overwrite the file with the current settings.",
 					QMessageBox::Open|QMessageBox::Reset);
 			if(reply != QMessageBox::Reset) {
 				m_config.setActive(false);
 				m_settings.load(m_config, filename);
 				loadSettings();
 				m_config.setActive(true);
+				return;
 			}
 		}
-		return;
 	}
 
 	config.lock();
+
+	if(field & SettingsFile)
+		txtSettingsFile->setText(qstr(m_config.settings()));
 
 	if(field & DoSmoothing)
 		grpSmoothing->layout()->setEnabled(m_config.doSmoothing());
@@ -578,9 +583,6 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 
 	if((field & DoCrowns) || (field & CrownsDoDatabase)) {
 		bool doCrownsAndDb = m_config.doCrowns() && m_config.crownsDoDatabase();
-		txtCrownsDatabase->setEnabled(doCrownsAndDb);
-		cboCrownsDatabaseDriver->setEnabled(doCrownsAndDb);
-		btnCrownsDatabase->setEnabled(doCrownsAndDb);
 		chkCrownsRemoveHoles->setEnabled(doCrownsAndDb);
 		chkCrownsRemoveDangles->setEnabled(doCrownsAndDb);
 	}
