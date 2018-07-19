@@ -200,9 +200,6 @@ void TreetopsForm::loadSettings() {
 	txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
 	if(!m_config.crownsDatabaseDriver().empty())
 		cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
-	//txtCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
-	//cboCrownsDatabaseDriver->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
-	//btnCrownsDatabase->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops());
