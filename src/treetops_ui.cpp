@@ -407,13 +407,13 @@ void TreetopsForm::treetopsDatabaseDriverChanged(QString text) {
 }
 
 void TreetopsForm::topsThresholdsClicked() {
-	std::vector<TopThreshold> thresholds;
+	std::vector<TopThreshold> thresholds = m_config.topsThresholds();
 	getTopsThresholds(m_form, thresholds);
 	m_config.setTopsThresholds(thresholds);
 }
 
 void TreetopsForm::crownsThresholdsClicked() {
-	std::vector<CrownThreshold> thresholds;
+	std::vector<CrownThreshold> thresholds = m_config.crownsThresholds();
 	getCrownsThresholds(m_form, thresholds);
 	m_config.setCrownsThresholds(thresholds);
 }
