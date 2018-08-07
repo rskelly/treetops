@@ -100,6 +100,7 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	config.setRowCacheSize(_geti(map, "rowCacheSize", config.rowCacheSize()));
 
 	config.setOriginalCHM(_gets(map, "originalCHM", config.originalCHM()));
+	config.setOriginalCHMBand(_geti(map, "originalCHMBand", config.originalCHMBand()));
 	config.setSmoothedCHM(_gets(map, "smoothedCHM", config.smoothedCHM()));
 	config.setSmoothedCHMDriver(_gets(map, "smoothedCHMDriver", config.smoothedCHMDriver()));
 	config.setTreetopsDatabase(_gets(map, "treetopsDatabase", config.treetopsDatabase()));
@@ -143,6 +144,7 @@ void Settings::save(TreetopsConfig& config) {
 	map["rowCacheSize"] = std::to_string(config.rowCacheSize()); //(24 * 1024 * 1024),
 
 	map["originalCHM"] = config.originalCHM();
+	map["originalCHMBand"] = std::to_string(config.originalCHMBand());
 	map["smoothedCHM"] = config.smoothedCHM();
 	map["smoothedCHMDriver"] = config.smoothedCHMDriver();
 	map["treetopsDatabase"] = config.treetopsDatabase();
