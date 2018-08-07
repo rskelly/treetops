@@ -70,6 +70,20 @@ namespace geo {
 			void loadSettings();
 			virtual ~TreetopsForm();
 
+			/**
+			 * Called when Treetops fails to convert the internal database to the chosen format.
+			 * Will cause the app to change the filename and driver to SQLite and move the file into
+			 * the appropriate place. Modifies the tops and crowns DB.
+			 */
+			void topsConvertFix();
+
+			/**
+			 * Called when Treetops fails to convert the internal database to the chosen format.
+			 * Will cause the app to change the filename and driver to SQLite and move the file into
+			 * the appropriate place. Modifies the crowns DB.
+			 */
+			void crownsConvertFix();
+
 		public slots:
 			void settingsFileClicked();
 			void settingsFileChanged(QString);
@@ -79,6 +93,7 @@ namespace geo {
 			void doCrownsChanged(bool);
 
 			void originalCHMChanged(QString);
+			void originalCHMBandChanged(int);
 			void smoothedCHMChanged(QString);
 			void smoothedCHMDriverChanged(QString);
 			void treetopsDatabaseChanged(QString);
