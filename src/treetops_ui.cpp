@@ -92,20 +92,28 @@ void TTWorkerThread::run() {
 
 		if (config.doTops()) {
 			cb->overallCallback((float) ++step / steps);
-			t.treetops(config, m_parent->m_cancel);
+			try {
+				t.treetops(config, m_parent->m_cancel);
+			} catch(const geo::treetops::util::DBConvertException& ex) {
+				m_parent->topsConvertFix();
+			}
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		if (config.doCrowns()) {
 			cb->overallCallback((float) ++step / steps);
-			t.treecrowns(config, m_parent->m_cancel);
+			try {
+				t.treecrowns(config, m_parent->m_cancel);
+			} catch(const geo::treetops::util::DBConvertException& ex) {
+				m_parent->crownsConvertFix();
+			}
 			cb->overallCallback((float) ++step / steps);
 		}
 
 		cb->statusCallback("Done.");
 		cb->overallCallback(1.0f);
 
-	} catch (const std::exception &e) {
+	} catch (const std::exception& e) {
 		m_message = stripBoost(e.what());
 		m_isError = true;
 		try {
@@ -148,6 +156,34 @@ TreetopsForm::TreetopsForm() :
 	m_clockThread(nullptr) {
 }
 
+void TreetopsForm::topsConvertFix() {
+	//QMessageBox::warning(this, "Warning", "Failed to convert database to the desired format. Saving as SQLite instead.", QMessageBox::Ok);
+	std::string text = Util::extension(m_config.treetopsDatabase());
+	std::string tops = m_config.treetopsDatabase().substr(0, m_config.treetopsDatabase().find(text)) + ".sqlite";
+	m_config.setActive(false);
+	m_config.setTreetopsDatabase(tops);
+	m_config.setTreetopsDatabaseDriver("SQLite");
+	if(m_config.crownsDatabaseDriver() != "SQLite") {
+		std::string cext = Util::extension(m_config.crownsDatabase());
+		std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(cext)) + ".sqlite";
+		m_config.setCrownsDatabase(crowns);
+		m_config.setCrownsDatabaseDriver("SQLite");
+	}
+	m_config.setActive(true);
+	m_config.update(TreetopsDatabase|TreetopsDatabaseDriver|CrownsDatabase|CrownsDatabaseDriver);
+}
+
+void TreetopsForm::crownsConvertFix() {
+	//QMessageBox::warning(this, "Warning", "Failed to convert database to the desired format. Saving as SQLite instead.", QMessageBox::Ok);
+	std::string ext = Util::extension(m_config.crownsDatabase());
+	std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(ext)) + ".sqlite";
+	m_config.setActive(false);
+	m_config.setCrownsDatabase(crowns);
+	m_config.setCrownsDatabaseDriver("SQLite");
+	m_config.setActive(true);
+	m_config.update(CrownsDatabase|CrownsDatabaseDriver);
+}
+
 void TreetopsForm::setRunTime(const std::string& time) {
 	lblRunTime->setText(QString(time.c_str()));
 }
@@ -187,6 +223,7 @@ void TreetopsForm::loadSettings() {
 	txtSettingsFile->setText(qstr(m_config.settings()));
 
 	txtOriginalCHM->setText(qstr(m_config.originalCHM()));
+	spnOriginalCHMBand->setValue(m_config.originalCHMBand());
 	txtSmoothedCHM->setText(qstr(m_config.smoothedCHM()));
 	if(!m_config.smoothedCHMDriver().empty())
 		cboSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothedCHMDriver()));
@@ -234,6 +271,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(txtSettingsFile, SIGNAL(textChanged(QString)), this, SLOT(settingsFileChanged(QString)));
 
 	connect(txtOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(originalCHMChanged(QString)));
+	connect(spnOriginalCHMBand, SIGNAL(valueChanged(int)), this, SLOT(originalCHMBandChanged(int)));
 	connect(txtSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothedCHMChanged(QString)));
 	connect(btnOriginalCHM, SIGNAL(clicked()), this, SLOT(originalCHMClicked()));
 	connect(btnSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothedCHMClicked()));
@@ -367,6 +405,10 @@ void TreetopsForm::originalCHMClicked() {
 		m_config.setCrownsDatabaseDriver(cboCrownsDatabaseDriver->currentText().toStdString());
 	m_config.setActive(active);
 	m_config.setOriginalCHM(filename, true);
+}
+
+void TreetopsForm::originalCHMBandChanged(int band) {
+	m_config.setOriginalCHMBand(band);
 }
 
 void TreetopsForm::smoothedCHMClicked() {
@@ -578,6 +620,9 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 	if(field & TreetopsDatabase)
 		txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
 
+	if(field & TreetopsDatabaseDriver)
+		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
+
 	if((field & DoCrowns) || (field & CrownsDoDatabase)) {
 		bool doCrownsAndDb = m_config.doCrowns() && m_config.crownsDoDatabase();
 		chkCrownsRemoveHoles->setEnabled(doCrownsAndDb);
@@ -586,6 +631,9 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 
 	if(field & CrownsDatabase)
 		txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
+
+	if(field & CrownsDatabaseDriver)
+		cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
 
 	if(field & CrownsRaster)
 		txtCrownsRaster->setText(qstr(m_config.crownsRaster()));
