@@ -66,6 +66,9 @@ void TTWorkerThread::run() {
 	using namespace geo::treetops;
 	using namespace geo::treetops::config;
 
+	// Clear the message to indicate no issues.
+	m_message.clear();
+
 	Treetops t;
 	try {
 		// Reset error state.
@@ -96,6 +99,7 @@ void TTWorkerThread::run() {
 				t.treetops(config, m_parent->m_cancel);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_parent->topsConvertFix();
+				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
 			cb->overallCallback((float) ++step / steps);
 		}
@@ -106,6 +110,7 @@ void TTWorkerThread::run() {
 				t.treecrowns(config, m_parent->m_cancel);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_parent->crownsConvertFix();
+				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
 			cb->overallCallback((float) ++step / steps);
 		}
@@ -157,7 +162,6 @@ TreetopsForm::TreetopsForm() :
 }
 
 void TreetopsForm::topsConvertFix() {
-	//QMessageBox::warning(this, "Warning", "Failed to convert database to the desired format. Saving as SQLite instead.", QMessageBox::Ok);
 	std::string text = Util::extension(m_config.treetopsDatabase());
 	std::string tops = m_config.treetopsDatabase().substr(0, m_config.treetopsDatabase().find(text)) + ".sqlite";
 	m_config.setActive(false);
@@ -174,7 +178,6 @@ void TreetopsForm::topsConvertFix() {
 }
 
 void TreetopsForm::crownsConvertFix() {
-	//QMessageBox::warning(this, "Warning", "Failed to convert database to the desired format. Saving as SQLite instead.", QMessageBox::Ok);
 	std::string ext = Util::extension(m_config.crownsDatabase());
 	std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(ext)) + ".sqlite";
 	m_config.setActive(false);
@@ -548,6 +551,8 @@ void TreetopsForm::done() {
 	if (m_workerThread->isError()) {
 		errorDialog(m_form, "Error", m_workerThread->message());
 		resetProgress();
+	} else if(!m_workerThread->message().empty()) {
+		infoDialog(m_form, "Notice", m_workerThread->message());
 	}
 	checkRun();
 }

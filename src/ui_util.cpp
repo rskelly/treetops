@@ -39,6 +39,10 @@ void geo::ui::util::errorDialog(QWidget* parent, const std::string& title, const
 	err.exec();
 }
 
+void geo::ui::util::infoDialog(QWidget* parent, const std::string& title, const std::string& text, const std::string& detail) {
+	QMessageBox::information(parent, qstr(title), qstr(text), QMessageBox::Ok);
+}
+
 void geo::ui::util::getInputFile(QWidget* form, const std::string& title, std::string& path,
 		const std::string& filter, std::string& filename) {
 	QString res = QFileDialog::getOpenFileName(form, qstr(title), QString(path.c_str()), qstr(filter));

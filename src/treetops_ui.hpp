@@ -134,51 +134,96 @@ namespace geo {
 			void done();
 		};
 
-		// A thread for performing the work of the application.
+		/**
+		 * A thread for performing the work of the application.
+		 */
 		class TTWorkerThread: public QThread {
 		private:
-			// The form that owns this thread.
-			TreetopsForm *m_parent;
-			// The error message from the last error.
-			std::string m_message;
-			// True if the thread is running or exiting in an error state.
-			bool m_isError;
+			TreetopsForm *m_parent;		///<! The form that owns this thread.
+			std::string m_message;		///<! The error message from the last error.
+			bool m_isError;				///<! True if the thread is running or exiting in an error state.
 
-			// Run the thread.
+			/**
+			 * Run the thread.
+			 */
 			void run();
 
-			// Reset the error message, etc.
+			/**
+			 * Reset the error message, etc.
+			 */
 			void reset();
 
 		public:
 
-			// Initialize the thread with a pointer to its parent form.
+			/**
+			 * Initialize the thread with a pointer to its parent form.
+			 *
+			 * @param parent The parent widget.
+			 */
 			void init(TreetopsForm *parent);
 
-			// Destroy the thread.
+			/**
+			 * Destroy the thread.
+			 */
 			virtual ~TTWorkerThread();
 
-			// Return the last error message/
+			/**
+			 * Return the last error message.
+			 *
+			 * @return The last error message.
+			 */
 			std::string message() const;
 
-			// Return true if an error has occurred.
+			/**
+			 * Return true if an error has occurred.
+			 *
+			 * @return True if an error has occurred.
+			 */
 			bool isError() const;
 		};
 
-		// A thread for handling the UI clock.
+		/**
+		 * A thread for handling the UI clock.
+		 */
 		class TTClockThread: public QThread {
 		private:
-			TreetopsForm *m_parent;
-			geo::util::Stopwatch m_sw;
-			bool m_running;
+			TreetopsForm *m_parent;		///<! The parent widget.
+			geo::util::Stopwatch m_sw;	///<! A stopwatch instance.
+			bool m_running;				///<! True when the application is running.
 
+			/**
+			 * Run the clock thread.
+			 */
 			void run();
 
 		public:
+			/**
+			 * Initialize with a pointer to the parent.
+			 *
+			 * @param parent A pointer to the parent widget.
+			 */
 			void init(TreetopsForm *parent);
+
+			/**
+			 * Destroy the clock thread.
+			 */
 			virtual ~TTClockThread();
-			std::string time();
+
+			/**
+			 * Return the time.
+			 *
+			 * @return The time.
+			 */
+			std::string time() const;
+
+			/**
+			 * Start the clock.
+			 */
 			void start();
+
+			/**
+			 * Stop the clock.
+			 */
 			void stop();
 		};
 

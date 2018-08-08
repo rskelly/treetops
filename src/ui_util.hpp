@@ -37,7 +37,26 @@ namespace geo {
 			// Hack to strip the boost::... part of an error message
 			std::string stripBoost(const std::string& msg);
 
+			/**
+			 * Displays a modal dialog indicating an error.
+			 *
+			 * @param parent The parent widget.
+			 * @param title The dialog title.
+			 * @param text The dialog text.
+			 * @param detail A detail string, optional.
+			 */
 			void errorDialog(QWidget* parent, const std::string& title,
+					const std::string& text, const std::string& detail = "");
+
+			/**
+			 * Displays an informative modal dialog.
+			 *
+			 * @param parent The parent widget.
+			 * @param title The dialog title.
+			 * @param text The dialog text.
+			 * @param detail A detail string, optional.
+			 */
+			void infoDialog(QWidget* parent, const std::string& title,
 					const std::string& text, const std::string& detail = "");
 
 			// Convenience: open an input file dialog and return the string.
