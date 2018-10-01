@@ -3,11 +3,14 @@
 <?define ProductUpgradeCode = "F6130536-F3D2-44E2-B496-82A5739D3B60"?>
 <?define CompanyName = "dijital.ca"?>
 <?define AppName = "treetops"?>
-<?define AppExecutable = "treetops.exe"?>
+<?define AppExecutable = "treetops-app.exe"?>
 <?define OptDir = "C:\dev\gisinternals"?>
-<?define BoostDir = "C:\dev\boost_1_64_0\stage\lib"?>
-<?define QtDir = "C:\Qt\5.9.1\msvc2015_64"?>
-<?define GeosDir = "C:\dev\geos\makefiles\bin\Release"?>
+<?define BoostDir = "C:\dev\boost_1_67_0\stage\lib"?>
+<?define BoostVcVer = "141"?>
+<?define BoostVer = "1_67"?>
+<?define QtDir = "C:\dev\Qt\5.11.0\msvc2017_64"?>
+<?define GeosDir = "C:\dev\git\geos\build\bin"?>
+<?defind GdalLib = "gdal203"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <Product Id="E2F73549-DB3C-4310-8CC5-E0219D54C15C" Name="$(var.AppName)"
@@ -76,23 +79,38 @@
 
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="ProductLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E81">
-        <File Source="..\..\makefiles\libtreetops\Release\treetops.dll" />
+        <File Source="..\..\build\bin\treetops.dll" />
+      </Component>
+      <Component Id="GeoUtilLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E82">
+        <File Source="..\..\build\bin\geoutil.dll" />
+      </Component>
+      <Component Id="GeoRasterLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E83">
+        <File Source="..\..\build\bin\georaster.dll" />
+      </Component>
+      <Component Id="GeoANNLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E84">
+        <File Source="..\..\build\bin\geoann.dll" />
+      </Component>
+      <Component Id="GeoDbLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E86">
+        <File Source="..\..\build\bin\geodb.dll" />
+      </Component>
+      <Component Id="UiUtilLib" Guid="4FA13ADA-251B-4345-94A4-6A6CBA160E85">
+        <File Source="..\..\build\bin\ui_util.dll" />
       </Component>
       <Component Id="ProductComponent" Guid="0AFB8DFB-CB83-4C31-AA6B-42032B5EEA96">
-        <File Source="..\..\makefiles\Release\treetops.exe">
+        <File Source="..\..\build\bin\treetops-app.exe">
           <Shortcut Id="StartMenuShortcut" Directory="ApplicationProgramsFolder"
                     Name="$(var.AppName)" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
         </File>
       </Component>
 
       <Component Id="Dep1" Guid="BF24905B-AF3C-433F-96A8-3E8A83FFB176">
-        <File Source="$(var.BoostDir)\boost_date_time-vc140-mt-1_64.dll" />
+        <File Source="$(var.BoostDir)\boost_date_time-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
       </Component>
       <Component Id="Dep2" Guid="764A418F-4D84-4607-9B2E-6BFD0A2AE0C3">
-        <File Source="$(var.BoostDir)\boost_system-vc140-mt-1_64.dll" />
+        <File Source="$(var.BoostDir)\boost_system-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
       </Component>
       <Component Id="Dep3" Guid="F7C5B6CB-4116-46DB-81B9-771E0E04432D">
-        <File Source="$(var.BoostDir)\boost_filesystem-vc140-mt-1_64.dll" />
+        <File Source="$(var.BoostDir)\boost_filesystem-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
       </Component>
       <Component Id="Dep4" Guid="0E6CE6B5-7B1D-498A-8F94-118AD1B3B95F">
         <File Source="$(var.OptDir)\bin\expat.dll" />
@@ -101,7 +119,7 @@
         <File Source="$(var.OptDir)\bin\freexl.dll" />
       </Component>
       <Component Id="Dep6" Guid="17BA70B7-4A5B-4272-A81A-1629ECD9C510">
-        <File Source="$(var.OptDir)\bin\gdal201.dll" />
+        <File Source="$(var.OptDir)\bin\gdal203.dll" />
       </Component>
       <Component Id="Dep7" Guid="DF004BFA-84F1-474D-897B-12B69EB1AD4D">
         <File Source="$(var.GeosDir)\geos.dll" />

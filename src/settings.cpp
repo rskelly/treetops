@@ -20,7 +20,7 @@ bool _load(const std::string& filename, smap& map) {
 	std::ifstream ins(filename, std::ios::in);
 	if(ins.bad())
 		return false;
-	int len = 1024;
+	constexpr int len = 1024;
 	char key[len];
 	char val[len];
 	while(ins.good()) {

@@ -11,14 +11,15 @@
 #include <QKeyEvent>
 #include <QDialog>
 
+#include "geo.hpp"
 #include "ui_crs_selector.h"
 
 namespace geo {
 
 	namespace ui {
 
-		class CRSSelector: public QDialog, public Ui::CRSSelector {
-			Q_OBJECT
+		class G_DLL_EXPORT CRSSelector: public QDialog, public Ui::CRSSelector {
+
 		private:
 			std::map<int, std::string> m_hcrs;
 			std::map<int, std::string> m_vcrs;

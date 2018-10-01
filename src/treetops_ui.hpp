@@ -17,7 +17,7 @@ namespace geo {
 
 	namespace treetops {
 
-		class TreetopsCallbacks: public QObject, public geo::util::Callbacks {
+		class G_DLL_EXPORT TreetopsCallbacks: public QObject, public geo::util::Callbacks {
 			Q_OBJECT
 		public:
 			void stepCallback(float status) const;
@@ -36,7 +36,7 @@ namespace geo {
 		class TTWorkerThread;
 		class TTClockThread;
 
-		class TreetopsForm: public QDialog, public Ui::TreetopsForm, public TreetopsConfigListener {
+		class G_DLL_EXPORT TreetopsForm: public QDialog, public Ui::TreetopsForm, public TreetopsConfigListener {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:

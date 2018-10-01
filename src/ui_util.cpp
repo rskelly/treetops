@@ -13,6 +13,8 @@
 using namespace geo::ui::util;
 using namespace geo::treetops::config;
 
+int g__loglevel = 0;
+
 QString geo::ui::util::qstr(const std::string& str) {
 	return QString(str.c_str());
 }

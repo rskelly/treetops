@@ -29,13 +29,13 @@ namespace geo {
 		namespace util {
 
 			// Convenience: returns a QString from a std string.
-			QString qstr(const std::string& str);
+			QString G_DLL_EXPORT qstr(const std::string& str);
 
 			// Convenience: returns a QString from an int.
-			QString qstr(int val);
+			QString G_DLL_EXPORT qstr(int val);
 
 			// Hack to strip the boost::... part of an error message
-			std::string stripBoost(const std::string& msg);
+			std::string G_DLL_EXPORT stripBoost(const std::string& msg);
 
 			/**
 			 * Displays a modal dialog indicating an error.
@@ -45,7 +45,7 @@ namespace geo {
 			 * @param text The dialog text.
 			 * @param detail A detail string, optional.
 			 */
-			void errorDialog(QWidget* parent, const std::string& title,
+			void G_DLL_EXPORT errorDialog(QWidget* parent, const std::string& title,
 					const std::string& text, const std::string& detail = "");
 
 			/**
@@ -56,21 +56,21 @@ namespace geo {
 			 * @param text The dialog text.
 			 * @param detail A detail string, optional.
 			 */
-			void infoDialog(QWidget* parent, const std::string& title,
+			void G_DLL_EXPORT infoDialog(QWidget* parent, const std::string& title,
 					const std::string& text, const std::string& detail = "");
 
 			// Convenience: open an input file dialog and return the string.
-			void getInputFile(QWidget* form, const std::string& title, std::string& path,
+			void G_DLL_EXPORT getInputFile(QWidget* form, const std::string& title, std::string& path,
 					const std::string& filter, std::string& filename);
 
 			// Convenience: open an output file dialog and return the string.
-			void getOutputFile(QWidget* form, const std::string& title, std::string& path,
+			void G_DLL_EXPORT getOutputFile(QWidget* form, const std::string& title, std::string& path,
 					const std::string& filter, std::string& filename, bool confirmOverwrite = true);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getTopsThresholds(QWidget* form, std::vector<geo::treetops::config::TopThreshold>& thresholds);
+			void G_DLL_EXPORT getTopsThresholds(QWidget* form, std::vector<geo::treetops::config::TopThreshold>& thresholds);
 
-			void getCrownsThresholds(QWidget* form, std::vector<geo::treetops::config::CrownThreshold>& thresholds);
+			void G_DLL_EXPORT getCrownsThresholds(QWidget* form, std::vector<geo::treetops::config::CrownThreshold>& thresholds);
 		}
 
 	}

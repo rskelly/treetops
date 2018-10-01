@@ -14,7 +14,9 @@
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
-int runWithGui(int argc, char **argv) {
+int g__loglevel = 0;
+
+int runWithGui(int argc, char** argv) {
 
 #ifdef _MSC_VER
 	CPLSetConfigOption("GDAL_DATA", "./gdal-data");
@@ -22,8 +24,8 @@ int runWithGui(int argc, char **argv) {
 
 	class TTApplication : public QApplication {
 	public:
-		TTApplication(int &argc, char **argv) : QApplication(argc, argv) {}
-		bool notify(QObject *receiver, QEvent *e) {
+		TTApplication(int& argc, char** argv) : QApplication(argc, argv) {}
+		bool notify(QObject* receiver, QEvent* e) {
 			try {
 				return QApplication::notify(receiver, e);
 			} catch(const std::exception &ex) {
@@ -46,11 +48,7 @@ int runWithGui(int argc, char **argv) {
 	return q.exec();
 }
 
-int main(int argc, char **argv) {
-
-	using namespace geo::treetops;
-	using namespace geo::treetops::util;
-	using namespace geo::treetops::config;
+int main(int argc, char** argv) {
 
 	try {
 
