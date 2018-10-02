@@ -49,22 +49,22 @@ if (${APPLE})
 	set (CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 elseif(${WIN32})
-	set (SQLITE_LIBRARY sqlite3_i)
-	set (SPATIALITE_LIBRARY spatialite_i)
-	set (GDAL_LIBRARY gdal_i)
-
 	set (DEV_DIR "C:\\dev")
 	set (Boost_COMPILER -vc141)
 	set (BOOST_ROOT "${DEV_DIR}\\boost_1_67_0")
 	set (GIT_DIR "${DEV_DIR}\\git")
 	set (GIS_DIR "${DEV_DIR}\\gisinternals")
-	set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib")
+	set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
 	set (GEOS_INCLUDEDIR "${DEV_DIR}\\geos\\include")
 	set (EIGEN_INCLUDEDIR "${DEV_DIR}\\eigen3")
-	set (GIS_LIBRARYDIR "${GIS_DIR}\\lib")
-	set (GIS_INCLUDEDIR "${GIS_DIR}\\include")
-	set (GDAL_INCLUDE_DIR "${GIS_INCLUDEDIR}")
+	set (GDAL_INCLUDE_DIR "${GIS_DIR}\\include")
+	set (GDAL_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin")
+	set (GIS_INCLUDE_DIR "${GIS_DIR}\\include")
+	set (GIS_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin")
 	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${GIS_DIR}\\bin;${DEV_DIR}\\Qt\\5.11.0\\msvc2017_64\\lib\\cmake")
+	set (SQLITE_LIBRARY sqlite3_i)
+	set (SPATIALITE_LIBRARY spatialite_i)
+	set (GDAL_LIBRARY gdal_i)
 else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
@@ -84,12 +84,6 @@ if(${WITH_GUI})
 	find_package(Qt5 REQUIRED Widgets)
 endif()
 
-include_directories(${Qt5Widgets_INCLUDES})
-add_definitions(${Qt5Widgets_DEFINITIONS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
-ADD_DEFINITIONS (${QT_DEFINITIONS})
-
-
 find_library(GEOS_LIBRARY geos PATHS ${GEOS_LIBRARYDIR})
 
 if(OPENMP_FOUND)
@@ -103,15 +97,33 @@ add_subdirectory (libgeo)
 
 # Configure directories
 
-include_directories(BEFORE SYSTEM include libgeo/include 
-	libtreetops/include build/ui_utilobj_autogen/include 
-	${GIS_INCLUDEDIR} ${EIGEN_INCLUDEDIR} ${GDAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GEOS_INCLUDEDIR}
-	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
-	
-link_directories(build/lib libgeo/build/lib libtreetops/build/lib 
-	build/bin libgeo/build/bin libtreetops/build/bin 
-	${GIS_LIBRARYDIR} ${GEOS_LIBRARYDIR} ${GDAL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+#include_directories(${Qt5Widgets_INCLUDES})
+#add_definitions(${Qt5Widgets_DEFINITIONS})
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
+#ADD_DEFINITIONS (${QT_DEFINITIONS})
 
+
+# include_directories(BEFORE SYSTEM include libgeo/include 
+	# libtreetops/include build/ui_utilobj_autogen/include 
+	# build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
+	# ${GIS_INCLUDEDIR} ${EIGEN_INCLUDEDIR} ${GDAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GEOS_INCLUDEDIR}
+	# ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	
+# link_directories(build/lib libgeo/build/lib libtreetops/build/lib 
+	# build/bin libgeo/build/bin libtreetops/build/bin 
+	# ${GIS_LIBRARYDIR} ${GEOS_LIBRARYDIR} ${GDAL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+
+include_directories(include libgeo/include libtreetops/include build/ui_utilobj_autogen/include 
+	build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
+	${GEOS_INCLUDEDIR} ${GIS_INCLUDEDIR} ${EIGEN_INCLUDEDIR} ${JSON_INCLUDEDIR}
+	${GDAL_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
+	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+	 
+link_directories(libgeo/build/lib libtreetops/build/lib 
+	libgeo/build/bin libtreetops/build/bin 
+	build/lib build/bin /opt/lib 
+	${GDAL_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
+	
 # Build support libraries ############################################################################################
 
 set (ui_utilsrc src/ui_util.cpp src/crs_selector_ui.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
