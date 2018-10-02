@@ -29,11 +29,11 @@ if(${WITH_GUI})
 	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc")
 endif()
 
-set (Boost_DEBUG OFF)
-set (Boost_USE_STATIC_LIBS ON)
-set (Boost_USE_STATIC_RUNTIME OFF)
-set (Boost_USE_MULTITHREADED ON)
-set (Boost_NO_SYSTEM_PATHS ON)
+#set (Boost_DEBUG OFF)
+#set (Boost_USE_STATIC_LIBS ON)
+#set (Boost_USE_STATIC_RUNTIME OFF)
+#set (Boost_USE_MULTITHREADED ON)
+#set (Boost_NO_SYSTEM_PATHS ON)
 
 set (SQLITE_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
@@ -50,8 +50,6 @@ if (${APPLE})
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 elseif(${WIN32})
 	set (DEV_DIR "C:\\dev")
-	set (Boost_COMPILER -vc141)
-	set (BOOST_ROOT "${DEV_DIR}\\boost_1_67_0")
 	set (GIT_DIR "${DEV_DIR}\\git")
 	set (GIS_DIR "${DEV_DIR}\\gisinternals")
 	set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
@@ -70,21 +68,17 @@ else()
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-	set (GEOS_INCLUDEDIR /opt/include)
-	set (GEOS_LIBRARYDIR /opt/lib)
 	set (EIGEN_INCLUDEDIR /usr/include/eigen3)
 endif()
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 
 find_package (OpenMP REQUIRED)
-find_package (Boost 1.58 COMPONENTS system filesystem date_time thread REQUIRED)
-find_package (GDAL 2.1 REQUIRED)
 if(${WITH_GUI})
 	find_package(Qt5 REQUIRED Widgets)
 endif()
 
-find_library(GEOS_LIBRARY geos PATHS ${GEOS_LIBRARYDIR})
+#find_library(GEOS_LIBRARY geos PATHS ${GEOS_LIBRARYDIR})
 
 if(OPENMP_FOUND)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
@@ -97,32 +91,14 @@ add_subdirectory (libgeo)
 
 # Configure directories
 
-#include_directories(${Qt5Widgets_INCLUDES})
-#add_definitions(${Qt5Widgets_DEFINITIONS})
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
-#ADD_DEFINITIONS (${QT_DEFINITIONS})
-
-
-# include_directories(BEFORE SYSTEM include libgeo/include 
-	# libtreetops/include build/ui_utilobj_autogen/include 
-	# build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
-	# ${GIS_INCLUDEDIR} ${EIGEN_INCLUDEDIR} ${GDAL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GEOS_INCLUDEDIR}
-	# ${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
-	
-# link_directories(build/lib libgeo/build/lib libtreetops/build/lib 
-	# build/bin libgeo/build/bin libtreetops/build/bin 
-	# ${GIS_LIBRARYDIR} ${GEOS_LIBRARYDIR} ${GDAL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
-
 include_directories(include libgeo/include libtreetops/include build/ui_utilobj_autogen/include 
 	build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
-	${GEOS_INCLUDEDIR} ${GIS_INCLUDEDIR} ${EIGEN_INCLUDEDIR} ${JSON_INCLUDEDIR}
-	${GDAL_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
+	${EIGEN_INCLUDEDIR}	${GDAL_INCLUDE_DIR}
 	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
 	 
 link_directories(libgeo/build/lib libtreetops/build/lib 
 	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin /opt/lib 
-	${GDAL_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
+	build/lib build/bin /opt/lib)
 	
 # Build support libraries ############################################################################################
 
