@@ -98,6 +98,7 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 void TopsThresholdsForm::setThresholds(const std::vector<TopThreshold> &thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
+	updateButtons();
 }
 
 void TopsThresholdsForm::sortItems() {

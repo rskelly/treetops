@@ -269,6 +269,20 @@ void TreetopsForm::setupUi(QWidget *form) {
 	m_clockThread = new TTClockThread();
 	m_clockThread->init(this);
 
+	// Populate combos.
+	QStringList rasterDrivers;
+	for(const auto &it : geo::raster::Raster::drivers({"GTiff", "HFA"}))
+		rasterDrivers << qstr(it.first);
+
+	QStringList vectorDrivers;
+	for(const auto &it : geo::db::DB::drivers({"ESRI Shapefile", "SQLite"}))
+		vectorDrivers << qstr(it.first);
+
+	cboSmoothedCHMDriver->addItems(rasterDrivers);
+	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
+	cboCrownsRasterDriver->addItems(rasterDrivers);
+	cboCrownsDatabaseDriver->addItems(vectorDrivers);
+
 	// Connect events
 	connect(btnSettingsFile, SIGNAL(clicked()), this, SLOT(settingsFileClicked()));
 	connect(txtSettingsFile, SIGNAL(textChanged(QString)), this, SLOT(settingsFileChanged(QString)));
@@ -328,26 +342,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 
-	QStringList rasterDrivers;
-	for(const auto &it : geo::raster::Raster::drivers({"GTiff", "HFA"}))
-		rasterDrivers << qstr(it.first);
-
-	QStringList vectorDrivers;
-	for(const auto &it : geo::db::DB::drivers({"ESRI Shapefile", "SQLite"}))
-		vectorDrivers << qstr(it.first);
-
-	cboSmoothedCHMDriver->addItems(rasterDrivers);
-	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
-	cboCrownsRasterDriver->addItems(rasterDrivers);
-	cboCrownsDatabaseDriver->addItems(vectorDrivers);
-
-	if(!m_settings.load(m_config))
-		g_warn("No settings file remembered. Starting fresh.")
-
-	//loadSettings();
-
 	m_config.setListener(this);
 	m_config.setActive(true);
+	m_config.update(TopsThresholds|CrownsThresholds);
 	checkRun();
 }
 
@@ -586,8 +583,7 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 		std::string filename = m_config.settings();
 		if(Util::exists(filename)) {
 			QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
-					"If you choose an existing file, the saved settings will replace the current settings.\n"
-					"Click 'Open' to use the saved settings or 'Reset' to overwrite the file with the current settings.",
+					"A settings file exists with this name. Click 'Open' to use the saved settings or 'Reset' to overwrite the file with the new settings.",
 					QMessageBox::Open|QMessageBox::Reset);
 			if(reply != QMessageBox::Reset) {
 				m_config.setActive(false);

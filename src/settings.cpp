@@ -75,19 +75,9 @@ std::string _gets(smap& map, const std::string& key, const std::string& alt) {
 }
 
 Settings::Settings() {
-	m_lastFile = m_settings.value("local/settings", "").toString().toStdString();
-}
-
-const std::string& Settings::lastFile() const {
-	return m_lastFile;
-}
-
-bool Settings::load(TreetopsConfig& config) {
-	return load(config, lastFile());
 }
 
 bool Settings::load(TreetopsConfig& config, const std::string& filename) {
-	m_lastFile = filename;
 	m_settings.setValue("local/settings", QString(filename.c_str()));
 
 	smap map;
@@ -136,8 +126,8 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 }
 
 void Settings::save(TreetopsConfig& config) {
-	//m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
 	smap map;
+	map["settingsFile"] = config.settings();
 	map["srid"] = std::to_string(config.srid());
 	map["buildIndex"] = std::to_string(config.buildIndex());
 	map["tableCacheSize"] = std::to_string(config.tableCacheSize());
@@ -169,12 +159,10 @@ void Settings::save(TreetopsConfig& config) {
 	map["crownsRemoveHoles"] = std::to_string(config.crownsRemoveHoles());
 	map["crownsRemoveDangles"] = std::to_string(config.crownsRemoveDangles());
 
-	_save(m_lastFile, map);
-
+	_save(config.settings(), map);
 }
 
 Settings::~Settings() {
-	m_settings.setValue("local/settings", QString(m_lastFile.c_str()));
 	m_settings.setValue("local/topsDatabaseLastDir", QString(topsDatabaseLastDir.c_str()));
 	m_settings.setValue("local/originalCHMLastDir", QString(originalCHMLastDir.c_str()));
 	m_settings.setValue("local/smoothedCHMLastDir", QString(smoothedCHMLastDir.c_str()));

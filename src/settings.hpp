@@ -26,7 +26,6 @@ typedef std::unordered_map<std::string, std::string> smap;
 class Settings {
 private:
 	QSettings m_settings;
-	std::string m_lastFile;
 	smap m_localSettings;
 	smap m_userSettings;
 
@@ -41,19 +40,6 @@ public:
 	Settings();
 
 	/**
-	 * Return the most recently used settings file.
-	 *
-	 * @return The most recently used settings file.
-	 */
-	const std::string& lastFile() const;
-
-	/**
-	 * Load the settings from the previously-accessed settings file.
-	 * If there isn't one, do nothing and return false.
-	 */
-	bool load(geo::treetops::config::TreetopsConfig& config);
-
-	/**
 	 * Load the settings contained in filename into the TreetopsConfig object.
 	 * If false is returned, there is no settings file available
 	 *
@@ -64,7 +50,8 @@ public:
 	bool load(geo::treetops::config::TreetopsConfig& config, const std::string& filename);
 
 	/**
-	 * Save the settings contained in the TreetopsConfig object to the filename.
+	 * Save the settings contained in the TreetopsConfig object to the
+	 * settings file contained in the config object.
 	 *
 	 * @param config A TreetopsConfig instance.
 	 */

@@ -119,6 +119,7 @@ void CrownsThresholdsForm::setupUi(QWidget* form) {
 void CrownsThresholdsForm::setThresholds(const std::vector<CrownThreshold>& thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
+	updateButtons();
 }
 
 void CrownsThresholdsForm::sortItems() {
