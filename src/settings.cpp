@@ -84,7 +84,6 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	if(!_load(filename, map))
 		return false;
 
-	config.setSRID(_geti(map, "srid", 0));
 	config.setBuildIndex(_getb(map, "buildIndex", config.buildIndex()));
 	config.setTableCacheSize(_geti(map, "tableCacheSize", config.tableCacheSize()));
 	config.setRowCacheSize(_geti(map, "rowCacheSize", config.rowCacheSize()));
@@ -128,7 +127,6 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 void Settings::save(TreetopsConfig& config) {
 	smap map;
 	map["settingsFile"] = config.settings();
-	map["srid"] = std::to_string(config.srid());
 	map["buildIndex"] = std::to_string(config.buildIndex());
 	map["tableCacheSize"] = std::to_string(config.tableCacheSize());
 	map["rowCacheSize"] = std::to_string(config.rowCacheSize()); //(24 * 1024 * 1024),

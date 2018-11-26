@@ -244,7 +244,6 @@ void TreetopsForm::loadSettings() {
 	// -- tops
 	grpTops->setChecked(m_config.doTops());
 	txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
-	spnTopsTreetopsSRID->setValue(m_config.srid());
 	spnTopsMaxNulls->setValue(m_config.topsMaxNulls());
 
 	// -- crowns
@@ -315,12 +314,10 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// -- tops
 	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
-	connect(spnTopsTreetopsSRID, SIGNAL(valueChanged(int)), this, SLOT(topsTreetopsSRIDChanged(int)));
 	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
 	// -- crowns
 	connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
-	connect(btnTopsTreetopsSRID, SIGNAL(clicked()), this, SLOT(topsTreetopsSRIDClicked()));
 	connect(chkCrownsDoDatabase, SIGNAL(toggled(bool)), this, SLOT(crownsDoDatabaseChanged(bool)));
 	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
 	connect(btnCrownsThresholds, SIGNAL(clicked()), this, SLOT(crownsThresholdsClicked()));
@@ -364,10 +361,6 @@ void TreetopsForm::settingsFileChanged(QString filename) {
 	m_config.setSettings(filename.toStdString());
 }
 
-void TreetopsForm::topsTreetopsSRIDChanged(int srid) {
-	m_config.setSRID(srid);
-}
-
 void TreetopsForm::topsMaxNullsChanged(double maxNulls) {
 	m_config.setTopsMaxNulls(maxNulls);
 }
@@ -378,14 +371,6 @@ void TreetopsForm::crownsRemoveHolesChanged(bool on) {
 
 void TreetopsForm::crownsRemoveDanglesChanged(bool on) {
 	m_config.setCrownsRemoveDangles(on);
-}
-
-void TreetopsForm::topsTreetopsSRIDClicked() {
-	CRSSelector cs(m_form);
-	cs.enableVertical(false);
-	cs.setHorizontalSRID(m_config.srid());
-	if (cs.exec())
-		spnTopsTreetopsSRID->setValue(cs.getHorizontalSRID());
 }
 
 void TreetopsForm::updateView() {

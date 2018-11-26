@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>673</width>
-    <height>735</height>
+    <height>703</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -374,7 +374,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="4">
+        <item row="0" column="3">
          <widget class="QToolButton" name="btnTopsThresholds">
           <property name="enabled">
            <bool>false</bool>
@@ -384,7 +384,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1" colspan="3">
+        <item row="0" column="1" colspan="2">
          <widget class="QLineEdit" name="txtTopsThresholds">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -407,23 +407,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_17">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>&amp;Treetops SRID</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsTreetopsSRID</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1" colspan="4">
+        <item row="1" column="1" colspan="3">
          <widget class="QDoubleSpinBox" name="spnTopsMaxNulls">
           <property name="maximum">
            <double>1.000000000000000</double>
@@ -433,35 +417,6 @@
           </property>
           <property name="value">
            <double>0.200000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="4">
-         <widget class="QToolButton" name="btnTopsTreetopsSRID">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1" colspan="3">
-         <widget class="QSpinBox" name="spnTopsTreetopsSRID">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::WheelFocus</enum>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>999999</number>
           </property>
          </widget>
         </item>

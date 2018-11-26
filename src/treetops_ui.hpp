@@ -114,8 +114,6 @@ namespace geo {
 
 			void topsThresholdsChanged(QString);
 			void topsThresholdsClicked();
-			void topsTreetopsSRIDClicked();
-			void topsTreetopsSRIDChanged(int);
 			void topsMaxNullsChanged(double);
 
 			void crownsThresholdsChanged(QString);
