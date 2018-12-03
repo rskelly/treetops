@@ -347,13 +347,12 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 void TreetopsForm::resetProgress() {
 	prgStep->setValue(0);
-	//prgOverall->setValue(0);
 	lblStatus->setText("[Not Started]");
 }
 
 void TreetopsForm::settingsFileClicked() {
 	std::string filename;
-	getOutputFile(m_form, "Settings File", m_settings.outputLastDir, ALL_PATTERN, filename, false);
+	getOutputFile(m_form, "Settings File", m_settings.lastDir, ALL_PATTERN, filename, false);
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
@@ -378,7 +377,7 @@ void TreetopsForm::updateView() {
 
 void TreetopsForm::originalCHMClicked() {
 	std::string filename;
-	getInputFile(m_form, "CHM for Smoothing", m_settings.originalCHMLastDir, ALL_PATTERN, filename);
+	getInputFile(m_form, "CHM for Smoothing", m_settings.lastDir, ALL_PATTERN, filename);
 	bool active = m_config.setActive(false);
 	if(m_config.smoothedCHMDriver().empty())
 		m_config.setSmoothedCHMDriver(cboSmoothedCHMDriver->currentText().toStdString());
@@ -399,7 +398,7 @@ void TreetopsForm::originalCHMBandChanged(int band) {
 void TreetopsForm::smoothedCHMClicked() {
 	std::string oldExt = Util::extension(m_config.smoothedCHM());
 	std::string filename;
-	getOutputFile(m_form, "Smoothed CHM", m_settings.outputLastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Smoothed CHM", m_settings.lastDir, ALL_PATTERN, filename);
 	m_config.setSmoothedCHM(filename);
 }
 
@@ -407,22 +406,31 @@ void TreetopsForm::smoothedCHMDriverChanged(QString text) {
 	m_config.setSmoothedCHMDriver(text.toStdString());
 }
 
+std::string __lastDir(Settings& settings, const std::string& filename) {
+	if(Util::isFile(filename)) {
+		settings.lastDir = Util::parent(filename);
+	} else {
+		settings.lastDir = filename;
+	}
+	return filename;
+}
+
 void TreetopsForm::originalCHMChanged(QString text) {
-	m_config.setOriginalCHM(text.toStdString());
+	m_config.setOriginalCHM(__lastDir(m_settings, text.toStdString()));
 }
 
 void TreetopsForm::smoothedCHMChanged(QString text) {
-	m_config.setSmoothedCHM(text.toStdString());
+	m_config.setSmoothedCHM(__lastDir(m_settings, text.toStdString()));
 }
 
 void TreetopsForm::treetopsDatabaseChanged(QString text) {
-	m_config.setTreetopsDatabase(text.toStdString());
+	m_config.setTreetopsDatabase(__lastDir(m_settings, text.toStdString()));
 }
 
 void TreetopsForm::treetopsDatabaseClicked() {
 	std::string oldExt = Util::extension(m_config.treetopsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Treetops Database", m_settings.topsDatabaseLastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Treetops Database", m_settings.lastDir, ALL_PATTERN, filename);
 	m_config.setTreetopsDatabase(filename);
 }
 
@@ -445,7 +453,7 @@ void TreetopsForm::crownsThresholdsClicked() {
 void TreetopsForm::crownsRasterClicked() {
 	std::string oldExt = Util::extension(m_config.crownsRaster());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Raster", m_settings.crownsRasterLastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Crowns Raster", m_settings.lastDir, ALL_PATTERN, filename);
 	m_config.setCrownsRaster(filename);
 }
 
@@ -453,11 +461,10 @@ void TreetopsForm::crownsRasterDriverChanged(QString text) {
 	m_config.setCrownsRasterDriver(text.toStdString());
 }
 
-
 void TreetopsForm::crownsDatabaseClicked() {
 	std::string oldExt = Util::extension(m_config.crownsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Database", m_settings.crownsDatabaseLastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Crowns Database", m_settings.lastDir, ALL_PATTERN, filename);
 	m_config.setCrownsDatabase(filename);
 }
 
@@ -485,16 +492,16 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 	m_config.setDoCrowns(doCrowns);
 }
 
-void TreetopsForm::crownsRasterChanged(QString file) {
+void TreetopsForm::crownsRasterChanged(QString text) {
 	std::string oldExt = Util::extension(m_config.crownsRaster());
-	m_config.setCrownsRaster(file.toStdString());
+	m_config.setCrownsRaster(__lastDir(m_settings, text.toStdString()));
 	if(oldExt != Util::extension(m_config.crownsRaster()))
 		cboCrownsRasterDriver->setCurrentText("");
 }
 
-void TreetopsForm::crownsDatabaseChanged(QString file) {
+void TreetopsForm::crownsDatabaseChanged(QString text) {
 	std::string oldExt = Util::extension(m_config.crownsDatabase());
-	m_config.setCrownsDatabase(file.toStdString());
+	m_config.setCrownsDatabase(__lastDir(m_settings, text.toStdString()));
 	if(oldExt != Util::extension(m_config.crownsDatabase()))
 		cboCrownsDatabaseDriver->setCurrentText("");
 }

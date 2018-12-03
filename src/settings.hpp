@@ -30,12 +30,7 @@ private:
 	smap m_userSettings;
 
 public:
-	std::string topsDatabaseLastDir;
-	std::string originalCHMLastDir;
-	std::string smoothedCHMLastDir;
-	std::string crownsRasterLastDir;
-	std::string crownsDatabaseLastDir;
-	std::string outputLastDir;
+	std::string lastDir;
 
 	Settings();
 
