@@ -68,6 +68,7 @@ void TTWorkerThread::run() {
 
 	// Clear the message to indicate no issues.
 	m_message.clear();
+	m_toFix = FixNone;
 
 	Treetops t;
 	try {
@@ -98,7 +99,7 @@ void TTWorkerThread::run() {
 			try {
 				t.treetops(config, m_parent->m_cancel);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
-				m_parent->topsConvertFix();
+				m_toFix |= FixTops;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
 			cb->overallCallback((float) ++step / steps);
@@ -109,7 +110,7 @@ void TTWorkerThread::run() {
 			try {
 				t.treecrowns(config, m_parent->m_cancel);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
-				m_parent->crownsConvertFix();
+				m_toFix |= FixCrowns;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
 			cb->overallCallback((float) ++step / steps);
@@ -145,6 +146,10 @@ std::string TTWorkerThread::message() const {
 
 bool TTWorkerThread::isError() const {
 	return m_isError;
+}
+
+int TTWorkerThread::toFix() const {
+	return m_toFix;
 }
 
 TTWorkerThread::~TTWorkerThread(){}
@@ -537,6 +542,11 @@ void TreetopsForm::runClicked() {
 
 void TreetopsForm::done() {
 	m_clockThread->stop();
+	m_clockThread->wait();
+	if(m_workerThread->toFix() & FixTops)
+		topsConvertFix();
+	if(m_workerThread->toFix() & FixCrowns)
+		crownsConvertFix();
 	if (m_workerThread->isError()) {
 		errorDialog(m_form, "Error", m_workerThread->message());
 		resetProgress();
@@ -564,9 +574,15 @@ void TreetopsForm::helpClicked() {
 }
 
 void TreetopsForm::checkRun() {
-	btnRun->setEnabled(m_config.canRun() && m_workerThread && !m_workerThread->isRunning());
-	btnCancel->setEnabled(m_workerThread->isRunning());
-	btnExit->setEnabled(!m_workerThread->isRunning());
+	if(m_workerThread) {
+		btnRun->setEnabled(m_config.canRun() && !m_workerThread->isRunning());
+		btnCancel->setEnabled(m_workerThread->isRunning());
+		btnExit->setEnabled(!m_workerThread->isRunning());
+	} else {
+		btnRun->setEnabled(false);
+		btnCancel->setEnabled(false);
+		btnExit->setEnabled(true);
+	}
 }
 
 void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {

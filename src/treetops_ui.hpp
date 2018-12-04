@@ -132,6 +132,12 @@ namespace geo {
 			void done();
 		};
 
+		enum FixFields {
+			FixNone,
+			FixTops,
+			FixCrowns
+		};
+
 		/**
 		 * A thread for performing the work of the application.
 		 */
@@ -140,6 +146,7 @@ namespace geo {
 			TreetopsForm *m_parent;		///<! The form that owns this thread.
 			std::string m_message;		///<! The error message from the last error.
 			bool m_isError;				///<! True if the thread is running or exiting in an error state.
+			int m_toFix;				///<! Container for flags indicating which fields to convert to sqlite. Tops/Crowns/Both.
 
 			/**
 			 * Run the thread.
@@ -178,6 +185,15 @@ namespace geo {
 			 * @return True if an error has occurred.
 			 */
 			bool isError() const;
+
+			/**
+			 * Return an integer indicating which fields to fix. Constants
+			 * from the {@link FixFields} enum are ORed together.
+			 *
+			 * @return The fields to fix.
+			 */
+			int toFix() const;
+
 		};
 
 		/**
