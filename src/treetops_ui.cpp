@@ -10,7 +10,6 @@
 #include "raster.hpp"
 #include "treetops.hpp"
 #include "treetops_ui.hpp"
-#include "crs_selector_ui.hpp"
 #include "ui_util.hpp"
 #include "settings.hpp"
 

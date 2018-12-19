@@ -102,7 +102,7 @@ link_directories(libgeo/build/lib libtreetops/build/lib
 	
 # Build support libraries ############################################################################################
 
-set (ui_utilsrc src/ui_util.cpp src/crs_selector_ui.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
+set (ui_utilsrc src/ui_util.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
 add_library (ui_utilobj OBJECT ${ui_utilsrc})
 set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
