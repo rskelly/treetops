@@ -70,6 +70,7 @@ void TTWorkerThread::run() {
 	m_toFix = FixNone;
 
 	Treetops t;
+
 	try {
 		// Reset error state.
 		reset();
@@ -259,6 +260,7 @@ void TreetopsForm::loadSettings() {
 	chkCrownsRemoveDangles->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
 	chkCrownsRemoveHoles->setChecked(m_config.crownsRemoveHoles());
 	chkCrownsRemoveDangles->setChecked(m_config.crownsRemoveDangles());
+
 }
 
 void TreetopsForm::setupUi(QWidget *form) {
@@ -490,9 +492,13 @@ void TreetopsForm::doSmoothChanged(bool v) {
 
 void TreetopsForm::doTopsChanged(bool v) {
 	m_config.setDoTops(v);
+	if(!m_config.doTops())
+		grpCrowns->setChecked(false);
 }
 
 void TreetopsForm::doCrownsChanged(bool doCrowns) {
+	if(doCrowns && !m_config.doTops())
+		grpTops->setChecked(true);
 	m_config.setDoCrowns(doCrowns);
 }
 
