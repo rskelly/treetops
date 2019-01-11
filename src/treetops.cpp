@@ -34,6 +34,8 @@ int runWithGui(int argc, char** argv) {
 				err.setInformativeText(QString(ex.what()));
 				err.exec();
 				return false;
+			} catch (...) {
+				g_warn("Some qt exception.")
 			}
 		}
 	};
