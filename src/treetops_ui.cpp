@@ -199,15 +199,15 @@ void TreetopsForm::setRunTime(const std::string& time) {
 TreetopsForm::~TreetopsForm() {
 	// Save the settings.
 	m_settings.save(m_config);
-
 	delete m_form;
 	delete m_callbacks;
 	if(m_clockThread) {
-		m_clockThread->exit(0);
+		m_clockThread->stop();
+		m_clockThread->wait();
 		delete m_clockThread;
 	}
 	if (m_workerThread) {
-		m_workerThread->exit(0);
+		m_workerThread->wait();
 		delete m_workerThread;
 	}
 }
