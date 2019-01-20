@@ -37,6 +37,7 @@ int runWithGui(int argc, char** argv) {
 			} catch (...) {
 				g_warn("Some qt exception.")
 			}
+			return false;
 		}
 	};
 

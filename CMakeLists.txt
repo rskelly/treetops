@@ -33,12 +33,6 @@ if(${WITH_GUI})
 	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc")
 endif()
 
-set (Boost_DEBUG OFF)
-set (Boost_USE_STATIC_LIBS ON)
-set (Boost_USE_STATIC_RUNTIME OFF)
-set (Boost_USE_MULTITHREADED ON)
-set (Boost_NO_SYSTEM_PATHS ON)
-
 set (SQLITE_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 
@@ -54,9 +48,6 @@ if (${APPLE})
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 elseif(${WIN32})
 	set (DEV_DIR "C:\\dev")
-	set (Boost_COMPILER -vc141)
-	set (BOOST_ROOT "${DEV_DIR}\\boost_1_67_0")
-	set (BOOST_LIBRARYDIR "${BOOST_ROOT}\\lib")
 	set (GIT_DIR "${DEV_DIR}\\git")
 	set (GIS_DIR "${DEV_DIR}\\gisinternals")
 	set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
@@ -80,10 +71,7 @@ endif()
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 
-unset (Boost_INCLUDE_DIR CACHE)
-unset (Boost_LIBRARY_DIRS CACHE)
 find_package (GDAL 2 REQUIRED)
-find_package (Boost REQUIRED COMPONENTS system filesystem date_time)
 find_package (OpenMP REQUIRED)
 if(${WITH_GUI})
 	find_package(Qt5 REQUIRED Widgets)
@@ -103,11 +91,11 @@ include_directories(include libgeo/include libtreetops/include build/ui_utilobj_
 	build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
 	${EIGEN_INCLUDEDIR}	${GDAL_INCLUDE_DIR}
 	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS}
-	${Boost_INCLUDE_DIRS} ${GEOS_INCLUDEDIR})
+	${GEOS_INCLUDEDIR})
 	 
 link_directories(libgeo/build/lib libtreetops/build/lib 
 	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin /opt/lib ${Boost_LIBRARY_DIRS} ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARIES})
+	build/lib build/bin /opt/lib ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR})
 	
 # Build support libraries ############################################################################################
 
