@@ -25,6 +25,11 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set (CMAKE_INSTALL_RPATH "/opt/lib;/usr/local/lib")
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+set (Boost_DEBUG OFF)
+set (Boost_USE_STATIC_LIBS OFF)
+set (Boost_USE_STATIC_RUNTIME OFF)
+set (Boost_USE_MULTITHREADED ON)
+set (Boost_NO_SYSTEM_PATHS ON)
 
 if(${WITH_GUI})
 	set (CMAKE_AUTOUIC ON)
@@ -48,10 +53,12 @@ if (${APPLE})
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 elseif(${WIN32})
 	set (DEV_DIR "C:\\dev")
+	set (Boost_COMPILER -vc141)
+	set (BOOST_ROOT "${DEV_DIR}\\boost_1_67_0")
 	set (GIT_DIR "${DEV_DIR}\\git")
 	set (GIS_DIR "${DEV_DIR}\\gisinternals")
-	set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
-	set (GEOS_INCLUDEDIR "${DEV_DIR}\\geos\\include")
+	set (GEOS_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin") #set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
+	set (GEOS_INCLUDEDIR "${GIS_DIR}\\include") #set (GEOS_INCLUDEDIR "${DEV_DIR}\\geos\\include")
 	set (EIGEN_INCLUDEDIR "${DEV_DIR}\\eigen3")
 	set (GDAL_INCLUDE_DIR "${GIS_DIR}\\include")
 	set (GDAL_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin")
@@ -71,6 +78,7 @@ endif()
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 
+find_package (Boost 1.58 COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2 REQUIRED)
 find_package (OpenMP REQUIRED)
 if(${WITH_GUI})
@@ -91,11 +99,11 @@ include_directories(include libgeo/include libtreetops/include build/ui_utilobj_
 	build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
 	${EIGEN_INCLUDEDIR}	${GDAL_INCLUDE_DIR}
 	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS}
-	${GEOS_INCLUDEDIR})
+	${GEOS_INCLUDEDIR} ${Boost_INCLUDE_DIRS})
 	 
 link_directories(libgeo/build/lib libtreetops/build/lib 
 	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin /opt/lib ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR})
+	build/lib build/bin /opt/lib ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
 	
 # Build support libraries ############################################################################################
 
@@ -103,13 +111,13 @@ set (ui_utilsrc src/ui_util.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds
 add_library (ui_utilobj OBJECT ${ui_utilsrc})
 set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
-target_link_libraries(ui_util georaster treetops Qt5::Gui Qt5::Core Qt5::Widgets ${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY})
+target_link_libraries(ui_util georaster treetops Qt5::Gui Qt5::Core Qt5::Widgets ${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} ${Boost_LIBRARIES})
 
 # Build programs #####################################################################################################
 
 add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
 #set_target_properties (treetops-app PROPERTIES OUTPUT_NAME treetops)
-target_link_libraries (treetops-app PUBLIC ui_util treetops Qt5::Gui Qt5::Core Qt5::Widgets)
+target_link_libraries (treetops-app PUBLIC ui_util treetops Qt5::Gui Qt5::Core Qt5::Widgets ${Boost_LIBRARIES})
 
 # Install ###########################################################################################################
 
