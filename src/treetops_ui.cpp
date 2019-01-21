@@ -18,6 +18,16 @@ using namespace geo::ui::util;
 using namespace geo::treetops;
 using namespace geo::treetops::config;
 
+std::string __lastDir(Settings& settings, const std::string& filename) {
+	if (Util::isFile(filename)) {
+		settings.lastDir = Util::parent(filename);
+	}
+	else {
+		settings.lastDir = filename;
+	}
+	return filename;
+}
+
 // TreetopsCallbacks implementation
 
 void TreetopsCallbacks::stepCallback(float status) const {
@@ -319,11 +329,13 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(spnSmoothSigma, SIGNAL(valueChanged(double)), this, SLOT(smoothSigmaChanged(double)));
 
 	// -- tops
-	connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
+	// TODO: Needs validator, see #113. connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
+	connect(txtTopsThresholds, SIGNAL(editingFinished()), this, SLOT(topsThresholdsEditingFinished()));
 	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
 	// -- crowns
-	connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
+	// TODO: Needs validator, see #113. connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
+	connect(txtCrownsThresholds, SIGNAL(editingFinished()), this, SLOT(crownsThresholdsEditingFinished()));
 	connect(chkCrownsDoDatabase, SIGNAL(toggled(bool)), this, SLOT(crownsDoDatabaseChanged(bool)));
 	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
 	connect(btnCrownsThresholds, SIGNAL(clicked()), this, SLOT(crownsThresholdsClicked()));
@@ -410,15 +422,6 @@ void TreetopsForm::smoothedCHMClicked() {
 
 void TreetopsForm::smoothedCHMDriverChanged(QString text) {
 	m_config.setSmoothedCHMDriver(text.toStdString());
-}
-
-std::string __lastDir(Settings& settings, const std::string& filename) {
-	if(Util::isFile(filename)) {
-		settings.lastDir = Util::parent(filename);
-	} else {
-		settings.lastDir = filename;
-	}
-	return filename;
 }
 
 void TreetopsForm::originalCHMChanged(QString text) {
@@ -520,7 +523,19 @@ void TreetopsForm::topsThresholdsChanged(QString thresh) {
 	m_config.parseTopsThresholds(thresh.toStdString());
 }
 
+// TODO: Temporary, see #113.
+void TreetopsForm::topsThresholdsEditingFinished() {
+	QString thresh = txtTopsThresholds->text();
+	m_config.parseTopsThresholds(thresh.toStdString());
+}
+
 void TreetopsForm::crownsThresholdsChanged(QString thresh) {
+	m_config.parseCrownsThresholds(thresh.toStdString());
+}
+
+// TODO: Temporary, see #113.
+void TreetopsForm::crownsThresholdsEditingFinished() {
+	QString thresh = txtCrownsThresholds->text();
 	m_config.parseCrownsThresholds(thresh.toStdString());
 }
 

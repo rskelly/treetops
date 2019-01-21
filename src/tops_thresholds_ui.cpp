@@ -22,6 +22,7 @@ TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	spnWindow = new QSpinBox();
 	spnWindow->setMinimum(3);
 	spnWindow->setMaximum(99);
+	spnWindow->setSingleStep(2);
 	btnDelete = new QToolButton();
 	btnDelete->setText("X");
 	layout->setMargin(0);
