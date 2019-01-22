@@ -22,14 +22,14 @@ set (CMAKE_INCLUDE_DIRECTORIES_BEFORE ON)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_INSTALL_RPATH "/opt/lib;/usr/local/lib")
+set (CMAKE_INSTALL_RPATH "/usr/local/lib")
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set (Boost_DEBUG OFF)
 set (Boost_USE_STATIC_LIBS OFF)
 set (Boost_USE_STATIC_RUNTIME OFF)
 set (Boost_USE_MULTITHREADED ON)
-set (Boost_NO_SYSTEM_PATHS ON)
+set (Boost_NO_SYSTEM_PATHS OFF)
 
 if(${WITH_GUI})
 	set (CMAKE_AUTOUIC ON)
@@ -103,7 +103,7 @@ include_directories(include libgeo/include libtreetops/include build/ui_utilobj_
 	 
 link_directories(libgeo/build/lib libtreetops/build/lib 
 	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin /opt/lib ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
+	build/lib build/bin ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
 	
 # Build support libraries ############################################################################################
 
