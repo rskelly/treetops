@@ -1,3 +1,10 @@
+#ifndef GIT_REV
+#define GIT_REV 0000000
+#endif
+#define stringyx(x) stringy(x)
+#define stringy(GIT_REV) #GIT_REV
+
+
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
@@ -276,6 +283,9 @@ void TreetopsForm::loadSettings() {
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
 	m_form = form;
+
+	QString title = form->windowTitle();
+	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
 
 	// Create callbacks and worker thread
 	m_callbacks = new TreetopsCallbacks();
