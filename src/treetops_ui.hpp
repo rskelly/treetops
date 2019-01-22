@@ -113,10 +113,12 @@ namespace geo {
 			void smoothSigmaChanged(double);
 
 			void topsThresholdsChanged(QString);
+			void topsThresholdsEditingFinished(); // TODO: Temporary see #113.
 			void topsThresholdsClicked();
 			void topsMaxNullsChanged(double);
 
 			void crownsThresholdsChanged(QString);
+			void crownsThresholdsEditingFinished(); // TODO: Temporary see #113.
 			void crownsDoDatabaseChanged(bool);
 			void crownsUpdateHeightsChanged(bool);
 			void crownsRemoveHolesChanged(bool);
