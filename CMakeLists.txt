@@ -22,7 +22,7 @@ set (CMAKE_INCLUDE_DIRECTORIES_BEFORE ON)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_INSTALL_RPATH "/opt/lib;/usr/local/lib")
+set (CMAKE_INSTALL_RPATH "/usr/local/lib")
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set (Boost_DEBUG OFF)
@@ -72,6 +72,8 @@ else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
+	set (BOOST_ROOT /usr)
+	set (BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 	set (EIGEN_INCLUDEDIR /usr/include/eigen3)
 endif()
@@ -103,7 +105,7 @@ include_directories(include libgeo/include libtreetops/include build/ui_utilobj_
 	 
 link_directories(libgeo/build/lib libtreetops/build/lib 
 	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin /opt/lib ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
+	build/lib build/bin ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
 	
 # Build support libraries ############################################################################################
 
