@@ -14,6 +14,12 @@
 
 using namespace geo::treetops::config;
 
+/**
+ * Load the key-value file contents into a map.
+ *
+ * \param filename The target file. Will be overwritten.
+ * \param map The map.
+ */
 bool _load(const std::string& filename, smap& map) {
 	if(filename.empty())
 		return false;
@@ -31,6 +37,12 @@ bool _load(const std::string& filename, smap& map) {
 	return true;
 }
 
+/**
+ * Save the map as a key-value file.
+ *
+ * \param filename The target file.
+ * \param map The map.
+ */
 void _save(const std::string& filename, smap& map) {
 	if(!filename.empty()) {
 		std::ofstream ofs(filename, std::ios::out);
@@ -41,41 +53,78 @@ void _save(const std::string& filename, smap& map) {
 	}
 }
 
-int _geti(smap& map, const std::string& key, int alt) {
+/**
+ * Return the map value corresponding to the given key as an integer.
+ * Return the alternate if the key doesn't exist.
+ *
+ * \param map The map.
+ * \param key The key.
+ * \param alt The alternate value.
+ */
+int _geti(const smap& map, const std::string& key, int alt) {
 	if(map.find(key) == map.end()) {
 		return alt;
 	} else {
-		return atoi(map[key].c_str());
+		return atoi(map.at(key).c_str());
 	}
 }
 
-double _getf(smap& map, const std::string& key, double alt) {
+/**
+ * Return the map value corresponding to the given key as a double.
+ * Return the alternate if the key doesn't exist.
+ *
+ * \param map The map.
+ * \param key The key.
+ * \param alt The alternate value.
+ */
+double _getf(const smap& map, const std::string& key, double alt) {
 	if(map.find(key) == map.end()) {
 		return alt;
 	} else {
-		return atof(map[key].c_str());
+		return atof(map.at(key).c_str());
 	}
 }
 
-bool _getb(smap& map, const std::string& key, bool alt) {
+/**
+ * Return the map value corresponding to the given key as a boolean.
+ * Return the alternate if the key doesn't exist.
+ * Allowed values are anything that starts with 't' or 'T' or '1'.
+ *
+ * \param map The map.
+ * \param key The key.
+ * \param alt The alternate value.
+ */
+bool _getb(const smap& map, const std::string& key, bool alt) {
 	if(map.find(key) == map.end()) {
 		return alt;
 	} else {
-		const std::string& val = map[key];
+		const std::string& val = map.at(key);
 		return val[0] == 't' || val[0] == 'T' || val[0] == '1';
 	}
 }
 
-std::string _gets(smap& map, const std::string& key, const std::string& alt) {
+/**
+ * Return the map value corresponding to the given key as a string.
+ * Return the alternate if the key doesn't exist.
+ *
+ * \param map The map.
+ * \param key The key.
+ * \param alt The alternate value.
+ */
+std::string _gets(const smap& map, const std::string& key, const std::string& alt) {
 	if(map.find(key) == map.end()) {
 		return alt;
 	} else {
-		return map[key];
+		return map.at(key);
 	}
 }
 
 Settings::Settings() {
-	lastDir = m_settings.value("local/lastDir", "").toString().toStdString();
+	m_lastDir = m_settings.value("local/lastDir", "").toString().toStdString();
+}
+
+std::string& Settings::lastDir() {
+	return m_lastDir;
 }
 
 bool Settings::load(TreetopsConfig& config, const std::string& filename) {
@@ -155,6 +204,6 @@ void Settings::save(TreetopsConfig& config) {
 }
 
 Settings::~Settings() {
-	m_settings.setValue("local/lastDir", QString(lastDir.c_str()));
+	m_settings.setValue("local/lastDir", QString(lastDir().c_str()));
 }
 

@@ -18,15 +18,24 @@ using namespace geo::ui::util;
 using namespace geo::treetops;
 using namespace geo::treetops::config;
 
+/**
+ * Set the last-used directory on the settigs object. If the filename is a file,
+ * takes the parent directory. Otherwise uses the file itself.
+ *
+ * \param settigs The settings object.
+ * \param filename The path to use as the last-used directory.
+ * \return The last-used directory.
+ */
 std::string __lastDir(Settings& settings, const std::string& filename) {
 	if (Util::isFile(filename)) {
-		settings.lastDir = Util::parent(filename);
+		settings.lastDir() = Util::parent(filename);
 	}
 	else {
-		settings.lastDir = filename;
+		settings.lastDir() = filename;
 	}
-	return filename;
+	return settings.lastDir();
 }
+
 
 // TreetopsCallbacks implementation
 
@@ -42,6 +51,8 @@ void TreetopsCallbacks::statusCallback(const std::string &msg) const {
 	emit statusUpdate(qstr(msg));
 }
 
+
+// Clock thread implementation.
 
 void TTClockThread::init(TreetopsForm *parent) {
 	m_parent = parent;
@@ -67,6 +78,7 @@ void TTClockThread::run() {
 
 TTClockThread::~TTClockThread() {
 }
+
 
 // WorkerThread implementation
 
@@ -370,7 +382,7 @@ void TreetopsForm::resetProgress() {
 
 void TreetopsForm::settingsFileClicked() {
 	std::string filename;
-	getOutputFile(m_form, "Settings File", m_settings.lastDir, ALL_PATTERN, filename, false);
+	getOutputFile(m_form, "Settings File", m_settings.lastDir(), ALL_PATTERN, filename, false);
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
@@ -395,7 +407,7 @@ void TreetopsForm::updateView() {
 
 void TreetopsForm::originalCHMClicked() {
 	std::string filename;
-	getInputFile(m_form, "CHM for Smoothing", m_settings.lastDir, ALL_PATTERN, filename);
+	getInputFile(m_form, "CHM for Smoothing", m_settings.lastDir(), ALL_PATTERN, filename);
 	bool active = m_config.setActive(false);
 	if(m_config.smoothedCHMDriver().empty())
 		m_config.setSmoothedCHMDriver(cboSmoothedCHMDriver->currentText().toStdString());
@@ -416,7 +428,7 @@ void TreetopsForm::originalCHMBandChanged(int band) {
 void TreetopsForm::smoothedCHMClicked() {
 	std::string oldExt = Util::extension(m_config.smoothedCHM());
 	std::string filename;
-	getOutputFile(m_form, "Smoothed CHM", m_settings.lastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Smoothed CHM", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setSmoothedCHM(filename);
 }
 
@@ -439,7 +451,7 @@ void TreetopsForm::treetopsDatabaseChanged(QString text) {
 void TreetopsForm::treetopsDatabaseClicked() {
 	std::string oldExt = Util::extension(m_config.treetopsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Treetops Database", m_settings.lastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Treetops Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setTreetopsDatabase(filename);
 }
 
@@ -462,7 +474,7 @@ void TreetopsForm::crownsThresholdsClicked() {
 void TreetopsForm::crownsRasterClicked() {
 	std::string oldExt = Util::extension(m_config.crownsRaster());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Raster", m_settings.lastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Crowns Raster", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsRaster(filename);
 }
 
@@ -473,7 +485,7 @@ void TreetopsForm::crownsRasterDriverChanged(QString text) {
 void TreetopsForm::crownsDatabaseClicked() {
 	std::string oldExt = Util::extension(m_config.crownsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Database", m_settings.lastDir, ALL_PATTERN, filename);
+	getOutputFile(m_form, "Crowns Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsDatabase(filename);
 }
 
