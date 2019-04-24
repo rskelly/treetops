@@ -245,33 +245,27 @@ void TreetopsForm::showForm() {
 void TreetopsForm::loadSettings() {
 
 	// Populate fields with saved or default values.
-	// -- smoothing
-	grpSmoothing->setChecked(m_config.doSmoothing());
-	spnSmoothWindow->setValue(m_config.smoothWindowSize());
-	spnSmoothSigma->setValue(m_config.smoothSigma());
 
 	txtSettingsFile->setText(qstr(m_config.settings()));
 
 	txtOriginalCHM->setText(qstr(m_config.originalCHM()));
 	spnOriginalCHMBand->setValue(m_config.originalCHMBand());
+
+	// -- smoothing
+	grpSmoothing->setChecked(m_config.doSmoothing());
+	spnSmoothWindow->setValue(m_config.smoothWindowSize());
+	spnSmoothSigma->setValue(m_config.smoothSigma());
 	txtSmoothedCHM->setText(qstr(m_config.smoothedCHM()));
 	if(!m_config.smoothedCHMDriver().empty())
 		cboSmoothedCHMDriver->setCurrentText(qstr(m_config.smoothedCHMDriver()));
-
-	txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
-	if(!m_config.treetopsDatabaseDriver().empty())
-		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
-
-	txtCrownsRaster->setText(qstr(m_config.crownsRaster()));
-	cboCrownsRasterDriver->setCurrentText(qstr(m_config.crownsRasterDriver()));
-	txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
-	if(!m_config.crownsDatabaseDriver().empty())
-		cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
 
 	// -- tops
 	grpTops->setChecked(m_config.doTops());
 	txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
 	spnTopsMaxNulls->setValue(m_config.topsMaxNulls());
+	txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
+	if(!m_config.treetopsDatabaseDriver().empty())
+		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
 
 	// -- crowns
 	grpCrowns->setChecked(m_config.doCrowns());
@@ -282,6 +276,11 @@ void TreetopsForm::loadSettings() {
 	chkCrownsRemoveDangles->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
 	chkCrownsRemoveHoles->setChecked(m_config.crownsRemoveHoles());
 	chkCrownsRemoveDangles->setChecked(m_config.crownsRemoveDangles());
+	txtCrownsRaster->setText(qstr(m_config.crownsRaster()));
+	cboCrownsRasterDriver->setCurrentText(qstr(m_config.crownsRasterDriver()));
+	txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
+	if(!m_config.crownsDatabaseDriver().empty())
+		cboCrownsDatabaseDriver->setCurrentText(qstr(m_config.crownsDatabaseDriver()));
 
 }
 
@@ -316,44 +315,43 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	connect(txtOriginalCHM, SIGNAL(textChanged(QString)), this, SLOT(originalCHMChanged(QString)));
 	connect(spnOriginalCHMBand, SIGNAL(valueChanged(int)), this, SLOT(originalCHMBandChanged(int)));
-	connect(txtSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothedCHMChanged(QString)));
 	connect(btnOriginalCHM, SIGNAL(clicked()), this, SLOT(originalCHMClicked()));
-	connect(btnSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothedCHMClicked()));
-	connect(cboSmoothedCHMDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(smoothedCHMDriverChanged(QString)));
 
-	connect(txtTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(treetopsDatabaseChanged(QString)));
-	connect(btnTreetopsDatabase, SIGNAL(clicked()), this, SLOT(treetopsDatabaseClicked()));
-	connect(cboTreetopsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(treetopsDatabaseDriverChanged(QString)));
-
-	connect(txtCrownsRaster, SIGNAL(textChanged(QString)), this, SLOT(crownsRasterChanged(QString)));
-	connect(txtCrownsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsDatabaseChanged(QString)));
-	connect(btnCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsRasterClicked()));
-	connect(cboCrownsRasterDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsRasterDriverChanged(QString)));
-	connect(btnCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsDatabaseClicked()));
-	connect(cboCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsDatabaseDriverChanged(QString)));
-
-	// -- section toggles
-	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
-	connect(grpTops, SIGNAL(toggled(bool)), this, SLOT(doTopsChanged(bool)));
-	connect(grpCrowns, SIGNAL(toggled(bool)), this, SLOT(doCrownsChanged(bool)));
 	// -- smoothing
 	connect(spnSmoothWindow, SIGNAL(valueChanged(int)), this, SLOT(smoothWindowSizeChanged(int)));
 	connect(spnSmoothSigma, SIGNAL(valueChanged(double)), this, SLOT(smoothSigmaChanged(double)));
+	connect(txtSmoothedCHM, SIGNAL(textChanged(QString)), this, SLOT(smoothedCHMChanged(QString)));
+	connect(cboSmoothedCHMDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(smoothedCHMDriverChanged(QString)));
+	connect(btnSmoothedCHM, SIGNAL(clicked()), this, SLOT(smoothedCHMClicked()));
 
 	// -- tops
 	// TODO: Needs validator, see #113. connect(txtTopsThresholds, SIGNAL(textEdited(QString)), this, SLOT(topsThresholdsChanged(QString)));
 	connect(txtTopsThresholds, SIGNAL(editingFinished()), this, SLOT(topsThresholdsEditingFinished()));
 	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
+	connect(txtTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(treetopsDatabaseChanged(QString)));
+	connect(cboTreetopsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(treetopsDatabaseDriverChanged(QString)));
+	connect(btnTreetopsDatabase, SIGNAL(clicked()), this, SLOT(treetopsDatabaseClicked()));
+
 	// -- crowns
 	// TODO: Needs validator, see #113. connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
 	connect(txtCrownsThresholds, SIGNAL(editingFinished()), this, SLOT(crownsThresholdsEditingFinished()));
 	connect(chkCrownsDoDatabase, SIGNAL(toggled(bool)), this, SLOT(crownsDoDatabaseChanged(bool)));
 	connect(chkCrownsUpdateHeights, SIGNAL(toggled(bool)), this, SLOT(crownsUpdateHeightsChanged(bool)));
 	connect(btnCrownsThresholds, SIGNAL(clicked()), this, SLOT(crownsThresholdsClicked()));
-
 	connect(chkCrownsRemoveHoles, SIGNAL(toggled(bool)), this, SLOT(crownsRemoveHolesChanged(bool)));
 	connect(chkCrownsRemoveDangles, SIGNAL(toggled(bool)), this, SLOT(crownsRemoveDanglesChanged(bool)));
+	connect(txtCrownsRaster, SIGNAL(textChanged(QString)), this, SLOT(crownsRasterChanged(QString)));
+	connect(txtCrownsDatabase, SIGNAL(textChanged(QString)), this, SLOT(crownsDatabaseChanged(QString)));
+	connect(cboCrownsRasterDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsRasterDriverChanged(QString)));
+	connect(cboCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsDatabaseDriverChanged(QString)));
+	connect(btnCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsDatabaseClicked()));
+	connect(btnCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsRasterClicked()));
+
+	// -- section toggles
+	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
+	connect(grpTops, SIGNAL(toggled(bool)), this, SLOT(doTopsChanged(bool)));
+	connect(grpCrowns, SIGNAL(toggled(bool)), this, SLOT(doCrownsChanged(bool)));
 
 	// -- program buttons
 	connect(btnExit, SIGNAL(clicked()), this, SLOT(exitClicked()));
@@ -387,7 +385,9 @@ void TreetopsForm::settingsFileClicked() {
 }
 
 void TreetopsForm::settingsFileChanged(QString filename) {
+	m_config.lock();
 	m_config.setSettings(filename.toStdString());
+	m_config.unlock();
 }
 
 void TreetopsForm::topsMaxNullsChanged(double maxNulls) {
@@ -437,15 +437,21 @@ void TreetopsForm::smoothedCHMDriverChanged(QString text) {
 }
 
 void TreetopsForm::originalCHMChanged(QString text) {
+	m_config.lock();
 	m_config.setOriginalCHM(__lastDir(m_settings, text.toStdString()));
+	m_config.unlock();
 }
 
 void TreetopsForm::smoothedCHMChanged(QString text) {
+	m_config.lock();
 	m_config.setSmoothedCHM(__lastDir(m_settings, text.toStdString()));
+	m_config.unlock();
 }
 
 void TreetopsForm::treetopsDatabaseChanged(QString text) {
+	m_config.lock();
 	m_config.setTreetopsDatabase(__lastDir(m_settings, text.toStdString()));
+	m_config.unlock();
 }
 
 void TreetopsForm::treetopsDatabaseClicked() {
@@ -478,7 +484,8 @@ void TreetopsForm::crownsRasterClicked() {
 	m_config.setCrownsRaster(filename);
 }
 
-void TreetopsForm::crownsRasterDriverChanged(QString text) {
+void TreetopsForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
+
 	m_config.setCrownsRasterDriver(text.toStdString());
 }
 
@@ -519,14 +526,18 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 
 void TreetopsForm::crownsRasterChanged(QString text) {
 	std::string oldExt = Util::extension(m_config.crownsRaster());
+	m_config.lock();
 	m_config.setCrownsRaster(__lastDir(m_settings, text.toStdString()));
+	m_config.unlock();
 	if(oldExt != Util::extension(m_config.crownsRaster()))
 		cboCrownsRasterDriver->setCurrentText("");
 }
 
 void TreetopsForm::crownsDatabaseChanged(QString text) {
 	std::string oldExt = Util::extension(m_config.crownsDatabase());
+	m_config.lock();
 	m_config.setCrownsDatabase(__lastDir(m_settings, text.toStdString()));
+	m_config.unlock();
 	if(oldExt != Util::extension(m_config.crownsDatabase()))
 		cboCrownsDatabaseDriver->setCurrentText("");
 }
