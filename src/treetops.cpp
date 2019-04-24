@@ -18,10 +18,6 @@ int g__loglevel = 0;
 
 int runWithGui(int argc, char** argv) {
 
-#ifdef _MSC_VER
-	CPLSetConfigOption("GDAL_DATA", "./gdal-data");
-#endif
-
 	class TTApplication : public QApplication {
 	public:
 		TTApplication(int& argc, char** argv) : QApplication(argc, argv) {}
