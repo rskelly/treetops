@@ -29,7 +29,7 @@ set (Boost_DEBUG OFF)
 set (Boost_USE_STATIC_LIBS OFF)
 set (Boost_USE_STATIC_RUNTIME OFF)
 set (Boost_USE_MULTITHREADED ON)
-set (Boost_NO_SYSTEM_PATHS ON)
+set (Boost_NO_SYSTEM_PATHS OFF)
 
 if(${WITH_GUI})
 	set (CMAKE_AUTOUIC ON)
@@ -94,6 +94,11 @@ if(OPENMP_FOUND)
 	set (CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
 endif()
 
+# Get the git rev and create an environment variable to be used in compilation.
+
+execute_process (COMMAND git rev-parse --short HEAD RESULT_VARIABLE GIT_RESULT OUTPUT_VARIABLE GIT_OUTPUT ERROR_VARIABLE GIT_ERROR)
+string (STRIP "${GIT_OUTPUT}" GIT_REV)
+message (STATUS "Finding Git rev: ${GIT_REV} (${GIT_RESULT}, ${GIT_ERROR}")
 
 # Configure directories
 
@@ -118,7 +123,7 @@ target_link_libraries(ui_util georaster treetops Qt5::Gui Qt5::Core Qt5::Widgets
 # Build programs #####################################################################################################
 
 add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
-#set_target_properties (treetops-app PROPERTIES OUTPUT_NAME treetops)
+target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
 target_link_libraries (treetops-app PUBLIC ui_util treetops Qt5::Gui Qt5::Core Qt5::Widgets ${Boost_LIBRARIES})
 
 # Install ###########################################################################################################
