@@ -4,6 +4,7 @@ project (treetops)
 add_subdirectory (libtreetops)
 add_subdirectory (libgeo)
 
+set (BUILD_APPS false CACHE BOOL "If true, build apps in libgeo.")
 set (WITH_GUI true CACHE BOOL "If true, will build the Qt GUI.")
 
 if(${WITH_GUI})
@@ -98,7 +99,7 @@ endif()
 
 execute_process (COMMAND git rev-parse --short HEAD RESULT_VARIABLE GIT_RESULT OUTPUT_VARIABLE GIT_OUTPUT ERROR_VARIABLE GIT_ERROR)
 string (STRIP "${GIT_OUTPUT}" GIT_REV)
-message (STATUS "Finding Git rev: ${GIT_REV} (${GIT_RESULT}, ${GIT_ERROR}")
+message (STATUS "Finding Git rev: ${GIT_REV} (${GIT_RESULT}, ${GIT_ERROR})")
 
 # Configure directories
 
