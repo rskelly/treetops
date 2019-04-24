@@ -13,12 +13,12 @@
 
 #include <set>
 
-#include <QFileDialog>
-#include <QDir>
-#include <QPushButton>
-#include <QListWidget>
-#include <QString>
-#include <QWidget>
+#include <QtCore/QDir>
+#include <QtCore/QString>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QListWidget>
+#include <QtWidgets/QWidget>
 
 #include "filelist.hpp"
 
