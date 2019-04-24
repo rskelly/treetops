@@ -24,7 +24,7 @@ using namespace geo::treetops::config;
  *
  * \param settigs The settings object.
  * \param filename The path to use as the last-used directory.
- * \return The last-used directory.
+ * \return The filename.
  */
 std::string __lastDir(Settings& settings, const std::string& filename) {
 	if (Util::isFile(filename)) {
@@ -33,7 +33,7 @@ std::string __lastDir(Settings& settings, const std::string& filename) {
 	else {
 		settings.lastDir() = filename;
 	}
-	return settings.lastDir();
+	return filename;
 }
 
 
