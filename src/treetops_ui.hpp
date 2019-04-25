@@ -94,42 +94,41 @@ namespace geo {
 
 			void originalCHMChanged(QString);
 			void originalCHMBandChanged(int);
-			void smoothedCHMChanged(QString);
-			void smoothedCHMDriverChanged(QString);
-			void treetopsDatabaseChanged(QString);
-			void treetopsDatabaseDriverChanged(QString);
-			void crownsRasterChanged(QString);
-			void crownsRasterDriverChanged(QString);
-			void crownsDatabaseChanged(QString);
-			void crownsDatabaseDriverChanged(QString);
-
-			void crownsDatabaseClicked();
-			void crownsRasterClicked();
-			void treetopsDatabaseClicked();
-			void smoothedCHMClicked();
 			void originalCHMClicked();
 
+			void smoothedCHMChanged(QString);
+			void smoothedCHMDriverChanged(QString);
+			void smoothedCHMClicked();
 			void smoothWindowSizeChanged(int);
 			void smoothSigmaChanged(double);
 
+			void treetopsDatabaseChanged(QString);
+			void treetopsDatabaseDriverChanged(QString);
+			void treetopsDatabaseClicked();
 			void topsThresholdsChanged(QString);
 			void topsThresholdsEditingFinished(); // TODO: Temporary see #113.
 			void topsThresholdsClicked();
 			void topsMaxNullsChanged(double);
 
+			void crownsRasterChanged(QString);
+			void crownsRasterDriverChanged(QString);
+			void crownsDatabaseChanged(QString);
+			void crownsDatabaseDriverChanged(QString);
+			void crownsDatabaseClicked();
+			void crownsRasterClicked();
 			void crownsThresholdsChanged(QString);
 			void crownsThresholdsEditingFinished(); // TODO: Temporary see #113.
 			void crownsDoDatabaseChanged(bool);
 			void crownsUpdateHeightsChanged(bool);
 			void crownsRemoveHolesChanged(bool);
 			void crownsRemoveDanglesChanged(bool);
+			void crownsThresholdsClicked();
+			void crownsKeepSmoothedChanged(bool);
 
 			void exitClicked();
 			void runClicked();
 			void cancelClicked();
 			void helpClicked();
-
-			void crownsThresholdsClicked();
 
 			void done();
 		};

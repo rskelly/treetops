@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>615</width>
-    <height>576</height>
+    <height>686</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -442,81 +442,7 @@
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <layout class="QGridLayout" name="crownsGrid">
-        <item row="2" column="0" colspan="2">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Polygonize Crowns</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="label_4">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Update Treetop Heights</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="7">
-         <widget class="QToolButton" name="btnCrownsThresholds">
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2" colspan="5">
-         <widget class="QLineEdit" name="txtCrownsThresholds">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="label_7">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Thresholds</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
-         <widget class="QLabel" name="lblCrownsRemove">
-          <property name="text">
-           <string>Remove...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2">
-         <widget class="QCheckBox" name="chkCrownsRemoveHoles">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Holes</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2" colspan="6">
-         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2" colspan="6">
+        <item row="3" column="1" colspan="3">
          <widget class="QCheckBox" name="chkCrownsDoDatabase">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -534,17 +460,78 @@
            <enum>Qt::LeftToRight</enum>
           </property>
           <property name="text">
-           <string/>
+           <string>Polygonize Crowns</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="3" colspan="5">
+        <item row="3" column="4">
+         <widget class="QLabel" name="lblCrownsRemove">
+          <property name="text">
+           <string>Remove...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="6">
          <widget class="QCheckBox" name="chkCrownsRemoveDangles">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="text">
            <string>Dangles</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="5">
+         <widget class="QCheckBox" name="chkCrownsRemoveHoles">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Holes</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="6">
+         <widget class="QLineEdit" name="txtCrownsThresholds">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="7">
+         <widget class="QToolButton" name="btnCrownsThresholds">
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
+          <property name="text">
+           <string>Update Treetop Heights</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsKeepSmoothed">
+          <property name="text">
+           <string>Keep Smoothed Heights</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Thresholds</string>
           </property>
          </widget>
         </item>
@@ -687,10 +674,6 @@
   <tabstop>grpTops</tabstop>
   <tabstop>txtTopsThresholds</tabstop>
   <tabstop>grpCrowns</tabstop>
-  <tabstop>txtCrownsThresholds</tabstop>
-  <tabstop>btnCrownsThresholds</tabstop>
-  <tabstop>chkCrownsUpdateHeights</tabstop>
-  <tabstop>chkCrownsRemoveHoles</tabstop>
   <tabstop>btnHelp</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnCancel</tabstop>

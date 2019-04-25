@@ -283,6 +283,7 @@ void TreetopsForm::loadSettings() {
 	chkCrownsRemoveDangles->setEnabled(m_config.crownsDoDatabase() && m_config.doCrowns());
 	chkCrownsRemoveHoles->setChecked(m_config.crownsRemoveHoles());
 	chkCrownsRemoveDangles->setChecked(m_config.crownsRemoveDangles());
+	chkCrownsKeepSmoothed->setChecked(m_config.crownsKeepSmoothed());
 	txtCrownsRaster->setText(qstr(m_config.crownsRaster()));
 	cboCrownsRasterDriver->setCurrentText(qstr(m_config.crownsRasterDriver()));
 	txtCrownsDatabase->setText(qstr(m_config.crownsDatabase()));
@@ -357,6 +358,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(cboCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsDatabaseDriverChanged(QString)));
 	connect(btnCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsDatabaseClicked()));
 	connect(btnCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsRasterClicked()));
+	connect(chkCrownsKeepSmoothed, SIGNAL(toogled(bool)), this, SLOT(crownsKeepSmoothedChanged(bool)));
 
 	// -- section toggles
 	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
@@ -410,6 +412,10 @@ void TreetopsForm::crownsRemoveHolesChanged(bool on) {
 
 void TreetopsForm::crownsRemoveDanglesChanged(bool on) {
 	m_config.setCrownsRemoveDangles(on);
+}
+
+void TreetopsForm::crownsKeepSmoothedChanged(bool on) {
+	m_config.setCrownsKeepSmoothed(on);
 }
 
 void TreetopsForm::updateView() {
