@@ -124,7 +124,7 @@ target_link_libraries(ui_util georaster treetops Qt5::Gui Qt5::Core Qt5::Widgets
 # Build programs #####################################################################################################
 
 add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
-target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
+target_compile_definitions (treetops-app PUBLIC GIT_REV="${GIT_REV}")
 target_link_libraries (treetops-app PUBLIC ui_util treetops Qt5::Gui Qt5::Core Qt5::Widgets ${Boost_LIBRARIES})
 
 # Install ###########################################################################################################
