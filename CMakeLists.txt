@@ -103,15 +103,33 @@ message (STATUS "Finding Git rev: ${GIT_REV} (${GIT_RESULT}, ${GIT_ERROR})")
 
 # Configure directories
 
-include_directories(include libgeo/include libtreetops/include build/ui_utilobj_autogen/include 
-	build/ui_utilobj_autogen/include_Debug build/ui_utilobj_autogen/include_Release
-	${EIGEN_INCLUDEDIR}	${GDAL_INCLUDE_DIR}
-	${Qt5Core_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS}
-	${GEOS_INCLUDEDIR} ${Boost_INCLUDE_DIRS})
+include_directories(BEFORE SYSTEM
+	include 
+	libgeo/include 
+	libtreetops/include 
+	build/ui_utilobj_autogen/include 
+	build/ui_utilobj_autogen/include_Debug 
+	build/ui_utilobj_autogen/include_Release
+	${EIGEN_INCLUDEDIR}	
+	${GDAL_INCLUDE_DIR}
+	${Qt5Core_INCLUDE_DIRS} 
+	${Qt5Widgets_INCLUDE_DIRS} 
+	${Qt5Gui_INCLUDE_DIRS}
+	${GEOS_INCLUDEDIR} 
+	${Boost_INCLUDE_DIRS}
+)
 	 
-link_directories(libgeo/build/lib libtreetops/build/lib 
-	libgeo/build/bin libtreetops/build/bin 
-	build/lib build/bin ${GEOS_LIBRARYDIR} ${GIS_LIBRARYDIR} ${Boost_LIBRARY_DIRS})
+link_directories(
+	libgeo/build/lib 
+	libtreetops/build/lib 
+	libgeo/build/bin 
+	libtreetops/build/bin 
+	build/lib 
+	build/bin 
+	${GEOS_LIBRARYDIR} 
+	${GIS_LIBRARYDIR} 
+	${Boost_LIBRARY_DIRS}
+)
 	
 # Build support libraries ############################################################################################
 
@@ -119,13 +137,20 @@ set (ui_utilsrc src/ui_util.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds
 add_library (ui_utilobj OBJECT ${ui_utilsrc})
 set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
-target_link_libraries(ui_util georaster treetops Qt5::Gui Qt5::Core Qt5::Widgets ${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(ui_util georaster treetops 
+	Qt5::Gui Qt5::Core Qt5::Widgets 
+	${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} ${Boost_LIBRARIES}
+)
 
 # Build programs #####################################################################################################
 
 add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
 target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
-target_link_libraries (treetops-app PUBLIC ui_util treetops Qt5::Gui Qt5::Core Qt5::Widgets ${Boost_LIBRARIES})
+target_link_libraries (treetops-app PUBLIC ui_util treetops 
+	Qt5::Gui Qt5::Core Qt5::Widgets 
+	${Boost_LIBRARIES}
+	geos_c
+)
 
 # Install ###########################################################################################################
 

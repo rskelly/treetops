@@ -17,7 +17,7 @@ namespace geo {
 
 	namespace treetops {
 
-		class G_DLL_EXPORT TreetopsCallbacks: public QObject, public geo::util::Callbacks {
+		class G_DLL_EXPORT TreetopsMonitor: public QObject, public geo::Monitor {
 			Q_OBJECT
 		public:
 			void stepCallback(float status) const;
@@ -41,10 +41,10 @@ namespace geo {
 			Q_OBJECT
 		private:
 			bool m_cancel;
-			QWidget *m_form;
-			geo::util::Callbacks *m_callbacks;
-			TTWorkerThread *m_workerThread;
-			TTClockThread *m_clockThread;
+			QWidget* m_form;
+			geo::treetops::TreetopsMonitor* m_monitor;
+			TTWorkerThread* m_workerThread;
+			TTClockThread* m_clockThread;
 			TreetopsConfig m_config;
 
 			Settings m_settings;
@@ -64,7 +64,7 @@ namespace geo {
 
 		public:
 			TreetopsForm();
-			void setupUi(QWidget *parent);
+			void setupUi(QWidget* parent);
 			void showForm();
 			void setRunTime(const std::string& time);
 			void loadSettings();
@@ -144,7 +144,7 @@ namespace geo {
 		 */
 		class TTWorkerThread: public QThread {
 		private:
-			TreetopsForm *m_parent;		///<! The form that owns this thread.
+			TreetopsForm* m_parent;		///<! The form that owns this thread.
 			std::string m_message;		///<! The error message from the last error.
 			bool m_isError;				///<! True if the thread is running or exiting in an error state.
 			int m_toFix;				///<! Container for flags indicating which fields to convert to sqlite. Tops/Crowns/Both.
@@ -166,7 +166,7 @@ namespace geo {
 			 *
 			 * @param parent The parent widget.
 			 */
-			void init(TreetopsForm *parent);
+			void init(TreetopsForm* parent);
 
 			/**
 			 * Destroy the thread.
@@ -202,7 +202,7 @@ namespace geo {
 		 */
 		class TTClockThread: public QThread {
 		private:
-			TreetopsForm *m_parent;		///<! The parent widget.
+			TreetopsForm* m_parent;		///<! The parent widget.
 			geo::util::Stopwatch m_sw;	///<! A stopwatch instance.
 			bool m_running;				///<! True when the application is running.
 
@@ -217,7 +217,7 @@ namespace geo {
 			 *
 			 * @param parent A pointer to the parent widget.
 			 */
-			void init(TreetopsForm *parent);
+			void init(TreetopsForm* parent);
 
 			/**
 			 * Destroy the clock thread.

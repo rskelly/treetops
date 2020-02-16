@@ -14,7 +14,7 @@
 #include <QtGui/QDesktopServices>
 
 #include "geo.hpp"
-#include "raster.hpp"
+#include "grid.hpp"
 #include "treetops.hpp"
 #include "treetops_ui.hpp"
 #include "ui_util.hpp"
@@ -34,8 +34,8 @@ using namespace geo::treetops::config;
  * \return The filename.
  */
 std::string __lastDir(Settings& settings, const std::string& filename) {
-	if (Util::isFile(filename)) {
-		settings.lastDir() = Util::parent(filename);
+	if (isfile(filename)) {
+		settings.lastDir() = parent(filename);
 	}
 	else {
 		settings.lastDir() = filename;
@@ -46,15 +46,15 @@ std::string __lastDir(Settings& settings, const std::string& filename) {
 
 // TreetopsCallbacks implementation
 
-void TreetopsCallbacks::stepCallback(float status) const {
+void TreetopsMonitor::stepCallback(float status) const {
 	emit stepProgress((int) std::round(status * 100));
 }
 
-void TreetopsCallbacks::overallCallback(float status) const {
+void TreetopsMonitor::overallCallback(float status) const {
 	emit overallProgress((int) std::round(status * 100));
 }
 
-void TreetopsCallbacks::statusCallback(const std::string &msg) const {
+void TreetopsMonitor::statusCallback(const std::string &msg) const {
 	emit statusUpdate(qstr(msg));
 }
 
@@ -105,48 +105,45 @@ void TTWorkerThread::run() {
 		reset();
 
 		// Set the pointer to the callback object.
-		t.setCallbacks(m_parent->m_callbacks);
+		t.setMonitor(m_parent->m_monitor);
 
 		const TreetopsConfig &config = m_parent->m_config;
-		const TreetopsCallbacks *cb = (TreetopsCallbacks *) m_parent->m_callbacks;
 
 		// Calculate the number of steps to complete the job(s).
 		int steps = (((int)config.doSmoothing()) + ((int)config.doTops()) + ((int)config.doCrowns())) * 2;
 		int step = 0;
 
-		if (cb)
-			cb->overallCallback(0.01f);
+		m_parent->m_monitor->status(0.01f);
 
 		if (config.doSmoothing()) {
-			cb->overallCallback((float) ++step / steps);
-			t.smooth(config, m_parent->m_cancel);
-			cb->overallCallback((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps);
+			t.smooth(config);
+			m_parent->m_monitor->status((float) ++step / steps);
 		}
 
 		if (config.doTops()) {
-			cb->overallCallback((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps);
 			try {
-				t.treetops(config, m_parent->m_cancel);
+				t.treetops(config);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixTops;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			cb->overallCallback((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps);
 		}
 
 		if (config.doCrowns()) {
-			cb->overallCallback((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps);
 			try {
-				t.treecrowns(config, m_parent->m_cancel);
+				t.treecrowns(config);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixCrowns;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			cb->overallCallback((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps);
 		}
 
-		cb->statusCallback("Done.");
-		cb->overallCallback(1.0f);
+		m_parent->m_monitor->status(1.0f, "Done.");
 
 	} catch (const std::exception& e) {
 		m_message = stripBoost(e.what());
@@ -190,19 +187,19 @@ TreetopsForm::TreetopsForm() :
 	Ui::TreetopsForm(),
 	m_cancel(false),
 	m_form(nullptr),
-	m_callbacks(nullptr),
+	m_monitor(nullptr),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
 }
 
 void TreetopsForm::topsConvertFix() {
-	std::string text = Util::extension(m_config.treetopsDatabase());
+	std::string text = geo::util::extension(m_config.treetopsDatabase());
 	std::string tops = m_config.treetopsDatabase().substr(0, m_config.treetopsDatabase().find(text)) + ".sqlite";
 	m_config.setActive(false);
 	m_config.setTreetopsDatabase(tops);
 	m_config.setTreetopsDatabaseDriver("SQLite");
 	if(m_config.crownsDatabaseDriver() != "SQLite") {
-		std::string cext = Util::extension(m_config.crownsDatabase());
+		std::string cext = geo::util::extension(m_config.crownsDatabase());
 		std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(cext)) + ".sqlite";
 		m_config.setCrownsDatabase(crowns);
 		m_config.setCrownsDatabaseDriver("SQLite");
@@ -212,7 +209,7 @@ void TreetopsForm::topsConvertFix() {
 }
 
 void TreetopsForm::crownsConvertFix() {
-	std::string ext = Util::extension(m_config.crownsDatabase());
+	std::string ext = geo::util::extension(m_config.crownsDatabase());
 	std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(ext)) + ".sqlite";
 	m_config.setActive(false);
 	m_config.setCrownsDatabase(crowns);
@@ -228,8 +225,10 @@ void TreetopsForm::setRunTime(const std::string& time) {
 TreetopsForm::~TreetopsForm() {
 	// Save the settings.
 	m_settings.save(m_config);
-	delete m_form;
-	delete m_callbacks;
+	if(m_form)
+		delete m_form;
+	if(m_monitor)
+		delete m_monitor;
 	if(m_clockThread) {
 		m_clockThread->stop();
 		m_clockThread->wait();
@@ -300,7 +299,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
 
 	// Create callbacks and worker thread
-	m_callbacks = new TreetopsCallbacks();
+	m_monitor = new geo::treetops::TreetopsMonitor();
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this);
 	m_clockThread = new TTClockThread();
@@ -308,7 +307,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// Populate combos.
 	QStringList rasterDrivers;
-	for(const auto &it : geo::raster::Raster::drivers({"GTiff", "HFA"}))
+	for(const auto &it : geo::grid::Grid<float>::drivers({"GTiff", "HFA"}))
 		rasterDrivers << qstr(it.first);
 
 	QStringList vectorDrivers;
@@ -372,9 +371,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnHelp, SIGNAL(clicked()), this, SLOT(helpClicked()));
 
 	// -- callbacks
-	if (m_callbacks) {
-		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
-		connect((TreetopsCallbacks *) m_callbacks, SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
+	if (m_monitor) {
+		connect(m_monitor, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
+		connect(m_monitor, SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
 	}
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
@@ -442,7 +441,7 @@ void TreetopsForm::originalCHMBandChanged(int band) {
 }
 
 void TreetopsForm::smoothedCHMClicked() {
-	std::string oldExt = Util::extension(m_config.smoothedCHM());
+	std::string oldExt = geo::util::extension(m_config.smoothedCHM());
 	std::string filename;
 	getOutputFile(m_form, "Smoothed CHM", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setSmoothedCHM(filename);
@@ -471,7 +470,7 @@ void TreetopsForm::treetopsDatabaseChanged(QString text) {
 }
 
 void TreetopsForm::treetopsDatabaseClicked() {
-	std::string oldExt = Util::extension(m_config.treetopsDatabase());
+	std::string oldExt = geo::util::extension(m_config.treetopsDatabase());
 	std::string filename;
 	getOutputFile(m_form, "Treetops Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setTreetopsDatabase(filename);
@@ -494,7 +493,7 @@ void TreetopsForm::crownsThresholdsClicked() {
 }
 
 void TreetopsForm::crownsRasterClicked() {
-	std::string oldExt = Util::extension(m_config.crownsRaster());
+	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	std::string filename;
 	getOutputFile(m_form, "Crowns Raster", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsRaster(filename);
@@ -506,7 +505,7 @@ void TreetopsForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
 }
 
 void TreetopsForm::crownsDatabaseClicked() {
-	std::string oldExt = Util::extension(m_config.crownsDatabase());
+	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	std::string filename;
 	getOutputFile(m_form, "Crowns Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsDatabase(filename);
@@ -541,20 +540,20 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 }
 
 void TreetopsForm::crownsRasterChanged(QString text) {
-	std::string oldExt = Util::extension(m_config.crownsRaster());
+	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	m_config.lock();
 	m_config.setCrownsRaster(__lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
-	if(oldExt != Util::extension(m_config.crownsRaster()))
+	if(oldExt != geo::util::extension(m_config.crownsRaster()))
 		cboCrownsRasterDriver->setCurrentText("");
 }
 
 void TreetopsForm::crownsDatabaseChanged(QString text) {
-	std::string oldExt = Util::extension(m_config.crownsDatabase());
+	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	m_config.lock();
 	m_config.setCrownsDatabase(__lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
-	if(oldExt != Util::extension(m_config.crownsDatabase()))
+	if(oldExt != geo::util::extension(m_config.crownsDatabase()))
 		cboCrownsDatabaseDriver->setCurrentText("");
 }
 
@@ -648,7 +647,7 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 
 	if(field & SettingsFile) {
 		std::string filename = m_config.settings();
-		if(Util::exists(filename)) {
+		if(isfile(filename)) {
 			QMessageBox::StandardButton reply = QMessageBox::question(this, "Settings",
 					"A settings file exists with this name. Click 'Open' to use the saved settings or 'Reset' to overwrite the file with the new settings.",
 					QMessageBox::Open|QMessageBox::Reset);
