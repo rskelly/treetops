@@ -357,7 +357,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(cboCrownsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(crownsDatabaseDriverChanged(QString)));
 	connect(btnCrownsDatabase, SIGNAL(clicked()), this, SLOT(crownsDatabaseClicked()));
 	connect(btnCrownsRaster, SIGNAL(clicked()), this, SLOT(crownsRasterClicked()));
-	connect(chkCrownsKeepSmoothed, SIGNAL(toogled(bool)), this, SLOT(crownsKeepSmoothedChanged(bool)));
+	connect(chkCrownsKeepSmoothed, SIGNAL(toggled(bool)), this, SLOT(crownsKeepSmoothedChanged(bool)));
 
 	// -- section toggles
 	connect(grpSmoothing, SIGNAL(toggled(bool)), this, SLOT(doSmoothChanged(bool)));
