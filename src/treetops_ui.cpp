@@ -61,6 +61,16 @@ void TreetopsMonitor::statusCallback(const std::string &msg) const {
 	emit statusUpdate(qstr(msg));
 }
 
+void TreetopsMonitor::status(float status, const std::string& message) {
+	emit stepProgress((int) std::round(status * 100));
+	if(!message.empty())
+		emit statusUpdate(QString(message.c_str()));
+}
+
+void TreetopsMonitor::error(const std::string& err) {
+	//emit stepProgress((int) std::round(status * 100));
+}
+
 
 // Clock thread implementation.
 
@@ -116,16 +126,16 @@ void TTWorkerThread::run() {
 		int steps = (((int)config.doSmoothing()) + ((int)config.doTops()) + ((int)config.doCrowns())) * 2;
 		int step = 0;
 
-		m_parent->m_monitor->status(0.01f);
+		m_parent->m_monitor->status(0.01f, "Starting...");
 
 		if (config.doSmoothing()) {
-			m_parent->m_monitor->status((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps, "Smoothing...");
 			t.smooth(config);
 			m_parent->m_monitor->status((float) ++step / steps);
 		}
 
 		if (config.doTops()) {
-			m_parent->m_monitor->status((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps, "Locating treetops...");
 			try {
 				t.treetops(config);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
@@ -136,7 +146,7 @@ void TTWorkerThread::run() {
 		}
 
 		if (config.doCrowns()) {
-			m_parent->m_monitor->status((float) ++step / steps);
+			m_parent->m_monitor->status((float) ++step / steps, "Delineating crowns...");
 			try {
 				t.treecrowns(config);
 			} catch(const geo::treetops::util::DBConvertException& ex) {
