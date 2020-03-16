@@ -25,24 +25,27 @@ using namespace geo::ui::util;
 using namespace geo::treetops;
 using namespace geo::treetops::config;
 
-/**
- * Set the last-used directory on the settigs object. If the filename is a file,
- * takes the parent directory. Otherwise uses the file itself.
- *
- * \param settigs The settings object.
- * \param filename The path to use as the last-used directory.
- * \return The filename.
- */
-std::string __lastDir(Settings& settings, const std::string& filename) {
-	if (isfile(filename)) {
-		settings.lastDir() = parent(filename);
-	}
-	else {
-		settings.lastDir() = filename;
-	}
-	return filename;
-}
+namespace {
 
+	/**
+	 * Set the last-used directory on the settigs object. If the filename is a file,
+	 * takes the parent directory. Otherwise uses the file itself.
+	 *
+	 * \param settigs The settings object.
+	 * \param filename The path to use as the last-used directory.
+	 * \return The filename.
+	 */
+	std::string lastDir(Settings& settings, const std::string& filename) {
+		if (isfile(filename)) {
+			settings.lastDir() = parent(filename);
+		}
+		else {
+			settings.lastDir() = filename;
+		}
+		return filename;
+	}
+
+}
 
 // TreetopsCallbacks implementation
 
@@ -453,19 +456,19 @@ void TreetopsForm::smoothedCHMDriverChanged(QString text) {
 
 void TreetopsForm::originalCHMChanged(QString text) {
 	m_config.lock();
-	m_config.setOriginalCHM(__lastDir(m_settings, text.toStdString()));
+	m_config.setOriginalCHM(lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
 }
 
 void TreetopsForm::smoothedCHMChanged(QString text) {
 	m_config.lock();
-	m_config.setSmoothedCHM(__lastDir(m_settings, text.toStdString()));
+	m_config.setSmoothedCHM(lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
 }
 
 void TreetopsForm::treetopsDatabaseChanged(QString text) {
 	m_config.lock();
-	m_config.setTreetopsDatabase(__lastDir(m_settings, text.toStdString()));
+	m_config.setTreetopsDatabase(lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
 }
 
@@ -542,7 +545,7 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 void TreetopsForm::crownsRasterChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	m_config.lock();
-	m_config.setCrownsRaster(__lastDir(m_settings, text.toStdString()));
+	m_config.setCrownsRaster(lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
 	if(oldExt != geo::util::extension(m_config.crownsRaster()))
 		cboCrownsRasterDriver->setCurrentText("");
@@ -551,7 +554,7 @@ void TreetopsForm::crownsRasterChanged(QString text) {
 void TreetopsForm::crownsDatabaseChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	m_config.lock();
-	m_config.setCrownsDatabase(__lastDir(m_settings, text.toStdString()));
+	m_config.setCrownsDatabase(lastDir(m_settings, text.toStdString()));
 	m_config.unlock();
 	if(oldExt != geo::util::extension(m_config.crownsDatabase()))
 		cboCrownsDatabaseDriver->setCurrentText("");
