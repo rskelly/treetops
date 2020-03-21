@@ -25,6 +25,7 @@ using namespace geo::ui::util;
 using namespace geo::treetops;
 using namespace geo::treetops::config;
 
+
 namespace {
 
 	/**
@@ -104,73 +105,67 @@ TTClockThread::~TTClockThread() {
 
 void TTWorkerThread::run() {
 
-	using namespace geo::treetops;
-	using namespace geo::treetops::config;
+	if(!m_config)
+		g_runerr("Configuration object not set.");
 
 	// Clear the message to indicate no issues.
 	m_message.clear();
 	m_toFix = FixNone;
 
-	Treetops t;
+	Monitor* monitor = m_config->monitor();
+
+	Treetops t(m_config);
 
 	try {
 		// Reset error state.
 		reset();
 
-		// Set the pointer to the callback object.
-		t.setMonitor(m_parent->m_monitor);
-
-		const TreetopsConfig &config = m_parent->m_config;
 
 		// Calculate the number of steps to complete the job(s).
-		int steps = (((int)config.doSmoothing()) + ((int)config.doTops()) + ((int)config.doCrowns())) * 2;
+		int steps = (((int) m_config->doSmoothing()) + ((int) m_config->doTops()) + ((int) m_config->doCrowns())) * 2;
 		int step = 0;
 
-		m_parent->m_monitor->status(0.01f, "Starting...");
+		monitor->status(0.01f, "Starting...");
 
-		if (config.doSmoothing()) {
-			m_parent->m_monitor->status((float) ++step / steps, "Smoothing...");
-			t.smooth(config);
-			m_parent->m_monitor->status((float) ++step / steps);
+		if (m_config->doSmoothing()) {
+			monitor->status((float) ++step / steps, "Smoothing...");
+			t.smooth();
+			monitor->status((float) ++step / steps);
 		}
 
-		if (config.doTops()) {
-			m_parent->m_monitor->status((float) ++step / steps, "Locating treetops...");
+		if (m_config->doTops()) {
+			monitor->status((float) ++step / steps, "Locating treetops...");
 			try {
-				t.treetops(config);
+				t.treetops();
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixTops;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			m_parent->m_monitor->status((float) ++step / steps);
+			monitor->status((float) ++step / steps);
 		}
 
-		if (config.doCrowns()) {
-			m_parent->m_monitor->status((float) ++step / steps, "Delineating crowns...");
+		if (m_config->doCrowns()) {
+			monitor->status((float) ++step / steps, "Delineating crowns...");
 			try {
-				t.treecrowns(config);
+				t.treecrowns();
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixCrowns;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			m_parent->m_monitor->status((float) ++step / steps);
+			monitor->status((float) ++step / steps);
 		}
 
-		m_parent->m_monitor->status(1.0f, "Done.");
+		monitor->status(1.0f, "Done.");
 
 	} catch (const std::exception& e) {
 		m_message = stripBoost(e.what());
 		m_isError = true;
-		try {
-			t.cleanup();
-		} catch(std::exception& ex) {
-			g_warn(ex.what());
-		}
 	}
 }
 
-void TTWorkerThread::init(TreetopsForm *parent) {
+void TTWorkerThread::init(TreetopsForm *parent, TreetopsConfig* config) {
 	m_parent = parent;
+	m_config = config;
 	reset();
 }
 
@@ -200,7 +195,6 @@ TreetopsForm::TreetopsForm() :
 	Ui::TreetopsForm(),
 	m_cancel(false),
 	m_form(nullptr),
-	m_monitor(nullptr),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
 }
@@ -240,8 +234,6 @@ TreetopsForm::~TreetopsForm() {
 	m_settings.save(m_config);
 	if(m_form)
 		delete m_form;
-	if(m_monitor)
-		delete m_monitor;
 	if(m_clockThread) {
 		m_clockThread->stop();
 		m_clockThread->wait();
@@ -312,9 +304,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
 
 	// Create callbacks and worker thread
-	m_monitor = new geo::treetops::TreetopsMonitor();
+	m_config.setMonitor(new geo::treetops::TreetopsMonitor());
 	m_workerThread = new TTWorkerThread();
-	m_workerThread->init(this);
+	m_workerThread->init(this, &m_config);
 	m_clockThread = new TTClockThread();
 	m_clockThread->init(this);
 
@@ -384,10 +376,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnHelp, SIGNAL(clicked()), this, SLOT(helpClicked()));
 
 	// -- callbacks
-	if (m_monitor) {
-		connect(m_monitor, SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
-		connect(m_monitor, SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
-	}
+	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
+	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
+
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
 

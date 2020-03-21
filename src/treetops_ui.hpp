@@ -11,6 +11,7 @@
 #include "settings.hpp"
 #include "ui_treetops.h"
 
+using namespace geo::treetops;
 using namespace geo::treetops::config;
 
 namespace geo {
@@ -45,7 +46,6 @@ namespace geo {
 		private:
 			bool m_cancel;
 			QWidget* m_form;
-			geo::treetops::TreetopsMonitor* m_monitor;
 			TTWorkerThread* m_workerThread;
 			TTClockThread* m_clockThread;
 			TreetopsConfig m_config;
@@ -148,6 +148,7 @@ namespace geo {
 		class TTWorkerThread: public QThread {
 		private:
 			TreetopsForm* m_parent;		///<! The form that owns this thread.
+			TreetopsConfig* m_config;	///<! The TreetopsConfig object.
 			std::string m_message;		///<! The error message from the last error.
 			bool m_isError;				///<! True if the thread is running or exiting in an error state.
 			int m_toFix;				///<! Container for flags indicating which fields to convert to sqlite. Tops/Crowns/Both.
@@ -165,11 +166,12 @@ namespace geo {
 		public:
 
 			/**
-			 * Initialize the thread with a pointer to its parent form.
+			 * \brief Initialize the thread with a pointer to its parent form.
 			 *
-			 * @param parent The parent widget.
+			 * \param parent The parent widget.
+			 * \param config The TreetopsConfig object.
 			 */
-			void init(TreetopsForm* parent);
+			void init(TreetopsForm* parent, TreetopsConfig* config);
 
 			/**
 			 * Destroy the thread.
