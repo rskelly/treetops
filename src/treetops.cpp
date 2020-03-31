@@ -9,7 +9,6 @@
 
 #include "geo.hpp"
 #include "treetops.hpp"
-
 #include "treetops_ui.hpp"
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
