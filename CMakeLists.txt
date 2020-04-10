@@ -43,6 +43,7 @@ set (SQLITE_LIBRARY sqlite3)
 set (SPATIALITE_LIBRARY spatialite)
 
 if (${APPLE})
+# Applie configs probably not good. Used for specific installation.
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.6.1-1/lib/cmake/Qt5Widgets")
 	endif()
@@ -73,15 +74,15 @@ else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
-	set (BOOST_ROOT /usr)
-	set (BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
+	#set (BOOST_ROOT /usr)
+	#set (BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-	set (EIGEN_INCLUDEDIR /usr/include/eigen3)
+	#set (EIGEN_INCLUDEDIR /usr/include/eigen3)
 endif()
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 
-find_package (Boost 1.58 COMPONENTS system filesystem date_time REQUIRED)
+#find_package (Boost 1.58 COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2 REQUIRED)
 find_package (OpenMP REQUIRED)
 if(${WITH_GUI})
@@ -116,7 +117,7 @@ include_directories(BEFORE SYSTEM
 	${Qt5Widgets_INCLUDE_DIRS} 
 	${Qt5Gui_INCLUDE_DIRS}
 	${GEOS_INCLUDEDIR} 
-	${Boost_INCLUDE_DIRS}
+	#	${Boost_INCLUDE_DIRS}
 )
 	 
 link_directories(
@@ -128,7 +129,7 @@ link_directories(
 	build/bin 
 	${GEOS_LIBRARYDIR} 
 	${GIS_LIBRARYDIR} 
-	${Boost_LIBRARY_DIRS}
+	#	${Boost_LIBRARY_DIRS}
 )
 	
 # Build support libraries ############################################################################################
@@ -139,7 +140,8 @@ set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
 target_link_libraries(ui_util georaster treetops 
 	Qt5::Gui Qt5::Core Qt5::Widgets 
-	${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} ${Boost_LIBRARIES}
+	${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} 
+	#	${Boost_LIBRARIES}
 )
 
 # Build programs #####################################################################################################
@@ -148,7 +150,7 @@ add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/sett
 target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
 target_link_libraries (treetops-app PUBLIC ui_util treetops 
 	Qt5::Gui Qt5::Core Qt5::Widgets 
-	${Boost_LIBRARIES}
+	#	${Boost_LIBRARIES}
 	geos_c
 )
 
