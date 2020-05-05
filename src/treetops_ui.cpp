@@ -29,10 +29,10 @@ using namespace geo::treetops::config;
 namespace {
 
 	/**
-	 * Set the last-used directory on the settigs object. If the filename is a file,
+	 * Set the last-used directory on the settings object. If the filename is a file,
 	 * takes the parent directory. Otherwise uses the file itself.
 	 *
-	 * \param settigs The settings object.
+	 * \param settings The settings object.
 	 * \param filename The path to use as the last-used directory.
 	 * \return The filename.
 	 */
