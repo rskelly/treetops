@@ -24,8 +24,8 @@ namespace geo {
 			void stepCallback(float status) const;
 			void overallCallback(float status) const;
 			void statusCallback(const std::string &msg) const;
-			virtual void status(float status, const std::string& message = "");
-			virtual void error(const std::string& err);
+			void status(float status, const std::string& message = "");
+			void error(const std::string& err);
 		signals:
 			void stepProgress(int) const;
 			void stepMessage(const std::string&) const;
