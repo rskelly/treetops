@@ -114,6 +114,8 @@ void TTWorkerThread::run() {
 
 	Monitor* monitor = m_config->monitor();
 
+	m_config->reset();
+
 	Treetops t(m_config);
 
 	try {
