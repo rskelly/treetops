@@ -11,6 +11,9 @@
 #include "geo.hpp"
 
 using namespace geo::ui::util;
+using namespace geo::treetops::config;
+
+int g__loglevel = 0;
 
 QString geo::ui::util::qstr(const std::string& str) {
 	return QString(str.c_str());
@@ -38,25 +41,32 @@ void geo::ui::util::errorDialog(QWidget* parent, const std::string& title, const
 	err.exec();
 }
 
-void geo::ui::util::getInputFile(QWidget* form, const std::string& title, QDir& path,
+void geo::ui::util::infoDialog(QWidget* parent, const std::string& title, const std::string& text, const std::string& detail) {
+	QMessageBox::information(parent, qstr(title), qstr(text), QMessageBox::Ok);
+}
+
+void geo::ui::util::getInputFile(QWidget* form, const std::string& title, std::string& path,
 		const std::string& filter, std::string& filename) {
-	QString res = QFileDialog::getOpenFileName(form, qstr(title), path.path(), qstr(filter));
+	QString res = QFileDialog::getOpenFileName(form, qstr(title), QString(path.c_str()), qstr(filter));
 	if(!res.isEmpty()) {
-		path.setPath(res);
+		path = res.toStdString();
 		filename = res.toStdString();
 	}
 }
 
-void geo::ui::util::getOutputFile(QWidget* form, const std::string& title, QDir& path,
-		const std::string& filter, std::string& filename) {
-	QString res = QFileDialog::getSaveFileName(form, qstr(title), path.path(), qstr(filter));
+void geo::ui::util::getOutputFile(QWidget* form, const std::string& title, std::string& path,
+		const std::string& filter, std::string& filename, bool confirmOverwrite) {
+	QFileDialog::Option opt = (QFileDialog::Option) 0;
+	if(!confirmOverwrite)
+		opt = QFileDialog::DontConfirmOverwrite;
+	QString res = QFileDialog::getSaveFileName(form, qstr(title), QString(path.c_str()), qstr(filter), nullptr, opt);
 	if(!res.isEmpty()) {
-		path.setPath(res);
+		path = res.toStdString();
 		filename = res.toStdString();
 	}
 }
 
-void geo::ui::util::getTopsThresholds(QWidget* form, std::vector<std::tuple<double, uint8_t> >& thresholds) {
+void geo::ui::util::getTopsThresholds(QWidget* form, std::vector<TopThreshold>& thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);
@@ -66,7 +76,7 @@ void geo::ui::util::getTopsThresholds(QWidget* form, std::vector<std::tuple<doub
 		thresholds = tf.thresholds();
 }
 
-void geo::ui::util::getCrownsThresholds(QWidget* form, std::vector<std::tuple<double, double, double> >& thresholds) {
+void geo::ui::util::getCrownsThresholds(QWidget* form, std::vector<CrownThreshold>& thresholds) {
 	CrownsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

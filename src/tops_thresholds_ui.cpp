@@ -5,7 +5,10 @@
  *      Author: rob
  */
 
+#include "treetops.hpp"
 #include "tops_thresholds_ui.hpp"
+
+using namespace geo::treetops::config;
 
 TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	QWidget(parent),
@@ -19,6 +22,7 @@ TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	spnWindow = new QSpinBox();
 	spnWindow->setMinimum(3);
 	spnWindow->setMaximum(99);
+	spnWindow->setSingleStep(2);
 	btnDelete = new QToolButton();
 	btnDelete->setText("X");
 	layout->setMargin(0);
@@ -43,7 +47,7 @@ void TopsThresholdItem::itemWindowChanged(int) {
 	emit itemUpdate(this);
 }
 
-void TopsThresholdItem::set(int index, double height, uint8_t window) {
+void TopsThresholdItem::set(int index, double height, int window) {
 	m_index = index;
 	spnHeight->blockSignals(true);
 	spnWindow->blockSignals(true);
@@ -61,7 +65,7 @@ double TopsThresholdItem::height() const {
 	return spnHeight->value();
 }
 
-uint8_t TopsThresholdItem::window() const {
+int TopsThresholdItem::window() const {
 	return spnWindow->value();
 }
 
@@ -92,9 +96,10 @@ void TopsThresholdsForm::setupUi(QWidget *form) {
 	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void TopsThresholdsForm::setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds) {
+void TopsThresholdsForm::setThresholds(const std::vector<TopThreshold> &thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
+	updateButtons();
 }
 
 void TopsThresholdsForm::sortItems() {
@@ -114,16 +119,16 @@ void TopsThresholdsForm::sortItems() {
 	}
 	auto item = m_items.begin();
 	int i = 0;
-	for(auto &it : m_thresholds)
-		(*item++)->set(i++, std::get<0>(it), std::get<1>(it));
+	for(const TopThreshold& t : m_thresholds)
+		(*item++)->set(i++, t.threshold, t.window);
 }
 
-std::vector<std::tuple<double, uint8_t> > TopsThresholdsForm::thresholds() const {
+std::vector<TopThreshold> TopsThresholdsForm::thresholds() const {
 	return m_thresholds;
 }
 
 void TopsThresholdsForm::btnAddItemClicked() {
-	m_thresholds.push_back(std::make_tuple(0, 0));
+	m_thresholds.emplace_back(0, 0);
 	sortItems();
 	updateButtons();
 }
@@ -137,7 +142,9 @@ void TopsThresholdsForm::itemDelete(TopsThresholdItem *item) {
 }
 
 void TopsThresholdsForm::itemUpdate(TopsThresholdItem *item) {
-	m_thresholds[item->index()] = std::make_tuple(item->height(), item->window());
+	TopThreshold& t = m_thresholds[item->index()];
+	t.threshold = item->height();
+	t.window = item->window();
 	sortItems();
 	updateButtons();
 }
@@ -149,8 +156,8 @@ void TopsThresholdsForm::updateButtons() {
 bool TopsThresholdsForm::valid() const {
 	if(m_thresholds.empty())
 		return false;
-	for(const auto &it : m_thresholds) {
-		if(std::get<0>(it) <= 0 || std::get<1>(it) % 2 == 0 || std::get<1>(it) < 3)
+	for(const TopThreshold& t : m_thresholds) {
+		if(t.threshold <= 0 || t.window % 2 == 0 || t.window < 3)
 			return false;
 	}
 	return true;

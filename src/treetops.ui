@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>757</width>
-    <height>713</height>
+    <width>615</width>
+    <height>686</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,6 +21,259 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0">
    <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Files</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="2" column="2">
+       <widget class="QComboBox" name="cboTreetopsDatabaseDriver"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_19">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Crowns Database</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="txtTreetopsDatabase">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QToolButton" name="btnTreetopsDatabase">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QComboBox" name="cboCrownsRasterDriver"/>
+      </item>
+      <item row="1" column="4">
+       <widget class="QToolButton" name="btnSmoothedCHM">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="txtSmoothedCHM">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>&amp;Crowns Raster</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtCrownsRaster</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QToolButton" name="btnOriginalCHM">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QComboBox" name="cboCrownsDatabaseDriver">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="txtCrownsDatabase">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QComboBox" name="cboSmoothedCHMDriver"/>
+      </item>
+      <item row="3" column="4">
+       <widget class="QToolButton" name="btnCrownsRaster">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_12">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Smoothe&amp;d CHM</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtSmoothedCHM</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_11">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Or&amp;iginal CHM</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtOriginalCHM</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="txtCrownsRaster">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>&amp;Treetops Database</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtTreetopsDatabase</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="4">
+       <widget class="QToolButton" name="btnCrownsDatabase">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>Settings File</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="4">
+       <widget class="QToolButton" name="btnSettingsFile">
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1" colspan="2">
+       <widget class="QLineEdit" name="txtSettingsFile"/>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="txtOriginalCHM">
+        <property name="mouseTracking">
+         <bool>false</bool>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
+        <property name="clearButtonEnabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QSpinBox" name="spnOriginalCHMBand">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>999</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="grpSmoothing">
      <property name="title">
       <string>S&amp;mooth Raster</string>
@@ -28,13 +281,39 @@
      <property name="checkable">
       <bool>true</bool>
      </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <layout class="QGridLayout" name="smoothGrid">
-        <item row="3" column="6">
-         <widget class="QComboBox" name="cboSmoothSmoothedCHMDriver"/>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Window Si&amp;ze</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnSmoothWindow</cstring>
+          </property>
+         </widget>
         </item>
-        <item row="1" column="5" colspan="3">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Si&amp;gma</string>
+          </property>
+          <property name="buddy">
+           <cstring>spnSmoothSigma</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
          <widget class="QDoubleSpinBox" name="spnSmoothSigma">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -53,91 +332,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_11">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Or&amp;iginal CHM (In)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtSmoothOriginalCHM</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="4">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Si&amp;gma</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnSmoothSigma</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Window Si&amp;ze</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnSmoothWindow</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_12">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Smoothe&amp;d CHM (Out)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtSmoothSmoothedCHM</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="7">
-         <widget class="QToolButton" name="btnSmoothSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="7">
-         <widget class="QToolButton" name="btnSmoothOriginalCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1" colspan="3">
+        <item row="0" column="1">
          <widget class="QSpinBox" name="spnSmoothWindow">
           <property name="mouseTracking">
            <bool>false</bool>
@@ -145,60 +340,8 @@
           <property name="minimum">
            <number>3</number>
           </property>
-         </widget>
-        </item>
-        <item row="3" column="1" colspan="5">
-         <widget class="QLineEdit" name="txtSmoothSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1" colspan="6">
-         <widget class="QLineEdit" name="txtSmoothOriginalCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="clearButtonEnabled" stdset="0">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Smoothing Method</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1" colspan="7">
-         <widget class="QComboBox" name="cboSmoothMethod">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="currentText" stdset="0">
-           <string/>
-          </property>
-          <property name="currentIndex">
-           <number>-1</number>
+          <property name="singleStep">
+           <number>2</number>
           </property>
          </widget>
         </item>
@@ -215,22 +358,19 @@
      <property name="checkable">
       <bool>true</bool>
      </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QGridLayout" name="topsGrid">
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_6">
+        <item row="0" column="1" colspan="2">
+         <widget class="QLineEdit" name="txtTopsThresholds">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
-          </property>
-          <property name="text">
-           <string>&amp;Treetops Database (Out)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtTopsTreetopsDatabase</cstring>
           </property>
          </widget>
         </item>
@@ -247,81 +387,16 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="7">
-         <widget class="QToolButton" name="btnTopsThresholds">
-          <property name="enabled">
-           <bool>true</bool>
+        <item row="1" column="1" colspan="3">
+         <widget class="QDoubleSpinBox" name="spnTopsMaxNulls">
+          <property name="maximum">
+           <double>1.000000000000000</double>
           </property>
-          <property name="text">
-           <string>...</string>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
           </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_16">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>S&amp;moothed CHM (In)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtTopsSmoothedCHM</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="7">
-         <widget class="QToolButton" name="btnTopsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="7">
-         <widget class="QToolButton" name="btnTopsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="6">
-         <widget class="QComboBox" name="cboTopsTreetopsDatabaseDriver"/>
-        </item>
-        <item row="2" column="1" colspan="6">
-         <widget class="QLineEdit" name="txtTopsSmoothedCHM"/>
-        </item>
-        <item row="0" column="1" colspan="6">
-         <widget class="QLineEdit" name="txtTopsThresholds">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>1</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1" colspan="5">
-         <widget class="QLineEdit" name="txtTopsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
+          <property name="value">
+           <double>0.200000000000000</double>
           </property>
          </widget>
         </item>
@@ -338,59 +413,8 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="4">
-         <widget class="QLabel" name="label_17">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>&amp;Treetops SRID</string>
-          </property>
-          <property name="buddy">
-           <cstring>spnTopsTreetopsSRID</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="5" colspan="2">
-         <widget class="QSpinBox" name="spnTopsTreetopsSRID">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::WheelFocus</enum>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>999999</number>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1" colspan="3">
-         <widget class="QDoubleSpinBox" name="spnTopsMaxNulls">
-          <property name="maximum">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.200000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="7">
-         <widget class="QToolButton" name="btnTopsTreetopsSRID">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
+        <item row="0" column="3">
+         <widget class="QToolButton" name="btnTopsThresholds">
           <property name="text">
            <string>...</string>
           </property>
@@ -412,207 +436,62 @@
      <property name="checkable">
       <bool>true</bool>
      </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <layout class="QGridLayout" name="crownsGrid">
-        <item row="2" column="0" colspan="2">
-         <widget class="QLabel" name="label_13">
+        <item row="3" column="1" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsDoDatabase">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="text">
-           <string>Smoothed CHM (In)</string>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
           </property>
-          <property name="buddy">
-           <cstring>txtCrownsSmoothedCHM</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
-         <widget class="QLabel" name="label_15">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
           </property>
           <property name="text">
-           <string>&amp;Treetops Database (In)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtCrownsTreetopsDatabase</cstring>
+           <string>Polygonize Crowns</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="3" colspan="4">
-         <widget class="QLineEdit" name="txtCrownsOriginalCHM">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
+        <item row="3" column="4">
+         <widget class="QLabel" name="lblCrownsRemove">
           <property name="text">
-           <string/>
+           <string>Remove...</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="label_4">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Original CHM (In)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="7">
-         <widget class="QToolButton" name="btnCrownsThresholds">
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="6">
-         <widget class="QComboBox" name="cboCrownsCrownsDatabaseDriver">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="7">
-         <widget class="QToolButton" name="btnCrownsOriginalCHM">
+        <item row="3" column="6">
+         <widget class="QCheckBox" name="chkCrownsRemoveDangles">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>...</string>
+           <string>Dangles</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="7">
-         <widget class="QToolButton" name="btnCrownsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="7">
-         <widget class="QToolButton" name="btnCrownsCrownsDatabase">
+        <item row="3" column="5">
+         <widget class="QCheckBox" name="chkCrownsRemoveHoles">
           <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
           <property name="text">
-           <string>...</string>
+           <string>Holes</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="6">
-         <widget class="QComboBox" name="cboCrownsCrownsRasterDriver"/>
-        </item>
-        <item row="3" column="7">
-         <widget class="QToolButton" name="btnCrownsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="7">
-         <widget class="QToolButton" name="btnCrownsCrownsRaster">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="2" colspan="4">
-         <widget class="QLineEdit" name="txtCrownsCrownsRaster">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="3" colspan="3">
-         <widget class="QLineEdit" name="txtCrownsCrownsDatabase">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2" colspan="5">
-         <widget class="QLineEdit" name="txtCrownsTreetopsDatabase">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2" colspan="5">
-         <widget class="QLineEdit" name="txtCrownsSmoothedCHM">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="acceptDrops">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0" colspan="2">
-         <widget class="QLabel" name="label_19">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Crowns Database (Out)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2" colspan="5">
+        <item row="1" column="1" colspan="6">
          <widget class="QLineEdit" name="txtCrownsThresholds">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -622,23 +501,28 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QLabel" name="label_10">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="1" column="7">
+         <widget class="QToolButton" name="btnCrownsThresholds">
           <property name="text">
-           <string>&amp;Crowns Raster (Out)</string>
-          </property>
-          <property name="buddy">
-           <cstring>txtCrownsCrownsRaster</cstring>
+           <string>...</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="0" colspan="2">
+        <item row="2" column="1" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsUpdateHeights">
+          <property name="text">
+           <string>Update Treetop Heights</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4" colspan="3">
+         <widget class="QCheckBox" name="chkCrownsKeepSmoothed">
+          <property name="text">
+           <string>Keep Smoothed Heights</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
          <widget class="QLabel" name="label_7">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -651,78 +535,10 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="2">
-         <widget class="QCheckBox" name="chkCrownsDoDatabase">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>19</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0" colspan="2">
-         <widget class="QLabel" name="lblCrownsRemove">
-          <property name="text">
-           <string>Remove...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="2" colspan="2">
-         <widget class="QCheckBox" name="chkCrownsRemoveHoles">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Holes</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="4">
-         <widget class="QCheckBox" name="chkCrownsRemoveDangles">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Dangles</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>0</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout">
@@ -755,7 +571,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>0:00:00</string>
+        <string>00:00:00</string>
        </property>
       </widget>
      </item>
@@ -853,41 +669,11 @@
  </widget>
  <tabstops>
   <tabstop>grpSmoothing</tabstop>
-  <tabstop>cboSmoothMethod</tabstop>
   <tabstop>spnSmoothWindow</tabstop>
   <tabstop>spnSmoothSigma</tabstop>
-  <tabstop>txtSmoothOriginalCHM</tabstop>
-  <tabstop>btnSmoothOriginalCHM</tabstop>
-  <tabstop>txtSmoothSmoothedCHM</tabstop>
-  <tabstop>cboSmoothSmoothedCHMDriver</tabstop>
-  <tabstop>btnSmoothSmoothedCHM</tabstop>
   <tabstop>grpTops</tabstop>
   <tabstop>txtTopsThresholds</tabstop>
-  <tabstop>btnTopsThresholds</tabstop>
-  <tabstop>txtTopsSmoothedCHM</tabstop>
-  <tabstop>btnTopsSmoothedCHM</tabstop>
-  <tabstop>txtTopsTreetopsDatabase</tabstop>
-  <tabstop>cboTopsTreetopsDatabaseDriver</tabstop>
-  <tabstop>btnTopsTreetopsDatabase</tabstop>
   <tabstop>grpCrowns</tabstop>
-  <tabstop>txtCrownsThresholds</tabstop>
-  <tabstop>btnCrownsThresholds</tabstop>
-  <tabstop>chkCrownsUpdateHeights</tabstop>
-  <tabstop>txtCrownsOriginalCHM</tabstop>
-  <tabstop>btnCrownsOriginalCHM</tabstop>
-  <tabstop>txtCrownsSmoothedCHM</tabstop>
-  <tabstop>btnCrownsSmoothedCHM</tabstop>
-  <tabstop>txtCrownsTreetopsDatabase</tabstop>
-  <tabstop>btnCrownsTreetopsDatabase</tabstop>
-  <tabstop>txtCrownsCrownsRaster</tabstop>
-  <tabstop>cboCrownsCrownsRasterDriver</tabstop>
-  <tabstop>btnCrownsCrownsRaster</tabstop>
-  <tabstop>chkCrownsDoDatabase</tabstop>
-  <tabstop>txtCrownsCrownsDatabase</tabstop>
-  <tabstop>cboCrownsCrownsDatabaseDriver</tabstop>
-  <tabstop>btnCrownsCrownsDatabase</tabstop>
-  <tabstop>chkCrownsRemoveHoles</tabstop>
-  <tabstop>chkCrownsRemoveDangles</tabstop>
   <tabstop>btnHelp</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnCancel</tabstop>

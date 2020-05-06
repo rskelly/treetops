@@ -16,6 +16,8 @@
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
 
+#include "treetops.hpp"
+
 #define VECTOR_PATTERN "Vector Files (*.sqlite *.shp)"
 #define RASTER_PATTERN "Raster Files (*.tif *.tiff *.dat)"
 #define ALL_PATTERN "All Files (*)"
@@ -27,29 +29,48 @@ namespace geo {
 		namespace util {
 
 			// Convenience: returns a QString from a std string.
-			QString qstr(const std::string& str);
+			QString G_DLL_EXPORT qstr(const std::string& str);
 
 			// Convenience: returns a QString from an int.
-			QString qstr(int val);
+			QString G_DLL_EXPORT qstr(int val);
 
 			// Hack to strip the boost::... part of an error message
-			std::string stripBoost(const std::string& msg);
+			std::string G_DLL_EXPORT stripBoost(const std::string& msg);
 
-			void errorDialog(QWidget* parent, const std::string& title, const std::string& text,
-				const std::string& detail = "");
+			/**
+			 * Displays a modal dialog indicating an error.
+			 *
+			 * @param parent The parent widget.
+			 * @param title The dialog title.
+			 * @param text The dialog text.
+			 * @param detail A detail string, optional.
+			 */
+			void G_DLL_EXPORT errorDialog(QWidget* parent, const std::string& title,
+					const std::string& text, const std::string& detail = "");
+
+			/**
+			 * Displays an informative modal dialog.
+			 *
+			 * @param parent The parent widget.
+			 * @param title The dialog title.
+			 * @param text The dialog text.
+			 * @param detail A detail string, optional.
+			 */
+			void G_DLL_EXPORT infoDialog(QWidget* parent, const std::string& title,
+					const std::string& text, const std::string& detail = "");
 
 			// Convenience: open an input file dialog and return the string.
-			void getInputFile(QWidget* form, const std::string& title, QDir& path,
+			void G_DLL_EXPORT getInputFile(QWidget* form, const std::string& title, std::string& path,
 					const std::string& filter, std::string& filename);
 
 			// Convenience: open an output file dialog and return the string.
-			void getOutputFile(QWidget* form, const std::string& title, QDir& path,
-					const std::string& filter, std::string& filename);
+			void G_DLL_EXPORT getOutputFile(QWidget* form, const std::string& title, std::string& path,
+					const std::string& filter, std::string& filename, bool confirmOverwrite = true);
 
 			// Get the list of thresholds from the thresholds dialog.
-			void getTopsThresholds(QWidget* form, std::vector<std::tuple<double, uint8_t> >& thresholds);
+			void G_DLL_EXPORT getTopsThresholds(QWidget* form, std::vector<geo::treetops::config::TopThreshold>& thresholds);
 
-			void getCrownsThresholds(QWidget* form, std::vector<std::tuple<double, double, double> >& thresholds);
+			void G_DLL_EXPORT getCrownsThresholds(QWidget* form, std::vector<geo::treetops::config::CrownThreshold>& thresholds);
 		}
 
 	}

@@ -13,6 +13,7 @@
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QWidget>
 
+#include "treetops.hpp"
 #include "ui_tops_thresholds.h"
 
 // Represents a single line in the tops thresholds dialog.
@@ -26,9 +27,9 @@ public:
 	QSpinBox *spnWindow;
 	QToolButton *btnDelete;
 	TopsThresholdItem(QWidget *parent = 0);
-	void set(int index, double height, uint8_t window);
+	void set(int index, double height, int window);
 	double height() const;
-	uint8_t window() const;
+	int window() const;
 	bool operator<(const TopsThresholdItem &other) const;
 	int index() const;
 
@@ -54,12 +55,12 @@ public:
 	QWidget *m_form;
 	QVBoxLayout *scrollLayout;
 	std::list<TopsThresholdItem*> m_items;
-	std::vector<std::tuple<double, uint8_t> > m_thresholds;
+	std::vector<geo::treetops::config::TopThreshold> m_thresholds;
 	bool m_confirm;
 
 	TopsThresholdsForm();
-	void setThresholds(const std::vector<std::tuple<double, uint8_t> > &thresholds);
-	std::vector<std::tuple<double, uint8_t> > thresholds() const;
+	void setThresholds(const std::vector<geo::treetops::config::TopThreshold> &thresholds);
+	std::vector<geo::treetops::config::TopThreshold> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
 	~TopsThresholdsForm();
