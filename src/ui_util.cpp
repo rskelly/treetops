@@ -41,7 +41,7 @@ void geo::ui::util::errorDialog(QWidget* parent, const std::string& title, const
 	err.exec();
 }
 
-void geo::ui::util::infoDialog(QWidget* parent, const std::string& title, const std::string& text, const std::string& detail) {
+void geo::ui::util::infoDialog(QWidget* parent, const std::string& title, const std::string& text, const std::string& /*detail*/) {
 	QMessageBox::information(parent, qstr(title), qstr(text), QMessageBox::Ok);
 }
 
@@ -66,7 +66,7 @@ void geo::ui::util::getOutputFile(QWidget* form, const std::string& title, std::
 	}
 }
 
-void geo::ui::util::getTopsThresholds(QWidget* form, std::vector<TopThreshold>& thresholds) {
+void geo::ui::util::getTopsThresholds(QWidget* /*form*/, std::vector<TopThreshold>& thresholds) {
 	TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);
@@ -76,7 +76,7 @@ void geo::ui::util::getTopsThresholds(QWidget* form, std::vector<TopThreshold>& 
 		thresholds = tf.thresholds();
 }
 
-void geo::ui::util::getCrownsThresholds(QWidget* form, std::vector<CrownThreshold>& thresholds) {
+void geo::ui::util::getCrownsThresholds(QWidget* /*form*/, std::vector<CrownThreshold>& thresholds) {
 	CrownsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);

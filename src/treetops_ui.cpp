@@ -68,7 +68,7 @@ void TreetopsMonitor::status(float status, const std::string& message) {
 		emit statusUpdate(QString(message.c_str()));
 }
 
-void TreetopsMonitor::error(const std::string& err) {
+void TreetopsMonitor::error(const std::string&) {
 	//emit stepProgress((int) std::round(status * 100));
 }
 

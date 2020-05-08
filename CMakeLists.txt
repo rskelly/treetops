@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 project (treetops)
 add_subdirectory (libtreetops)
@@ -13,10 +13,12 @@ endif()
 
 enable_language(C)
 enable_language(CXX)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D_GLIBCXX_PARALLEL")
+set (CMAKE_CXX_FLAGS "-Wall -D_GLIBCXX_PARALLEL")
+set (CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3")
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (CMAKE_INCLUDE_DIRECTORIES_BEFORE ON)
 
@@ -25,12 +27,6 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set (CMAKE_INSTALL_RPATH "/usr/local/lib")
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-set (Boost_DEBUG OFF)
-set (Boost_USE_STATIC_LIBS OFF)
-set (Boost_USE_STATIC_RUNTIME OFF)
-set (Boost_USE_MULTITHREADED ON)
-set (Boost_NO_SYSTEM_PATHS OFF)
 
 if(${WITH_GUI})
 	set (CMAKE_AUTOUIC ON)
@@ -55,8 +51,6 @@ if (${APPLE})
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 elseif(${WIN32})
 	set (DEV_DIR "C:\\dev")
-	set (Boost_COMPILER -vc141)
-	set (BOOST_ROOT "${DEV_DIR}\\boost_1_67_0")
 	set (GIT_DIR "${DEV_DIR}\\git")
 	set (GIS_DIR "${DEV_DIR}\\gisinternals")
 	set (GEOS_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin") #set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
@@ -74,17 +68,14 @@ else()
 	if(${WITH_GUI})
 		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 	endif()
-	#set (BOOST_ROOT /usr)
-	#set (BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
-	#set (EIGEN_INCLUDEDIR /usr/include/eigen3)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-unknown-pragmas")
 endif()
 
 set (THREADS_PREFER_PTHREAD_FLAG ON)
 
-#find_package (Boost 1.58 COMPONENTS system filesystem date_time REQUIRED)
 find_package (GDAL 2 REQUIRED)
 find_package (OpenMP REQUIRED)
+
 if(${WITH_GUI})
 	find_package(Qt5 REQUIRED Widgets)
 endif()
@@ -98,59 +89,59 @@ endif()
 
 # Get the git rev and create an environment variable to be used in compilation.
 
-execute_process (COMMAND git rev-parse --short HEAD RESULT_VARIABLE GIT_RESULT OUTPUT_VARIABLE GIT_OUTPUT ERROR_VARIABLE GIT_ERROR)
+execute_process (COMMAND git rev-parse --short HEAD RESULT_VARIABLE GIT_RESULT 
+	OUTPUT_VARIABLE GIT_OUTPUT ERROR_VARIABLE GIT_ERROR)
 string (STRIP "${GIT_OUTPUT}" GIT_REV)
-message (STATUS "Finding Git rev: ${GIT_REV} (${GIT_RESULT}, ${GIT_ERROR})")
+message (STATUS "Finding Git rev: ${GIT_REV} (Result: ${GIT_RESULT}, Error: ${GIT_ERROR})")
 
 # Configure directories
 
 include_directories(BEFORE SYSTEM
-	include 
+#	include 
 	libgeo/include 
 	libtreetops/include 
-	build/ui_utilobj_autogen/include 
-	build/ui_utilobj_autogen/include_Debug 
-	build/ui_utilobj_autogen/include_Release
+#	build/ui_utilobj_autogen/include 
+#	build/ui_utilobj_autogen/include_Debug 
+#	build/ui_utilobj_autogen/include_Release
 	${EIGEN_INCLUDEDIR}	
 	${GDAL_INCLUDE_DIR}
 	${Qt5Core_INCLUDE_DIRS} 
 	${Qt5Widgets_INCLUDE_DIRS} 
 	${Qt5Gui_INCLUDE_DIRS}
 	${GEOS_INCLUDEDIR} 
-	#	${Boost_INCLUDE_DIRS}
 )
 	 
 link_directories(
-	libgeo/build/lib 
-	libtreetops/build/lib 
-	libgeo/build/bin 
-	libtreetops/build/bin 
-	build/lib 
-	build/bin 
+#	libgeo/build/lib 
+#	libtreetops/build/lib 
+#	libgeo/build/bin 
+#	libtreetops/build/bin 
+#	build/lib 
+#	build/bin 
 	${GEOS_LIBRARYDIR} 
 	${GIS_LIBRARYDIR} 
-	#	${Boost_LIBRARY_DIRS}
 )
 	
 # Build support libraries ############################################################################################
 
 set (ui_utilsrc src/ui_util.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
 add_library (ui_utilobj OBJECT ${ui_utilsrc})
+target_compile_features(ui_utilobj PUBLIC cxx_std_17)
 set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
-target_link_libraries(ui_util georaster treetops 
+target_link_libraries(ui_util treetops 
 	Qt5::Gui Qt5::Core Qt5::Widgets 
-	${SQLITE_LIBRARY} ${SPATIALITE_LIBRARY} 
-	#	${Boost_LIBRARIES}
+	${SQLITE_LIBRARY} 
+	${SPATIALITE_LIBRARY} 
 )
 
 # Build programs #####################################################################################################
 
 add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
+target_compile_features(treetops-app PUBLIC cxx_std_17)
 target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
 target_link_libraries (treetops-app PUBLIC ui_util treetops 
 	Qt5::Gui Qt5::Core Qt5::Widgets 
-	#	${Boost_LIBRARIES}
 	geos_c
 )
 
