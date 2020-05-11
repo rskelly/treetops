@@ -1,6 +1,6 @@
 [submodule "libtreetops"]
 	path = libtreetops
-	url = git@github.com:rskelly/libtreetops
+	url = https://github.com/rskelly/libtreetops
 [submodule "libgeo"]
 	path = libgeo
-	url = git@github.com:rskelly/libgeo
+	url = https://github.com/rskelly/libgeo
