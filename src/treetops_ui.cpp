@@ -314,7 +314,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	// Populate combos.
 	QStringList rasterDrivers;
-	for(const auto &it : geo::grid::Grid<float>::drivers({"GTiff", "HFA"}))
+	for(const auto &it : geo::grid::Band<float>::drivers({"GTiff", "HFA"}))
 		rasterDrivers << qstr(it.first);
 
 	QStringList vectorDrivers;
