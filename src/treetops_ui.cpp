@@ -403,7 +403,7 @@ void TreetopsForm::settingsFileClicked() {
 
 void TreetopsForm::settingsFileChanged(QString filename) {
 	m_config.lock();
-	m_config.setSettings(filename.toStdString());
+	m_config.setSettings(sstr(filename));
 	m_config.unlock();
 }
 
@@ -431,13 +431,13 @@ void TreetopsForm::originalCHMClicked() {
 	getInputFile(m_form, "CHM for Smoothing", m_settings.lastDir(), ALL_PATTERN, filename);
 	bool active = m_config.setActive(false);
 	if(m_config.smoothedCHMDriver().empty())
-		m_config.setSmoothedCHMDriver(cboSmoothedCHMDriver->currentText().toStdString());
+		m_config.setSmoothedCHMDriver(sstr(cboSmoothedCHMDriver->currentText()));
 	if(m_config.treetopsDatabaseDriver().empty())
-		m_config.setTreetopsDatabaseDriver(cboTreetopsDatabaseDriver->currentText().toStdString());
+		m_config.setTreetopsDatabaseDriver(sstr(cboTreetopsDatabaseDriver->currentText()));
 	if(m_config.crownsRasterDriver().empty())
-		m_config.setCrownsRasterDriver(cboCrownsRasterDriver->currentText().toStdString());
+		m_config.setCrownsRasterDriver(sstr(cboCrownsRasterDriver->currentText()));
 	if(m_config.crownsDatabaseDriver().empty())
-		m_config.setCrownsDatabaseDriver(cboCrownsDatabaseDriver->currentText().toStdString());
+		m_config.setCrownsDatabaseDriver(sstr(cboCrownsDatabaseDriver->currentText()));
 	m_config.setActive(active);
 	m_config.setOriginalCHM(filename, true);
 }
@@ -454,24 +454,24 @@ void TreetopsForm::smoothedCHMClicked() {
 }
 
 void TreetopsForm::smoothedCHMDriverChanged(QString text) {
-	m_config.setSmoothedCHMDriver(text.toStdString());
+	m_config.setSmoothedCHMDriver(sstr(text));
 }
 
 void TreetopsForm::originalCHMChanged(QString text) {
 	m_config.lock();
-	m_config.setOriginalCHM(lastDir(m_settings, text.toStdString()));
+	m_config.setOriginalCHM(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
 void TreetopsForm::smoothedCHMChanged(QString text) {
 	m_config.lock();
-	m_config.setSmoothedCHM(lastDir(m_settings, text.toStdString()));
+	m_config.setSmoothedCHM(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
 void TreetopsForm::treetopsDatabaseChanged(QString text) {
 	m_config.lock();
-	m_config.setTreetopsDatabase(lastDir(m_settings, text.toStdString()));
+	m_config.setTreetopsDatabase(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
@@ -483,7 +483,7 @@ void TreetopsForm::treetopsDatabaseClicked() {
 }
 
 void TreetopsForm::treetopsDatabaseDriverChanged(QString text) {
-	m_config.setTreetopsDatabaseDriver(text.toStdString());
+	m_config.setTreetopsDatabaseDriver(sstr(text));
 }
 
 void TreetopsForm::topsThresholdsClicked() {
@@ -507,7 +507,7 @@ void TreetopsForm::crownsRasterClicked() {
 
 void TreetopsForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
 
-	m_config.setCrownsRasterDriver(text.toStdString());
+	m_config.setCrownsRasterDriver(sstr(text));
 }
 
 void TreetopsForm::crownsDatabaseClicked() {
@@ -518,7 +518,7 @@ void TreetopsForm::crownsDatabaseClicked() {
 }
 
 void TreetopsForm::crownsDatabaseDriverChanged(QString text) {
-	m_config.setCrownsDatabaseDriver(text.toStdString());
+	m_config.setCrownsDatabaseDriver(sstr(text));
 }
 
 void TreetopsForm::crownsDoDatabaseChanged(bool state) {
@@ -548,7 +548,7 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 void TreetopsForm::crownsRasterChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	m_config.lock();
-	m_config.setCrownsRaster(lastDir(m_settings, text.toStdString()));
+	m_config.setCrownsRaster(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 	if(oldExt != geo::util::extension(m_config.crownsRaster()))
 		cboCrownsRasterDriver->setCurrentText("");
@@ -557,30 +557,30 @@ void TreetopsForm::crownsRasterChanged(QString text) {
 void TreetopsForm::crownsDatabaseChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	m_config.lock();
-	m_config.setCrownsDatabase(lastDir(m_settings, text.toStdString()));
+	m_config.setCrownsDatabase(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 	if(oldExt != geo::util::extension(m_config.crownsDatabase()))
 		cboCrownsDatabaseDriver->setCurrentText("");
 }
 
 void TreetopsForm::topsThresholdsChanged(QString thresh) {
-	m_config.parseTopsThresholds(thresh.toStdString());
+	m_config.parseTopsThresholds(sstr(thresh));
 }
 
 // TODO: Temporary, see #113.
 void TreetopsForm::topsThresholdsEditingFinished() {
 	QString thresh = txtTopsThresholds->text();
-	m_config.parseTopsThresholds(thresh.toStdString());
+	m_config.parseTopsThresholds(sstr(thresh));
 }
 
 void TreetopsForm::crownsThresholdsChanged(QString thresh) {
-	m_config.parseCrownsThresholds(thresh.toStdString());
+	m_config.parseCrownsThresholds(sstr(thresh));
 }
 
 // TODO: Temporary, see #113.
 void TreetopsForm::crownsThresholdsEditingFinished() {
 	QString thresh = txtCrownsThresholds->text();
-	m_config.parseCrownsThresholds(thresh.toStdString());
+	m_config.parseCrownsThresholds(sstr(thresh));
 }
 
 void TreetopsForm::smoothWindowSizeChanged(int size) {

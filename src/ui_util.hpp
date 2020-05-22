@@ -34,6 +34,9 @@ namespace geo {
 			// Convenience: returns a QString from an int.
 			QString G_DLL_EXPORT qstr(int val);
 
+			// Convenience: returns a std::string from a QString -- avoids ABI incompatibility issues.
+			std::string G_DLL_EXPORT sstr(const QString& str);
+
 			// Hack to strip the boost::... part of an error message
 			std::string G_DLL_EXPORT stripBoost(const std::string& msg);
 

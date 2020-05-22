@@ -25,7 +25,7 @@ typedef std::unordered_map<std::string, std::string> smap;
  */
 class Settings {
 private:
-	QSettings m_settings;	///<! The settings storage object.
+	QSettings* m_settings;	///<! The settings storage object.
 	smap m_localSettings;	///<! A map of local settings.
 	smap m_userSettings;	///<! A map of transient user settings.
 	std::string m_lastDir;	///<! The last-used directory.
