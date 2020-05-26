@@ -125,39 +125,31 @@ void TTWorkerThread::run() {
 		// Reset error state.
 		reset();
 
-
-		// Calculate the number of steps to complete the job(s).
-		int steps = (((int) m_config->doSmoothing()) + ((int) m_config->doTops()) + ((int) m_config->doCrowns())) * 2;
-		int step = 0;
-
-		monitor->status(0.01f, "Starting...");
+		monitor->status(0.0f, "Starting...");
 
 		if (m_config->doSmoothing()) {
-			monitor->status((float) ++step / steps, "Smoothing...");
+			monitor->status(0.0f, "Smoothing...");
 			t.smooth();
-			monitor->status((float) ++step / steps);
 		}
 
 		if (m_config->doTops()) {
-			monitor->status((float) ++step / steps, "Locating treetops...");
+			monitor->status(0.0f, "Locating treetops...");
 			try {
 				t.treetops();
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixTops;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			monitor->status((float) ++step / steps);
 		}
 
 		if (m_config->doCrowns()) {
-			monitor->status((float) ++step / steps, "Delineating crowns...");
+			monitor->status(0.0f, "Delineating crowns...");
 			try {
 				t.treecrowns();
 			} catch(const geo::treetops::util::DBConvertException& ex) {
 				m_toFix |= FixCrowns;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
-			monitor->status((float) ++step / steps);
 		}
 
 		monitor->status(1.0f, "Done.");
