@@ -63,6 +63,9 @@ void TreetopsMonitor::statusCallback(const std::string &msg) const {
 }
 
 void TreetopsMonitor::status(float status, const std::string& message) {
+	if(status < 0)
+		status = m_lastStatus;
+	m_lastStatus = status;
 	emit stepProgress((int) std::round(status * 100));
 	if(!message.empty())
 		emit statusUpdate(QString(message.c_str()));
