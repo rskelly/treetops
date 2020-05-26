@@ -13,8 +13,6 @@
 using namespace geo::ui::util;
 using namespace geo::treetops::config;
 
-int g__loglevel = 0;
-
 QString geo::ui::util::qstr(const std::string& str) {
 	return QString(str.c_str());
 }
@@ -22,6 +20,14 @@ QString geo::ui::util::qstr(const std::string& str) {
 QString geo::ui::util::qstr(int val) {
 	QString s;
 	s.setNum(val);
+	return s;
+}
+
+std::string geo::ui::util::sstr(const QString& str) {
+	std::vector<wchar_t> buf(str.size() + 1);
+	str.toWCharArray(buf.data());
+	std::wstring ws(buf.data());
+	std::string s(ws.begin(), ws.end());
 	return s;
 }
 
@@ -47,10 +53,10 @@ void geo::ui::util::infoDialog(QWidget* parent, const std::string& title, const 
 
 void geo::ui::util::getInputFile(QWidget* form, const std::string& title, std::string& path,
 		const std::string& filter, std::string& filename) {
-	QString res = QFileDialog::getOpenFileName(form, qstr(title), QString(path.c_str()), qstr(filter));
+	QString res = QFileDialog::getOpenFileName(form, qstr(title), qstr(path), qstr(filter));
 	if(!res.isEmpty()) {
-		path = res.toStdString();
-		filename = res.toStdString();
+		path = sstr(res);
+		filename = sstr(res);
 	}
 }
 

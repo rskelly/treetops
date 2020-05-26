@@ -11,6 +11,7 @@
 #include <QtCore/QSettings>
 
 #include "settings.hpp"
+#include "ui_util.hpp"
 
 using namespace geo::treetops::config;
 
@@ -127,8 +128,10 @@ namespace {
 
 } // anon
 
-Settings::Settings() {
-	m_lastDir = m_settings.value("local/lastDir", "").toString().toStdString();
+Settings::Settings() :
+	m_settings(new QSettings("ui_settings.txt", QSettings::Format::IniFormat)),
+	m_lastDir("") {
+	m_lastDir = geo::ui::util::sstr(m_settings->value("local/lastDir", "").toString());
 }
 
 std::string& Settings::lastDir() {
@@ -136,7 +139,7 @@ std::string& Settings::lastDir() {
 }
 
 bool Settings::load(TreetopsConfig& config, const std::string& filename) {
-	m_settings.setValue("local/settings", QString(filename.c_str()));
+	m_settings->setValue("local/settings", QString(filename.c_str()));
 
 	smap map;
 	if(!loadMap(filename, map))
@@ -212,6 +215,7 @@ void Settings::save(TreetopsConfig& config) {
 }
 
 Settings::~Settings() {
-	m_settings.setValue("local/lastDir", QString(lastDir().c_str()));
+	m_settings->setValue("local/lastDir", QString(lastDir().c_str()));
+	delete m_settings;
 }
 

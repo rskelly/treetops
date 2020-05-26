@@ -13,8 +13,6 @@
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
-int g__loglevel = 0;
-
 int runWithGui(int argc, char** argv) {
 
 	class TTApplication : public QApplication {
@@ -36,6 +34,8 @@ int runWithGui(int argc, char** argv) {
 		}
 	};
 
+	// These must be set before TreetopsForm is constructed because
+	// QSettings needs them for context.
 	QCoreApplication::setOrganizationName("Rob Skelly");
 	QCoreApplication::setOrganizationDomain("dijital.ca");
 	QCoreApplication::setApplicationName("Treetops");
