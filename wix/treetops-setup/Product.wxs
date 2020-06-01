@@ -10,19 +10,16 @@
 <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
 <?endif ?>
 
-<?define ProductVersion = "0.0.1"?>
+<?define ProductVersion = "0.0.2"?>
 <?define ProductUpgradeCode = "F6130536-F3D2-44E2-B496-82A5739D3B60"?>
 <?define CompanyName = "dijital.ca"?>
 <?define AppName = "treetops"?>
 <?define AppExecutable = "treetops-app.exe"?>
-<?define OptDir = "C:\dev\OSGeo4W64"?>
-<?define BoostDir = "C:\dev\boost_1_67_0\stage\lib"?>
-<?define BoostVcVer = "141"?>
-<?define BoostVer = "1_67"?>
-<?define QtDir = "C:\dev\Qt\5.11.0\msvc2017_64"?>
+<?define OptDir = "C:\dev\gisinternals"?>
+<?define QtDir = "C:\dev\Qt\5.14.2\msvc2017_64"?>
 <?define GdalLib = "gdal300"?>
 <?define XerxesLib = "xerces-c_3_2"?>
-<?define BuildType = "Debug"?>
+<?define BuildType = "Release"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <Product Id="E2F73549-DB3C-4310-8CC5-E0219D54C15C" Name="$(var.AppName)"
@@ -118,45 +115,14 @@
         </File>
       </Component>
 
-        <!--
-      <Component Win64="$(var.Win64)" Id="Dep1" Guid="BF24905B-AF3C-433F-96A8-3E8A83FFB176">
-        <File Source="$(var.BoostDir)\boost_date_time-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="Dep2" Guid="764A418F-4D84-4607-9B2E-6BFD0A2AE0C3">
-        <File Source="$(var.BoostDir)\boost_system-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="Dep3" Guid="F7C5B6CB-4116-46DB-81B9-771E0E04432D">
-        <File Source="$(var.BoostDir)\boost_filesystem-vc$(var.BoostVcVer)-mt-x64-$(var.BoostVer).dll" />
-      </Component>
-      -->
       <Component Win64="$(var.Win64)" Id="DepHDF5" Guid="AB12228C-D4D1-47A8-90D5-61BC7400F7F6">
         <File Source="$(var.OptDir)\bin\hdf5.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="DepIconv" Guid="40B36F3D-4C04-4054-9CC9-E2CF159D42D7">
         <File Source="$(var.OptDir)\bin\iconv.dll" />
       </Component>
-      <Component Win64="$(var.Win64)" Id="DepLWGEOM" Guid="4059F46E-E49F-474F-957C-A4EE34A00F95">
-        <File Source="$(var.OptDir)\bin\lwgeom.dll" />
-      </Component>
-
       <Component Win64="$(var.Win64)" Id="DepHDF5HL" Guid="7737DFBA-565A-4EC4-9795-A6379C37B750">
         <File Source="$(var.OptDir)\bin\hdf5_hl.dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="DepSSL" Guid="CFB80A68-E806-4C1A-B21E-F6BBA98566A5">
-        <File Source="$(var.OptDir)\bin\libssl-1_1-x64.dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="DepCrypto" Guid="7CEF2678-E706-47AB-BC59-D0A6FC28BEFF">
-        <File Source="$(var.OptDir)\bin\libcrypto-1_1-x64.dll" />
-      </Component>
-
-      <Component Win64="$(var.Win64)" Id="DepZStd" Guid="BD9A38B6-F95B-4D57-9E77-696999ECE33D">
-        <File Source="$(var.OptDir)\bin\zstd.dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="DepLZMA" Guid="CCCD456C-1471-442C-957B-201F0BFFFF01">
-        <File Source="$(var.OptDir)\bin\liblzma.dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="DepLibPNG" Guid="C885CC40-B5A6-423D-8A62-0D35D665CB86">
-        <File Source="$(var.OptDir)\bin\libpng16.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep4" Guid="0E6CE6B5-7B1D-498A-8F94-118AD1B3B95F">
         <File Source="$(var.OptDir)\bin\expat.dll" />
@@ -172,9 +138,6 @@
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep8" Guid="6BAB57A6-552E-4023-9166-A456D0BCBF1A">
         <File Source="$(var.OptDir)\bin\geos_c.dll" />
-      </Component>
-      <Component Win64="$(var.Win64)" Id="Dep9" Guid="53DF5F26-4D21-447E-89B2-98B00C8BE26F">
-        <File Source="$(var.OptDir)\bin\iconv-2.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep10" Guid="ECDF7FED-8AE5-41F1-A7BC-08F3FF45081D">
         <File Source="$(var.OptDir)\bin\libcurl.dll" />
@@ -192,7 +155,10 @@
         <File Source="$(var.OptDir)\bin\openjp2.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep16" Guid="FDD5CBCD-C9EF-423D-827F-A9892954D6DF">
-        <File Source="$(var.OptDir)\bin\proj_6_3.dll" />
+        <File Source="$(var.OptDir)\bin\proj_6_1.dll" />
+      </Component>
+      <Component Win64="$(var.Win64)" Id="Dep160" Guid="9079586E-C200-4CAA-AE31-DCFF3E15213B">
+        <File Source="$(var.OptDir)\bin\proj.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep17" Guid="5644074F-BA29-4E42-B9FC-4B4E0E81BB72">
         <File Source="$(var.OptDir)\bin\spatialite.dll" />
@@ -209,9 +175,6 @@
       <Component Win64="$(var.Win64)" Id="Dep33" Guid="17EF806E-7DF0-4BA9-8B67-665944E1DC4E">
         <File Source="$(var.OptDir)\bin\zlib1.dll" />
       </Component>
-      <Component Win64="$(var.Win64)" Id="Dep34" Guid="17EF806E-7DF0-4BA9-8B67-665944E1DC4F">
-        <File Source="$(var.OptDir)\bin\ogdi.dll" />
-      </Component>
       <Component Win64="$(var.Win64)" Id="Dep35" Guid="17EF806E-7DF0-4BA9-8B67-665944E1DC50">
         <File Source="$(var.OptDir)\bin\szip.dll" />
       </Component>
@@ -221,22 +184,20 @@
       <Component Win64="$(var.Win64)" Id="Dep20" Guid="22CA6EC3-7B59-4E4B-BC21-A06172790CAD">
         <File Source="$(var.OptDir)\bin\$(var.XerxesLib).dll" />
       </Component>
-      <!--//
       <Component Win64="$(var.Win64)" Id="Dep21" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E8">
         <File Source="$(var.OptDir)\bin\vcruntime140.dll" />
       </Component>
-      //-->
       <Component Win64="$(var.Win64)" Id="Dep29" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E9">
-        <File Source="$(var.OptDir)\bin\msvcp110.dll" />
+        <File Source="$(var.OptDir)\bin\msvcp140.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep22" Guid="1C83F510-AFA5-4402-B8A6-31790A326397">
-        <File Source="$(var.QtDir)\bin\Qt5Cored.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Core.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep23" Guid="E3B4B58D-90C9-4486-9FA2-627D6CD82DA8">
-        <File Source="$(var.QtDir)\bin\Qt5Widgetsd.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Widgets.dll" />
       </Component>
       <Component Win64="$(var.Win64)" Id="Dep24" Guid="0D951344-4F6B-4390-B553-2ED4FBABED6A">
-        <File Source="$(var.QtDir)\bin\Qt5Guid.dll" />
+        <File Source="$(var.QtDir)\bin\Qt5Gui.dll" />
       </Component>
     </ComponentGroup>
   </Fragment>
