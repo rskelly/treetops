@@ -174,6 +174,7 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	config.setCrownsDoDatabase(getb(map, "crownsDoDatabase", config.crownsDoDatabase()));
 	config.setCrownsRemoveHoles(getb(map, "crownsRemoveHoles", config.crownsRemoveHoles()));
 	config.setCrownsRemoveDangles(getb(map, "crownsRemoveDangles", config.crownsRemoveDangles()));
+	config.setCrownsKeepSmoothed(getb(map, "crownsKeepSmoothed", config.crownsKeepSmoothed()));
 
 	return true;
 }
@@ -210,6 +211,7 @@ void Settings::save(TreetopsConfig& config) {
 	map["crownsDoDatabase"] = std::to_string(config.crownsDoDatabase());
 	map["crownsRemoveHoles"] = std::to_string(config.crownsRemoveHoles());
 	map["crownsRemoveDangles"] = std::to_string(config.crownsRemoveDangles());
+	map["crownsKeepSmoothed"] = std::to_string(config.crownsKeepSmoothed());
 
 	saveMap(config.settings(), map);
 }

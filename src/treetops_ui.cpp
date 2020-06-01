@@ -723,6 +723,9 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 	if(field & CrownsThresholds)
 		txtCrownsThresholds->setText(qstr(m_config.crownsThresholdsList()));
 
+	if(field & CrownsKeepSmoothed)
+		chkCrownsKeepSmoothed->setChecked(m_config.crownsKeepSmoothed());
+
 	m_settings.save(config);
 
 	config.unlock();
