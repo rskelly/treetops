@@ -44,12 +44,10 @@ namespace geo {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
-			bool m_cancel;
 			QWidget* m_form;
 			TTWorkerThread* m_workerThread;
 			TTClockThread* m_clockThread;
 			TreetopsConfig m_config;
-
 			Settings m_settings;
 			std::string m_settingsFile;
 

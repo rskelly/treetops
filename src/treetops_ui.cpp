@@ -132,6 +132,11 @@ void TTWorkerThread::run() {
 			t.smooth();
 		}
 
+		if(monitor->canceled()) {
+			monitor->status(0.0f, "Canceled.");
+			return;
+		}
+
 		if (m_config->doTops()) {
 			monitor->status(0.0f, "Locating treetops...");
 			try {
@@ -142,6 +147,11 @@ void TTWorkerThread::run() {
 			}
 		}
 
+		if(monitor->canceled()) {
+			monitor->status(0.0f, "Canceled.");
+			return;
+		}
+
 		if (m_config->doCrowns()) {
 			monitor->status(0.0f, "Delineating crowns...");
 			try {
@@ -150,6 +160,11 @@ void TTWorkerThread::run() {
 				m_toFix |= FixCrowns;
 				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
 			}
+		}
+
+		if(monitor->canceled()) {
+			monitor->status(0.0f, "Canceled.");
+			return;
 		}
 
 		monitor->status(1.0f, "Done.");
@@ -190,7 +205,6 @@ TTWorkerThread::~TTWorkerThread(){}
 
 TreetopsForm::TreetopsForm() :
 	Ui::TreetopsForm(),
-	m_cancel(false),
 	m_form(nullptr),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
@@ -589,7 +603,7 @@ void TreetopsForm::smoothSigmaChanged(double sigma) {
 void TreetopsForm::runClicked() {
 	if (m_workerThread->isRunning())
 		return;
-	m_cancel = false;
+	m_config.monitor()->setCanceled(false);
 	btnRun->setEnabled(false);
 	btnCancel->setEnabled(true);
 	btnExit->setEnabled(false);
@@ -623,7 +637,7 @@ void TreetopsForm::exitClicked() {
 
 void TreetopsForm::cancelClicked() {
 	g_debug("cancel");
-	m_cancel = true;
+	m_config.monitor()->cancel();
 	checkRun();
 }
 
