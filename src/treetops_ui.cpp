@@ -380,6 +380,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnCancel, SIGNAL(clicked()), this, SLOT(cancelClicked()));
 	connect(btnHelp, SIGNAL(clicked()), this, SLOT(helpClicked()));
 
+	// -- handle config updates in the ui thread.
+	connect(this, SIGNAL(configUpdateReceived(long)), this, SLOT(handleConfigUpdate(long)));
+
 	// -- callbacks
 	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
 	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
@@ -651,8 +654,12 @@ void TreetopsForm::checkRun() {
 	}
 }
 
-void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
+void TreetopsForm::configUpdate(TreetopsConfig&, long field) {
+	// Emit the event that will trigger handleConfig update in the UI thread.
+	emit configUpdateReceived(field);
+}
 
+void TreetopsForm::handleConfigUpdate(long field) {
 	if(field & SettingsFile) {
 		std::string filename = m_config.settings();
 		if(isfile(filename)) {
@@ -669,7 +676,7 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 		}
 	}
 
-	config.lock();
+	m_config.lock();
 
 	if(field & SettingsFile)
 		txtSettingsFile->setText(qstr(m_config.settings()));
@@ -719,9 +726,23 @@ void TreetopsForm::configUpdate(TreetopsConfig& config, long field) {
 	if(field & CrownsKeepSmoothed)
 		chkCrownsKeepSmoothed->setChecked(m_config.crownsKeepSmoothed());
 
-	m_settings.save(config);
+	if(field & TopsDBFormatChanged) {
+		QMessageBox::warning(this, "Settings Changed",
+				"The tops database is too large for the Shapefile format. Changed to SQLite.",
+				QMessageBox::StandardButton::Ok);
 
-	config.unlock();
+	}
+
+	if(field & CrownsDBFormatChanged) {
+		QMessageBox::warning(this, "Settings Changed",
+				"The crowns database is too large for the Shapefile format. Changed to SQLite.",
+				QMessageBox::StandardButton::Ok);
+
+	}
+
+	m_settings.save(m_config);
+
+	m_config.unlock();
 
 	checkRun();
 }

@@ -84,6 +84,9 @@ namespace geo {
 			 */
 			void crownsConvertFix();
 
+		signals:
+			void configUpdateReceived(long);
+
 		public slots:
 			void settingsFileClicked();
 			void settingsFileChanged(QString);
@@ -129,6 +132,8 @@ namespace geo {
 			void runClicked();
 			void cancelClicked();
 			void helpClicked();
+
+			void handleConfigUpdate(long);
 
 			void done();
 		};
