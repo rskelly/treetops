@@ -205,7 +205,6 @@ TTWorkerThread::~TTWorkerThread(){}
 
 TreetopsForm::TreetopsForm() :
 	Ui::TreetopsForm(),
-	m_form(nullptr),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
 }
@@ -243,8 +242,6 @@ void TreetopsForm::setRunTime(const std::string& time) {
 TreetopsForm::~TreetopsForm() {
 	// Save the settings.
 	m_settings.save(m_config);
-	if(m_form)
-		delete m_form;
 	if(m_clockThread) {
 		m_clockThread->stop();
 		m_clockThread->wait();
@@ -254,14 +251,12 @@ TreetopsForm::~TreetopsForm() {
 		m_workerThread->wait();
 		delete m_workerThread;
 	}
+	m_config.destroy();
 }
 
 void TreetopsForm::showForm() {
-	if(!m_form) {
-		m_form = new QWidget();
-		this->setupUi(m_form);
-	}
-	m_form->show();
+	setupUi(this);
+	show();
 }
 
 void TreetopsForm::loadSettings() {
@@ -309,7 +304,6 @@ void TreetopsForm::loadSettings() {
 
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
-	m_form = form;
 
 	QString title = form->windowTitle();
 	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
@@ -406,7 +400,7 @@ void TreetopsForm::resetProgress() {
 
 void TreetopsForm::settingsFileClicked() {
 	std::string filename;
-	getOutputFile(m_form, "Settings File", m_settings.lastDir(), ALL_PATTERN, filename, false);
+	getOutputFile(this, "Settings File", m_settings.lastDir(), ALL_PATTERN, filename, false);
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
@@ -437,7 +431,7 @@ void TreetopsForm::updateView() {
 
 void TreetopsForm::originalCHMClicked() {
 	std::string filename;
-	getInputFile(m_form, "CHM for Smoothing", m_settings.lastDir(), ALL_PATTERN, filename);
+	getInputFile(this, "CHM for Smoothing", m_settings.lastDir(), ALL_PATTERN, filename);
 	bool active = m_config.setActive(false);
 	if(m_config.smoothedCHMDriver().empty())
 		m_config.setSmoothedCHMDriver(sstr(cboSmoothedCHMDriver->currentText()));
@@ -458,7 +452,7 @@ void TreetopsForm::originalCHMBandChanged(int band) {
 void TreetopsForm::smoothedCHMClicked() {
 	std::string oldExt = geo::util::extension(m_config.smoothedCHM());
 	std::string filename;
-	getOutputFile(m_form, "Smoothed CHM", m_settings.lastDir(), ALL_PATTERN, filename);
+	getOutputFile(this, "Smoothed CHM", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setSmoothedCHM(filename);
 }
 
@@ -487,7 +481,7 @@ void TreetopsForm::treetopsDatabaseChanged(QString text) {
 void TreetopsForm::treetopsDatabaseClicked() {
 	std::string oldExt = geo::util::extension(m_config.treetopsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Treetops Database", m_settings.lastDir(), ALL_PATTERN, filename);
+	getOutputFile(this, "Treetops Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setTreetopsDatabase(filename);
 }
 
@@ -497,20 +491,20 @@ void TreetopsForm::treetopsDatabaseDriverChanged(QString text) {
 
 void TreetopsForm::topsThresholdsClicked() {
 	std::vector<TopThreshold> thresholds = m_config.topsThresholds();
-	getTopsThresholds(m_form, thresholds);
+	getTopsThresholds(this, thresholds);
 	m_config.setTopsThresholds(thresholds);
 }
 
 void TreetopsForm::crownsThresholdsClicked() {
 	std::vector<CrownThreshold> thresholds = m_config.crownsThresholds();
-	getCrownsThresholds(m_form, thresholds);
+	getCrownsThresholds(this, thresholds);
 	m_config.setCrownsThresholds(thresholds);
 }
 
 void TreetopsForm::crownsRasterClicked() {
 	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Raster", m_settings.lastDir(), ALL_PATTERN, filename);
+	getOutputFile(this, "Crowns Raster", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsRaster(filename);
 }
 
@@ -522,7 +516,7 @@ void TreetopsForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
 void TreetopsForm::crownsDatabaseClicked() {
 	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	std::string filename;
-	getOutputFile(m_form, "Crowns Database", m_settings.lastDir(), ALL_PATTERN, filename);
+	getOutputFile(this, "Crowns Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsDatabase(filename);
 }
 
@@ -621,18 +615,17 @@ void TreetopsForm::done() {
 	if(m_workerThread->toFix() & FixCrowns)
 		crownsConvertFix();
 	if (m_workerThread->isError()) {
-		errorDialog(m_form, "Error", m_workerThread->message());
+		errorDialog(this, "Error", m_workerThread->message());
 		resetProgress();
 	} else if(!m_workerThread->message().empty()) {
-		infoDialog(m_form, "Notice", m_workerThread->message());
+		infoDialog(this, "Notice", m_workerThread->message());
 	}
 	checkRun();
 }
 
 void TreetopsForm::exitClicked() {
 	g_debug("quit");
-	m_settings.save(m_config);
-	m_form->close();
+	close();
 }
 
 void TreetopsForm::cancelClicked() {

@@ -44,7 +44,6 @@ namespace geo {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
-			QWidget* m_form;
 			TTWorkerThread* m_workerThread;
 			TTClockThread* m_clockThread;
 			TreetopsConfig m_config;
@@ -69,7 +68,7 @@ namespace geo {
 			void showForm();
 			void setRunTime(const std::string& time);
 			void loadSettings();
-			virtual ~TreetopsForm();
+			~TreetopsForm();
 
 			/**
 			 * Called when Treetops fails to convert the internal database to the chosen format.
