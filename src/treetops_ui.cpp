@@ -113,12 +113,12 @@ void TTWorkerThread::run() {
 
 	// Clear the message to indicate no issues.
 	m_message.clear();
-	m_toFix = FixNone;
 
+	// Get the monitor and reset the data state.
 	Monitor* monitor = m_config->monitor();
-
 	m_config->reset();
 
+	// Create a new Treetops program.
 	Treetops t(m_config);
 
 	try {
@@ -139,12 +139,7 @@ void TTWorkerThread::run() {
 
 		if (m_config->doTops()) {
 			monitor->status(0.0f, "Locating treetops...");
-			try {
-				t.treetops();
-			} catch(const geo::treetops::util::DBConvertException& ex) {
-				m_toFix |= FixTops;
-				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
-			}
+			t.treetops();
 		}
 
 		if(monitor->canceled()) {
@@ -154,12 +149,7 @@ void TTWorkerThread::run() {
 
 		if (m_config->doCrowns()) {
 			monitor->status(0.0f, "Delineating crowns...");
-			try {
-				t.treecrowns();
-			} catch(const geo::treetops::util::DBConvertException& ex) {
-				m_toFix |= FixCrowns;
-				m_message = "Saving to the selected database format has failed. The output has been converted to SQLite.";
-			}
+			t.treecrowns();
 		}
 
 		if(monitor->canceled()) {
@@ -194,10 +184,6 @@ bool TTWorkerThread::isError() const {
 	return m_isError;
 }
 
-int TTWorkerThread::toFix() const {
-	return m_toFix;
-}
-
 TTWorkerThread::~TTWorkerThread(){}
 
 
@@ -207,32 +193,6 @@ TreetopsForm::TreetopsForm() :
 	Ui::TreetopsForm(),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
-}
-
-void TreetopsForm::topsConvertFix() {
-	std::string text = geo::util::extension(m_config.treetopsDatabase());
-	std::string tops = m_config.treetopsDatabase().substr(0, m_config.treetopsDatabase().find(text)) + ".sqlite";
-	m_config.setActive(false);
-	m_config.setTreetopsDatabase(tops);
-	m_config.setTreetopsDatabaseDriver("SQLite");
-	if(m_config.crownsDatabaseDriver() != "SQLite") {
-		std::string cext = geo::util::extension(m_config.crownsDatabase());
-		std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(cext)) + ".sqlite";
-		m_config.setCrownsDatabase(crowns);
-		m_config.setCrownsDatabaseDriver("SQLite");
-	}
-	m_config.setActive(true);
-	m_config.update(TreetopsDatabase|TreetopsDatabaseDriver|CrownsDatabase|CrownsDatabaseDriver);
-}
-
-void TreetopsForm::crownsConvertFix() {
-	std::string ext = geo::util::extension(m_config.crownsDatabase());
-	std::string crowns = m_config.crownsDatabase().substr(0, m_config.crownsDatabase().find(ext)) + ".sqlite";
-	m_config.setActive(false);
-	m_config.setCrownsDatabase(crowns);
-	m_config.setCrownsDatabaseDriver("SQLite");
-	m_config.setActive(true);
-	m_config.update(CrownsDatabase|CrownsDatabaseDriver);
 }
 
 void TreetopsForm::setRunTime(const std::string& time) {
@@ -388,7 +348,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
 
 	// -- worker thread.
-	connect(m_workerThread, SIGNAL(finished()), this, SLOT(done()));
+	connect(m_workerThread, SIGNAL(finished()), this, SLOT(stopped()));
+	connect(m_workerThread, SIGNAL(started()), this, SLOT(started()));
 
 	m_config.setListener(this);
 	m_config.setActive(true);
@@ -430,6 +391,11 @@ void TreetopsForm::crownsKeepSmoothedChanged(bool on) {
 }
 
 void TreetopsForm::updateView() {
+	bool enable = !(m_workerThread && m_workerThread->isRunning());
+	grpFiles->setEnabled(enable);
+	grpSmoothing->setEnabled(enable);
+	grpTops->setEnabled(enable);
+	grpCrowns->setEnabled(enable);
 }
 
 void TreetopsForm::originalCHMClicked() {
@@ -601,22 +567,21 @@ void TreetopsForm::runClicked() {
 	if (m_workerThread->isRunning())
 		return;
 	m_config.monitor()->setCanceled(false);
+	m_workerThread->start();
+}
+
+void TreetopsForm::started() {
 	btnRun->setEnabled(false);
 	btnCancel->setEnabled(true);
 	btnExit->setEnabled(false);
 	m_clockThread->start();
-	m_workerThread->start();
-	resetProgress();
 	checkRun();
+	updateView();
 }
 
-void TreetopsForm::done() {
+void TreetopsForm::stopped() {
 	m_clockThread->stop();
 	m_clockThread->wait();
-	if(m_workerThread->toFix() & FixTops)
-		topsConvertFix();
-	if(m_workerThread->toFix() & FixCrowns)
-		crownsConvertFix();
 	if (m_workerThread->isError()) {
 		errorDialog(this, "Error", m_workerThread->message());
 		resetProgress();
@@ -624,6 +589,7 @@ void TreetopsForm::done() {
 		infoDialog(this, "Notice", m_workerThread->message());
 	}
 	checkRun();
+	updateView();
 }
 
 void TreetopsForm::exitClicked() {
@@ -726,19 +692,11 @@ void TreetopsForm::handleConfigUpdate(long field) {
 	if(field & CrownsKeepSmoothed)
 		chkCrownsKeepSmoothed->setChecked(m_config.crownsKeepSmoothed());
 
-	if(field & TopsDBFormatChanged) {
-		QMessageBox::warning(this, "Settings Changed",
-				"The tops database is too large for the Shapefile format. Changed to SQLite.",
-				QMessageBox::StandardButton::Ok);
+	if(field & TopsDBFormatChanged)
+		infoDialog(this, "Settings Changed", "The tops database is too large for the Shapefile format. Changed to SQLite.");
 
-	}
-
-	if(field & CrownsDBFormatChanged) {
-		QMessageBox::warning(this, "Settings Changed",
-				"The crowns database is too large for the Shapefile format. Changed to SQLite.",
-				QMessageBox::StandardButton::Ok);
-
-	}
+	if(field & CrownsDBFormatChanged)
+		infoDialog(this, "Settings Changed", "The crowns database is too large for the Shapefile format. Changed to SQLite.");
 
 	m_settings.save(m_config);
 

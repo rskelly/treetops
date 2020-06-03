@@ -70,20 +70,6 @@ namespace geo {
 			void loadSettings();
 			~TreetopsForm();
 
-			/**
-			 * Called when Treetops fails to convert the internal database to the chosen format.
-			 * Will cause the app to change the filename and driver to SQLite and move the file into
-			 * the appropriate place. Modifies the tops and crowns DB.
-			 */
-			void topsConvertFix();
-
-			/**
-			 * Called when Treetops fails to convert the internal database to the chosen format.
-			 * Will cause the app to change the filename and driver to SQLite and move the file into
-			 * the appropriate place. Modifies the crowns DB.
-			 */
-			void crownsConvertFix();
-
 		signals:
 			void configUpdateReceived(long);
 
@@ -135,25 +121,27 @@ namespace geo {
 
 			void handleConfigUpdate(long);
 
-			void done();
-		};
+			/**
+			 * \brief Called when the worker thread stops.
+			 */
+			void stopped();
 
-		enum FixFields {
-			FixNone,
-			FixTops,
-			FixCrowns
+			/**
+			 * \brief Called when the worker thread starts.
+			 */
+			void started();
 		};
 
 		/**
 		 * A thread for performing the work of the application.
 		 */
 		class TTWorkerThread: public QThread {
+			Q_OBJECT
 		private:
 			TreetopsForm* m_parent;		///<! The form that owns this thread.
 			TreetopsConfig* m_config;	///<! The TreetopsConfig object.
 			std::string m_message;		///<! The error message from the last error.
 			bool m_isError;				///<! True if the thread is running or exiting in an error state.
-			int m_toFix;				///<! Container for flags indicating which fields to convert to sqlite. Tops/Crowns/Both.
 
 			/**
 			 * Run the thread.
@@ -193,14 +181,6 @@ namespace geo {
 			 * @return True if an error has occurred.
 			 */
 			bool isError() const;
-
-			/**
-			 * Return an integer indicating which fields to fix. Constants
-			 * from the {@link FixFields} enum are ORed together.
-			 *
-			 * @return The fields to fix.
-			 */
-			int toFix() const;
 
 		};
 
