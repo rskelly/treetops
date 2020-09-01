@@ -187,6 +187,9 @@
       <Component Win64="$(var.Win64)" Id="Dep21" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E8">
         <File Source="$(var.OptDir)\bin\vcruntime140.dll" />
       </Component>
+      <Component Win64="$(var.Win64)" Id="Dep21_1" Guid="6DE36302-8E53-42C3-866A-46944E02409B">
+        <File Source="$(var.OptDir)\bin\vcruntime140_1.dll" />
+      </Component>
       <Component Win64="$(var.Win64)" Id="Dep29" Guid="32FCAD4F-DA15-4BDA-BF9E-90012CB7A8E9">
         <File Source="$(var.OptDir)\bin\msvcp140.dll" />
       </Component>
