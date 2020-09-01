@@ -130,4 +130,4 @@ target_link_libraries (treetops-app PUBLIC ui_util treetops
 
 # Install ###########################################################################################################
 
-install (TARGETS treetops-app RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+install (TARGETS treetops-app ui_util RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
