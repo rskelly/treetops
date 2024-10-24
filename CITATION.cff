@@ -1,0 +1,37 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Treetops
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Rob
+    name-particle: rob
+    family-names: Skelly
+    email: rob@dijital.ca
+    affiliation: >-
+      Hyperspectral LiDAR Research Group, University of
+      Victoria, British Columbia, Canada
+    orcid: 'https://orcid.org/0000-0002-6770-5617'
+repository-code: 'https://github.com/rskelly/treetops'
+url: 'https://github.com/rskelly/treetops'
+abstract: >-
+  Treetops reads digital surface models of forest canopies
+  to delineate the extents of tree crowns and locate their
+  tops. The software uses a deterministic algorithm based on
+  flood fill with some extra preparation and post-processing
+  steps. Configurable thresholds allow the user to optimize
+  the software for the specific characteristics of the site.
+keywords:
+  - forestry
+  - trees
+  - crowns
+  - remote sensing
+  - lidar
+  - canopy
+license: CC-BY-NC-SA-4.0
+version: v2.0d
+date-released: '2020-09-18'
