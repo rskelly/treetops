@@ -9,7 +9,6 @@ message: >-
 type: software
 authors:
   - given-names: Rob
-    name-particle: Rob
     family-names: Skelly
     email: rob@dijital.ca
     affiliation: >-
