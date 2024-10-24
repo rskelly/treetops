@@ -9,7 +9,6 @@ message: >-
 type: software
 authors:
   - given-names: Rob
-    name-particle: rob
     family-names: Skelly
     email: rob@dijital.ca
     affiliation: >-
@@ -33,5 +32,4 @@ keywords:
   - lidar
   - canopy
 license: CC-BY-NC-SA-4.0
-version: v2.0d
 date-released: '2020-09-18'
