@@ -32,7 +32,7 @@ CrownsThresholdItem::CrownsThresholdItem(QWidget* parent) :
 	spnRadius->setMaximum(999.0);
 	btnDelete = new QToolButton();
 	btnDelete->setText("X");
-	layout->setMargin(0);
+	//layout->setMargin(0);
 	layout->addWidget(spnHeight, 0, 0);
 	layout->addWidget(spnFraction, 0, 1);
 	layout->addWidget(spnRadius, 0, 2);

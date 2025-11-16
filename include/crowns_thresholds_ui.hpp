@@ -14,7 +14,7 @@
 #include <QtWidgets/QWidget>
 
 #include "treetops.hpp"
-#include "ui_crowns_thresholds.h"
+//#include "ui_crowns_thresholds.h"
 
 // Represents a single line in the crowns thresholds dialog.
 class CrownsThresholdItem : public QWidget {

@@ -25,7 +25,6 @@ TopsThresholdItem::TopsThresholdItem(QWidget *parent) :
 	spnWindow->setSingleStep(2);
 	btnDelete = new QToolButton();
 	btnDelete->setText("X");
-	layout->setMargin(0);
 	layout->addWidget(spnHeight, 0, 0);
 	layout->addWidget(spnWindow, 0, 1);
 	layout->addWidget(btnDelete, 0, 2);
