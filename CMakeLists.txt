@@ -1,135 +1,77 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.22)
 
-project (treetops)
-add_subdirectory (libtreetops)
-add_subdirectory (libgeo)
+project(treetops VERSION 1.0 LANGUAGES CXX)
 
-set (BUILD_APPS false CACHE BOOL "If true, build apps in libgeo.")
-set (WITH_GUI true CACHE BOOL "If true, will build the Qt GUI.")
+# Use C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(${WITH_GUI})
-	add_definitions(-DWITH_GUI)
+# Enable automatic handling of Qt MOC, UIC, RCC
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Optionally set CMAKE_PREFIX_PATH if Qt is installed in a custom location
+if(NOT DEFINED CMAKE_PREFIX_PATH)
+    set(CMAKE_PREFIX_PATH "$ENV{QT_ROOT}" CACHE PATH "Qt install path")
 endif()
 
-enable_language(C)
-enable_language(CXX)
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
-set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-set (CMAKE_INCLUDE_DIRECTORIES_BEFORE ON)
+# Find Qt 6 packages
+find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED)
 
-set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_INSTALL_RPATH "/usr/local/lib")
-set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# Optionally find GIS/math libraries (GDAL, PROJ, GEOS)
+find_package(GDAL CONFIG QUIET)
+find_package(PROJ CONFIG QUIET)
+find_package(GEOS 3 CONFIG QUIET)
+find_package(PDAL CONFIG QUIET)
 
-if(${WITH_GUI})
-	message (STATUS "Building gui...")
-	set (CMAKE_AUTOUIC ON)
-	set (CMAKE_AUTOMOC ON)
-	set (CMAKE_INCLUDE_CURRENT_DIR ON)
-	set (CMAKE_AUTOMOC_OPTIONS "-Iinclude -Isrc")
+include_directories(BEFORE SYSTEM include)
+
+# Collect all source and header files
+file(GLOB_RECURSE SOURCES src/*.cpp)
+file(GLOB_RECURSE HEADERS include/*.hpp)
+
+# Add the executable
+add_executable(treetops ${SOURCES} ${HEADERS})
+
+# Link Qt libraries
+target_link_libraries(treetops PRIVATE Qt6::Widgets Qt6::Gui Qt6::Core)
+
+# Link GIS/math libraries if found
+if(GDAL_FOUND)
+    target_link_libraries(treetops PRIVATE GDAL::GDAL)
 endif()
 
-set (SQLITE_LIBRARY sqlite3)
-set (SPATIALITE_LIBRARY spatialite)
-
-if(${WIN32})
-	set (DEV_DIR "C:\\dev")
-	set (GIT_DIR "${DEV_DIR}\\git")
-	set (GIS_DIR "${DEV_DIR}\\OSGeo4W64")
-	set (GEOS_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin") #set (GEOS_LIBRARYDIR "${DEV_DIR}\\geos\\lib;${DEV_DIR}\\geos\\bin")
-	set (GEOS_INCLUDEDIR "${GIS_DIR}\\include") #set (GEOS_INCLUDEDIR "${DEV_DIR}\\geos\\include")
-	set (EIGEN3_INCLUDE_DIR "${GIS_DIR}\\include\\eigen3")
-	set (GDAL_INCLUDE_DIR "${GIS_DIR}\\include")
-	set (GDAL_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin")
-	set (GIS_INCLUDE_DIR "${GIS_DIR}\\include")
-	set (GIS_LIBRARYDIR "${GIS_DIR}\\lib;${GIS_DIR}\\bin")
-	set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${GIS_DIR}\\bin;${GIS_DIR}\\lib") #;${DEV_DIR}\\Qt\\5.14.2\\msvc2017_64\\lib\\cmake")
-	set (SQLITE_LIBRARY sqlite3_i)
-	set (SPATIALITE_LIBRARY spatialite_i)
-	set (GDAL_LIBRARY gdal_i)
-	set (CMAKE_CXX_FLAGS "/Zc:alignedNew /Zc:__cplusplus /std:c++17")	
-	set (CMAKE_CXX_FLAGS_DEBUG "/Od /Og /Zi /GS- /guard:cf-")	
-	set (CMAKE_CXX_FLAGS_RELEASE "/Ox")	
-else()
-	if(${WITH_GUI})
-		set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}:/usr/lib/x86_64-linux-gnu/cmake/Qt6")
-	endif()
-	set (CMAKE_CXX_COMPILER_LAUNCHER ccache)
-	set (CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unknown-pragmas -fopenmp -D_GLIBCXX_PARALLEL")
-	set (CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-	set (CMAKE_CXX_FLAGS_RELEASE "-O3")
-	set (FS_LIB stdc++fs) # For filesystem features in c++17.
+if(PROJ_FOUND)
+    target_link_libraries(treetops PRIVATE PROJ::proj)
 endif()
 
-set (THREADS_PREFER_PTHREAD_FLAG ON)
+#if(GEOS_FOUND)
+    target_link_libraries(treetops PRIVATE GEOS::geos GEOS::geos_c)
+#endif()
 
-find_package (GDAL 2 REQUIRED)
-#find_package (OpenMP REQUIRED)
-
-if(${WITH_GUI})
-	find_package(Qt6 REQUIRED Widgets)
+if(PDAL_FOUND)
+    target_link_libraries(treetops PRIVATE GEOS::geos)
 endif()
 
-find_library (GEOS_LIBRARY geos_c PATHS ${GEOS_LIBRARYDIR})
-
-if(OPENMP_FOUND)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
-	set (CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS} -fopenmp")
-endif()
-
-# Get the git rev and create an environment variable to be used in compilation.
-
-execute_process (COMMAND git rev-parse --short HEAD RESULT_VARIABLE GIT_RESULT 
-	OUTPUT_VARIABLE GIT_OUTPUT ERROR_VARIABLE GIT_ERROR)
-string (STRIP "${GIT_OUTPUT}" GIT_REV)
-message (STATUS "Finding Git rev: ${GIT_REV} (Result: ${GIT_RESULT}, Error: ${GIT_ERROR})")
-
-# Configure directories
-
-include_directories(BEFORE SYSTEM
-	libgeo/include 
-	libtreetops/include 
-	./include
-	${EIGEN_INCLUDEDIR}	
-	${GDAL_INCLUDE_DIR}
-	${Qt6Core_INCLUDE_DIRS} 
-	${Qt6Widgets_INCLUDE_DIRS} 
-	${Qt6Gui_INCLUDE_DIRS}
-	${GEOS_INCLUDEDIR} 
-)
-	 
-link_directories(
-	${GEOS_LIBRARYDIR} 
-	${GIS_LIBRARYDIR} 
-)
-	
-# Build support libraries ############################################################################################
-
-set (ui_utilsrc src/ui_util.cpp src/tops_thresholds_ui.cpp src/crowns_thresholds_ui.cpp)
-add_library (ui_utilobj OBJECT ${ui_utilsrc})
-target_compile_features(ui_utilobj PUBLIC cxx_std_17)
-set_property (TARGET ui_utilobj PROPERTY POSITION_INDEPENDENT_CODE 1)
-add_library (ui_util SHARED $<TARGET_OBJECTS:ui_utilobj>)
-target_link_libraries(ui_util treetops 
-	Qt6::Gui Qt6::Core Qt6::Widgets 
-	${SQLITE_LIBRARY} 
-	${SPATIALITE_LIBRARY} 
+# Optional: set output directory for the executable
+set_target_properties(treetops PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-# Build programs #####################################################################################################
+# Include directories (optional, e.g., for GIS headers)
+if(GDAL_FOUND)
+    target_include_directories(treetops PRIVATE ${GDAL_INCLUDE_DIRS})
+endif()
 
-add_executable (treetops-app WIN32 src/treetops.cpp src/treetops_ui.cpp src/settings.cpp)
-target_compile_features(treetops-app PUBLIC cxx_std_17)
-target_compile_definitions (treetops-app PUBLIC GIT_REV=${GIT_REV})
-target_link_libraries (treetops-app PUBLIC ui_util treetops 
-	Qt6::Gui Qt6::Core Qt6::Widgets 
-	${GEOS_LIBRARY}
-)
+if(PROJ_FOUND)
+    target_include_directories(treetops PRIVATE ${PROJ_INCLUDE_DIRS})
+endif()
 
-# Install ###########################################################################################################
+if(GEOS_FOUND)
+    target_include_directories(treetops PRIVATE ${GEOS_INCLUDE_DIRS})
+endif()
 
-install (TARGETS treetops-app ui_util RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+# Optional: enable testing if you have CTest configured
+enable_testing()
+
