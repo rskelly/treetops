@@ -6,8 +6,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QThread>
 
-#include "util.hpp"
-#include "treetops.hpp"
+#include "geo/util.hpp"
+//#include "treetops.hpp"
 #include "settings.hpp"
 #include "ui_treetops.h"
 
@@ -18,7 +18,7 @@ namespace geo {
 
 	namespace treetops {
 
-		class G_DLL_EXPORT TreetopsMonitor: public QObject, public geo::Monitor {
+		class G_DLL_EXPORT TTMonitor: public QObject, public geo::Monitor {
 			Q_OBJECT
 		public:
 			void stepCallback(float status) const;
@@ -40,14 +40,14 @@ namespace geo {
 		class TTWorkerThread;
 		class TTClockThread;
 
-		class G_DLL_EXPORT TreetopsForm: public QDialog, public Ui::TreetopsForm, public TreetopsConfigListener {
+		class G_DLL_EXPORT TTForm: public QDialog, public Ui::TTForm, public TTConfigListener {
 			friend class TTWorkerThread;
 			Q_OBJECT
 		private:
 			TTWorkerThread* m_workerThread;
 			TTClockThread* m_clockThread;
-			TreetopsConfig m_config;
-			Settings m_settings;
+			TTConfig m_config;
+			TTSettings m_settings;
 			std::string m_settingsFile;
 
 			// Check if the program is runnable; set buttons accordingly.
@@ -60,15 +60,15 @@ namespace geo {
 			void resetProgress();
 
 			// Handle updates from the config.
-			void configUpdate(TreetopsConfig& config, long field);
+			void configUpdate(TTConfig& config, long field);
 
 		public:
-			TreetopsForm();
+			TTForm();
 			void setupUi(QWidget* parent);
 			void showForm();
 			void setRunTime(const std::string& time);
 			void loadSettings();
-			~TreetopsForm();
+			~TTForm();
 
 		signals:
 			void configUpdateReceived(long);
@@ -138,8 +138,8 @@ namespace geo {
 		class TTWorkerThread: public QThread {
 			Q_OBJECT
 		private:
-			TreetopsForm* m_parent;		///<! The form that owns this thread.
-			TreetopsConfig* m_config;	///<! The TreetopsConfig object.
+			TTForm* m_parent;		///<! The form that owns this thread.
+			TTConfig* m_config;	///<! The TTConfig object.
 			std::string m_message;		///<! The error message from the last error.
 			bool m_isError;				///<! True if the thread is running or exiting in an error state.
 
@@ -159,9 +159,9 @@ namespace geo {
 			 * \brief Initialize the thread with a pointer to its parent form.
 			 *
 			 * \param parent The parent widget.
-			 * \param config The TreetopsConfig object.
+			 * \param config The TTConfig object.
 			 */
-			void init(TreetopsForm* parent, TreetopsConfig* config);
+			void init(TTForm* parent, TTConfig* config);
 
 			/**
 			 * Destroy the thread.
@@ -189,7 +189,7 @@ namespace geo {
 		 */
 		class TTClockThread: public QThread {
 		private:
-			TreetopsForm* m_parent;		///<! The parent widget.
+			TTForm* m_parent;		///<! The parent widget.
 			geo::util::Stopwatch m_sw;	///<! A stopwatch instance.
 			bool m_running;				///<! True when the application is running.
 
@@ -204,7 +204,7 @@ namespace geo {
 			 *
 			 * @param parent A pointer to the parent widget.
 			 */
-			void init(TreetopsForm* parent);
+			void init(TTForm* parent);
 
 			/**
 			 * Destroy the clock thread.

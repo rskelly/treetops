@@ -9,15 +9,17 @@
 
 #include "geo.hpp"
 #include "treetops.hpp"
-#include "treetops_ui.hpp"
+#include "ui/treetops_ui.hpp"
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
 int runWithGui(int argc, char** argv) {
 
-	class TTApplication : public QApplication {
+	class tt_app : public QApplication {
 	public:
-		TTApplication(int& argc, char** argv) : QApplication(argc, argv) {}
+		
+	tt_app(int& argc, char** argv) : QApplication(argc, argv) {}
+		
 		bool notify(QObject* receiver, QEvent* e) {
 			try {
 				return QApplication::notify(receiver, e);
@@ -34,14 +36,14 @@ int runWithGui(int argc, char** argv) {
 		}
 	};
 
-	// These must be set before TreetopsForm is constructed because
+	// These must be set before TTForm is constructed because
 	// QSettings needs them for context.
 	QCoreApplication::setOrganizationName("Rob Skelly");
 	QCoreApplication::setOrganizationDomain("dijital.ca");
 	QCoreApplication::setApplicationName("Treetops");
 
-	TTApplication q(argc, argv);
-	geo::ui::TreetopsForm f;
+	tt_app q(argc, argv);
+	geo::ui::TTForm f;
 	f.showForm();
 	return q.exec();
 }

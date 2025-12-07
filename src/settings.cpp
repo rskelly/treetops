@@ -128,17 +128,17 @@ namespace {
 
 } // anon
 
-Settings::Settings() :
+TTSettings::TTSettings() :
 	m_settings(new QSettings("ui_settings.txt", QSettings::Format::IniFormat)),
 	m_lastDir("") {
 	m_lastDir = geo::ui::util::sstr(m_settings->value("local/lastDir", "").toString());
 }
 
-std::string& Settings::lastDir() {
+std::string& TTSettings::lastDir() {
 	return m_lastDir;
 }
 
-bool Settings::load(TreetopsConfig& config, const std::string& filename) {
+bool TTSettings::load(TTConfig& config, const std::string& filename) {
 	m_settings->setValue("local/settings", QString(filename.c_str()));
 
 	smap map;
@@ -153,8 +153,8 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	config.setOriginalCHMBand(geti(map, "originalCHMBand", config.originalCHMBand()));
 	config.setSmoothedCHM(gets(map, "smoothedCHM", config.smoothedCHM()));
 	config.setSmoothedCHMDriver(gets(map, "smoothedCHMDriver", config.smoothedCHMDriver()));
-	config.setTreetopsDatabase(gets(map, "treetopsDatabase", config.treetopsDatabase()));
-	config.setTreetopsDatabaseDriver(gets(map, "treetopsDatabaseDriver", config.treetopsDatabaseDriver()));
+	config.setDatabase(gets(map, "treetopsDatabase", config.treetopsDatabase()));
+	config.setDatabaseDriver(gets(map, "treetopsDatabaseDriver", config.treetopsDatabaseDriver()));
 	config.setCrownsRaster(gets(map, "crownsRaster", config.crownsRaster()));
 	config.setCrownsRasterDriver(gets(map, "crownsRasterDriver", config.crownsRasterDriver()));
 	config.setCrownsDatabase(gets(map, "crownsDatabase", config.crownsDatabase()));
@@ -179,7 +179,7 @@ bool Settings::load(TreetopsConfig& config, const std::string& filename) {
 	return true;
 }
 
-void Settings::save(TreetopsConfig& config) {
+void TTSettings::save(TTConfig& config) {
 	smap map;
 	map["settingsFile"] = config.settings();
 	map["buildIndex"] = std::to_string(config.buildIndex());
@@ -216,7 +216,7 @@ void Settings::save(TreetopsConfig& config) {
 	saveMap(config.settings(), map);
 }
 
-Settings::~Settings() {
+TTSettings::~TTSettings() {
 	m_settings->setValue("local/lastDir", QString(lastDir().c_str()));
 	delete m_settings;
 }

@@ -13,7 +13,7 @@
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QWidget>
 
-#include "treetops.hpp"
+//#include "treetops.hpp"
 #include "ui_tops_thresholds.h"
 
 // Represents a single line in the tops thresholds dialog.

@@ -12,7 +12,7 @@
 
 #include <QtCore/QSettings>
 
-#include "treetops.hpp"
+//#include "treetops.hpp"
 
 namespace geo {
 namespace treetops {
@@ -23,7 +23,7 @@ typedef std::unordered_map<std::string, std::string> smap;
 /**
  * A class for loading and saving settings.
  */
-class Settings {
+class TTSettings {
 private:
 	QSettings* m_settings;	///<! The settings storage object.
 	smap m_localSettings;	///<! A map of local settings.
@@ -32,7 +32,7 @@ private:
 
 public:
 
-	Settings();
+	TTSettings();
 
 	/**
 	 * Return the last-used directory.
@@ -42,24 +42,24 @@ public:
 	std::string& lastDir();
 
 	/**
-	 * Load the settings contained in filename into the TreetopsConfig object.
+	 * Load the settings contained in filename into the TTConfig object.
 	 * If false is returned, there is no settings file available
 	 *
-	 * \param config A TreetopsConfig instance.
+	 * \param config A TTConfig instance.
 	 * \param filename A path to a settings file.
 	 * \return False if no file is available or there's a failure. True otherwise.
 	 */
-	bool load(geo::treetops::config::TreetopsConfig& config, const std::string& filename);
+	bool load(geo::treetops::config::TTConfig& config, const std::string& filename);
 
 	/**
-	 * Save the settings contained in the TreetopsConfig object to the
+	 * Save the settings contained in the TTConfig object to the
 	 * settings file contained in the config object.
 	 *
-	 * \param config A TreetopsConfig instance.
+	 * \param config A TTConfig instance.
 	 */
-	void save(geo::treetops::config::TreetopsConfig& config);
+	void save(geo::treetops::config::TTConfig& config);
 
-	~Settings();
+	~TTSettings();
 };
 
 } // config

@@ -36,7 +36,7 @@ namespace {
 	 * \param filename The path to use as the last-used directory.
 	 * \return The filename.
 	 */
-	std::string lastDir(Settings& settings, const std::string& filename) {
+	std::string lastDir(TTSettings& settings, const std::string& filename) {
 		if (isfile(filename)) {
 			settings.lastDir() = parent(filename);
 		}
@@ -48,21 +48,21 @@ namespace {
 
 }
 
-// TreetopsCallbacks implementation
+// TTCallbacks implementation
 
-void TreetopsMonitor::stepCallback(float status) const {
+void TTMonitor::stepCallback(float status) const {
 	emit stepProgress((int) std::round(status * 100));
 }
 
-void TreetopsMonitor::overallCallback(float status) const {
+void TTMonitor::overallCallback(float status) const {
 	emit overallProgress((int) std::round(status * 100));
 }
 
-void TreetopsMonitor::statusCallback(const std::string &msg) const {
+void TTMonitor::statusCallback(const std::string &msg) const {
 	emit statusUpdate(qstr(msg));
 }
 
-void TreetopsMonitor::status(float status, const std::string& message) {
+void TTMonitor::status(float status, const std::string& message) {
 	if(status < 0)
 		status = m_lastStatus;
 	m_lastStatus = status;
@@ -71,14 +71,14 @@ void TreetopsMonitor::status(float status, const std::string& message) {
 		emit statusUpdate(QString(message.c_str()));
 }
 
-void TreetopsMonitor::error(const std::string&) {
+void TTMonitor::error(const std::string&) {
 	//emit stepProgress((int) std::round(status * 100));
 }
 
 
 // Clock thread implementation.
 
-void TTClockThread::init(TreetopsForm *parent) {
+void TTClockThread::init(TTForm *parent) {
 	m_parent = parent;
 }
 
@@ -165,7 +165,7 @@ void TTWorkerThread::run() {
 	}
 }
 
-void TTWorkerThread::init(TreetopsForm *parent, TreetopsConfig* config) {
+void TTWorkerThread::init(TTForm *parent, TTConfig* config) {
 	m_parent = parent;
 	m_config = config;
 	reset();
@@ -187,19 +187,19 @@ bool TTWorkerThread::isError() const {
 TTWorkerThread::~TTWorkerThread(){}
 
 
-// TreetopsForm implementation
+// TTForm implementation
 
-TreetopsForm::TreetopsForm() :
-	Ui::TreetopsForm(),
+TTForm::TTForm() :
+	Ui::TTForm(),
 	m_workerThread(nullptr),
 	m_clockThread(nullptr) {
 }
 
-void TreetopsForm::setRunTime(const std::string& time) {
+void TTForm::setRunTime(const std::string& time) {
 	lblRunTime->setText(QString(time.c_str()));
 }
 
-TreetopsForm::~TreetopsForm() {
+TTForm::~TTForm() {
 	// Save the settings.
 	m_settings.save(m_config);
 	if(m_clockThread) {
@@ -214,12 +214,12 @@ TreetopsForm::~TreetopsForm() {
 	m_config.destroy();
 }
 
-void TreetopsForm::showForm() {
+void TTForm::showForm() {
 	setupUi(this);
 	show();
 }
 
-void TreetopsForm::loadSettings() {
+void TTForm::loadSettings() {
 
 	// Populate fields with saved or default values.
 
@@ -240,9 +240,9 @@ void TreetopsForm::loadSettings() {
 	grpTops->setChecked(m_config.doTops());
 	txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
 	spnTopsMaxNulls->setValue(m_config.topsMaxNulls());
-	txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
+	txtTTDatabase->setText(qstr(m_config.treetopsDatabase()));
 	if(!m_config.treetopsDatabaseDriver().empty())
-		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
+		cboTTDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
 
 	// -- crowns
 	grpCrowns->setChecked(m_config.doCrowns());
@@ -262,14 +262,14 @@ void TreetopsForm::loadSettings() {
 
 }
 
-void TreetopsForm::setupUi(QWidget *form) {
-	Ui::TreetopsForm::setupUi(form);
+void TTForm::setupUi(QWidget *form) {
+	Ui::TTForm::setupUi(form);
 
 	QString title = form->windowTitle();
 	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
 
 	// Create callbacks and worker thread
-	m_config.setMonitor(new geo::treetops::TreetopsMonitor());
+	m_config.setMonitor(new geo::treetops::TTMonitor());
 	m_workerThread = new TTWorkerThread();
 	m_workerThread->init(this, &m_config);
 	m_clockThread = new TTClockThread();
@@ -285,7 +285,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 		vectorDrivers << qstr(it.first);
 
 	cboSmoothedCHMDriver->addItems(rasterDrivers);
-	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
+	cboTTDatabaseDriver->addItems(vectorDrivers);
 	cboCrownsRasterDriver->addItems(rasterDrivers);
 	cboCrownsDatabaseDriver->addItems(vectorDrivers);
 
@@ -309,9 +309,9 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(txtTopsThresholds, SIGNAL(editingFinished()), this, SLOT(topsThresholdsEditingFinished()));
 	connect(spnTopsMaxNulls, SIGNAL(valueChanged(double)), this, SLOT(topsMaxNullsChanged(double)));
 	connect(btnTopsThresholds, SIGNAL(clicked()), this, SLOT(topsThresholdsClicked()));
-	connect(txtTreetopsDatabase, SIGNAL(textChanged(QString)), this, SLOT(treetopsDatabaseChanged(QString)));
-	connect(cboTreetopsDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(treetopsDatabaseDriverChanged(QString)));
-	connect(btnTreetopsDatabase, SIGNAL(clicked()), this, SLOT(treetopsDatabaseClicked()));
+	connect(txtTTDatabase, SIGNAL(textChanged(QString)), this, SLOT(treetopsDatabaseChanged(QString)));
+	connect(cboTTDatabaseDriver, SIGNAL(currentTextChanged(QString)), this, SLOT(treetopsDatabaseDriverChanged(QString)));
+	connect(btnTTDatabase, SIGNAL(clicked()), this, SLOT(treetopsDatabaseClicked()));
 
 	// -- crowns
 	// TODO: Needs validator, see #113. connect(txtCrownsThresholds, SIGNAL(textEdited(QString)), this, SLOT(crownsThresholdsChanged(QString)));
@@ -344,8 +344,8 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(this, SIGNAL(configUpdateReceived(long)), this, SLOT(handleConfigUpdate(long)));
 
 	// -- callbacks
-	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
-	connect(dynamic_cast<TreetopsMonitor*>(m_config.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
+	connect(dynamic_cast<TTMonitor*>(m_config.monitor()), SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
+	connect(dynamic_cast<TTMonitor*>(m_config.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
 
 	// -- worker thread.
 	connect(m_workerThread, SIGNAL(finished()), this, SLOT(stopped()));
@@ -357,40 +357,40 @@ void TreetopsForm::setupUi(QWidget *form) {
 	checkRun();
 }
 
-void TreetopsForm::resetProgress() {
+void TTForm::resetProgress() {
 	prgStep->setValue(0);
 	lblStatus->setText("[Not Started]");
 }
 
-void TreetopsForm::settingsFileClicked() {
+void TTForm::settingsFileClicked() {
 	std::string filename;
 	getOutputFile(this, "Settings File", m_settings.lastDir(), ALL_PATTERN, filename, false);
 	txtSettingsFile->setText(QString(filename.c_str()));
 }
 
-void TreetopsForm::settingsFileChanged(QString filename) {
+void TTForm::settingsFileChanged(QString filename) {
 	m_config.lock();
 	m_config.setSettings(sstr(filename));
 	m_config.unlock();
 }
 
-void TreetopsForm::topsMaxNullsChanged(double maxNulls) {
+void TTForm::topsMaxNullsChanged(double maxNulls) {
 	m_config.setTopsMaxNulls(maxNulls);
 }
 
-void TreetopsForm::crownsRemoveHolesChanged(bool on) {
+void TTForm::crownsRemoveHolesChanged(bool on) {
 	m_config.setCrownsRemoveHoles(on);
 }
 
-void TreetopsForm::crownsRemoveDanglesChanged(bool on) {
+void TTForm::crownsRemoveDanglesChanged(bool on) {
 	m_config.setCrownsRemoveDangles(on);
 }
 
-void TreetopsForm::crownsKeepSmoothedChanged(bool on) {
+void TTForm::crownsKeepSmoothedChanged(bool on) {
 	m_config.setCrownsKeepSmoothed(on);
 }
 
-void TreetopsForm::updateView() {
+void TTForm::updateView() {
 	bool enable = !(m_workerThread && m_workerThread->isRunning());
 	grpFiles->setEnabled(enable);
 	grpSmoothing->setEnabled(enable);
@@ -398,14 +398,14 @@ void TreetopsForm::updateView() {
 	grpCrowns->setEnabled(enable);
 }
 
-void TreetopsForm::originalCHMClicked() {
+void TTForm::originalCHMClicked() {
 	std::string filename;
 	getInputFile(this, "CHM for Smoothing", m_settings.lastDir(), ALL_PATTERN, filename);
 	bool active = m_config.setActive(false);
 	if(m_config.smoothedCHMDriver().empty())
 		m_config.setSmoothedCHMDriver(sstr(cboSmoothedCHMDriver->currentText()));
 	if(m_config.treetopsDatabaseDriver().empty())
-		m_config.setTreetopsDatabaseDriver(sstr(cboTreetopsDatabaseDriver->currentText()));
+		m_config.setDatabaseDriver(sstr(cboTTDatabaseDriver->currentText()));
 	if(m_config.crownsRasterDriver().empty())
 		m_config.setCrownsRasterDriver(sstr(cboCrownsRasterDriver->currentText()));
 	if(m_config.crownsDatabaseDriver().empty())
@@ -414,110 +414,110 @@ void TreetopsForm::originalCHMClicked() {
 	m_config.setOriginalCHM(filename, true);
 }
 
-void TreetopsForm::originalCHMBandChanged(int band) {
+void TTForm::originalCHMBandChanged(int band) {
 	m_config.setOriginalCHMBand(band);
 }
 
-void TreetopsForm::smoothedCHMClicked() {
+void TTForm::smoothedCHMClicked() {
 	std::string oldExt = geo::util::extension(m_config.smoothedCHM());
 	std::string filename;
 	getOutputFile(this, "Smoothed CHM", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setSmoothedCHM(filename);
 }
 
-void TreetopsForm::smoothedCHMDriverChanged(QString text) {
+void TTForm::smoothedCHMDriverChanged(QString text) {
 	m_config.setSmoothedCHMDriver(sstr(text));
 }
 
-void TreetopsForm::originalCHMChanged(QString text) {
+void TTForm::originalCHMChanged(QString text) {
 	m_config.lock();
 	m_config.setOriginalCHM(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
-void TreetopsForm::smoothedCHMChanged(QString text) {
+void TTForm::smoothedCHMChanged(QString text) {
 	m_config.lock();
 	m_config.setSmoothedCHM(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
-void TreetopsForm::treetopsDatabaseChanged(QString text) {
+void TTForm::treetopsDatabaseChanged(QString text) {
 	m_config.lock();
-	m_config.setTreetopsDatabase(lastDir(m_settings, sstr(text)));
+	m_config.setDatabase(lastDir(m_settings, sstr(text)));
 	m_config.unlock();
 }
 
-void TreetopsForm::treetopsDatabaseClicked() {
+void TTForm::treetopsDatabaseClicked() {
 	std::string oldExt = geo::util::extension(m_config.treetopsDatabase());
 	std::string filename;
-	getOutputFile(this, "Treetops Database", m_settings.lastDir(), ALL_PATTERN, filename);
-	m_config.setTreetopsDatabase(filename);
+	getOutputFile(this, "TT Database", m_settings.lastDir(), ALL_PATTERN, filename);
+	m_config.setDatabase(filename);
 }
 
-void TreetopsForm::treetopsDatabaseDriverChanged(QString text) {
-	m_config.setTreetopsDatabaseDriver(sstr(text));
+void TTForm::treetopsDatabaseDriverChanged(QString text) {
+	m_config.setDatabaseDriver(sstr(text));
 }
 
-void TreetopsForm::topsThresholdsClicked() {
+void TTForm::topsThresholdsClicked() {
 	std::vector<TopThreshold> thresholds = m_config.topsThresholds();
 	getTopsThresholds(this, thresholds);
 	m_config.setTopsThresholds(thresholds);
 }
 
-void TreetopsForm::crownsThresholdsClicked() {
+void TTForm::crownsThresholdsClicked() {
 	std::vector<CrownThreshold> thresholds = m_config.crownsThresholds();
 	getCrownsThresholds(this, thresholds);
 	m_config.setCrownsThresholds(thresholds);
 }
 
-void TreetopsForm::crownsRasterClicked() {
+void TTForm::crownsRasterClicked() {
 	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	std::string filename;
 	getOutputFile(this, "Crowns Raster", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsRaster(filename);
 }
 
-void TreetopsForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
+void TTForm::crownsRasterDriverChanged(QString text) {	m_config.lock();
 
 	m_config.setCrownsRasterDriver(sstr(text));
 }
 
-void TreetopsForm::crownsDatabaseClicked() {
+void TTForm::crownsDatabaseClicked() {
 	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	std::string filename;
 	getOutputFile(this, "Crowns Database", m_settings.lastDir(), ALL_PATTERN, filename);
 	m_config.setCrownsDatabase(filename);
 }
 
-void TreetopsForm::crownsDatabaseDriverChanged(QString text) {
+void TTForm::crownsDatabaseDriverChanged(QString text) {
 	m_config.setCrownsDatabaseDriver(sstr(text));
 }
 
-void TreetopsForm::crownsDoDatabaseChanged(bool state) {
+void TTForm::crownsDoDatabaseChanged(bool state) {
 	m_config.setCrownsDoDatabase(state);
 }
 
-void TreetopsForm::crownsUpdateHeightsChanged(bool state) {
+void TTForm::crownsUpdateHeightsChanged(bool state) {
 	m_config.setCrownsUpdateHeights(state);
 }
 
-void TreetopsForm::doSmoothChanged(bool v) {
+void TTForm::doSmoothChanged(bool v) {
 	m_config.setDoSmoothing(v);
 }
 
-void TreetopsForm::doTopsChanged(bool v) {
+void TTForm::doTopsChanged(bool v) {
 	m_config.setDoTops(v);
 	if(!m_config.doTops())
 		grpCrowns->setChecked(false);
 }
 
-void TreetopsForm::doCrownsChanged(bool doCrowns) {
+void TTForm::doCrownsChanged(bool doCrowns) {
 	if(doCrowns && !m_config.doTops())
 		grpTops->setChecked(true);
 	m_config.setDoCrowns(doCrowns);
 }
 
-void TreetopsForm::crownsRasterChanged(QString text) {
+void TTForm::crownsRasterChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsRaster());
 	m_config.lock();
 	m_config.setCrownsRaster(lastDir(m_settings, sstr(text)));
@@ -526,7 +526,7 @@ void TreetopsForm::crownsRasterChanged(QString text) {
 		cboCrownsRasterDriver->setCurrentText("");
 }
 
-void TreetopsForm::crownsDatabaseChanged(QString text) {
+void TTForm::crownsDatabaseChanged(QString text) {
 	std::string oldExt = geo::util::extension(m_config.crownsDatabase());
 	m_config.lock();
 	m_config.setCrownsDatabase(lastDir(m_settings, sstr(text)));
@@ -535,42 +535,42 @@ void TreetopsForm::crownsDatabaseChanged(QString text) {
 		cboCrownsDatabaseDriver->setCurrentText("");
 }
 
-void TreetopsForm::topsThresholdsChanged(QString thresh) {
+void TTForm::topsThresholdsChanged(QString thresh) {
 	m_config.parseTopsThresholds(sstr(thresh));
 }
 
 // TODO: Temporary, see #113.
-void TreetopsForm::topsThresholdsEditingFinished() {
+void TTForm::topsThresholdsEditingFinished() {
 	QString thresh = txtTopsThresholds->text();
 	m_config.parseTopsThresholds(sstr(thresh));
 }
 
-void TreetopsForm::crownsThresholdsChanged(QString thresh) {
+void TTForm::crownsThresholdsChanged(QString thresh) {
 	m_config.parseCrownsThresholds(sstr(thresh));
 }
 
 // TODO: Temporary, see #113.
-void TreetopsForm::crownsThresholdsEditingFinished() {
+void TTForm::crownsThresholdsEditingFinished() {
 	QString thresh = txtCrownsThresholds->text();
 	m_config.parseCrownsThresholds(sstr(thresh));
 }
 
-void TreetopsForm::smoothWindowSizeChanged(int size) {
+void TTForm::smoothWindowSizeChanged(int size) {
 	m_config.setSmoothWindowSize(size);
 }
 
-void TreetopsForm::smoothSigmaChanged(double sigma) {
+void TTForm::smoothSigmaChanged(double sigma) {
 	m_config.setSmoothSigma(sigma);
 }
 
-void TreetopsForm::runClicked() {
+void TTForm::runClicked() {
 	if (m_workerThread->isRunning())
 		return;
 	m_config.monitor()->setCanceled(false);
 	m_workerThread->start();
 }
 
-void TreetopsForm::started() {
+void TTForm::started() {
 	btnRun->setEnabled(false);
 	btnCancel->setEnabled(true);
 	btnExit->setEnabled(false);
@@ -579,7 +579,7 @@ void TreetopsForm::started() {
 	updateView();
 }
 
-void TreetopsForm::stopped() {
+void TTForm::stopped() {
 	m_clockThread->stop();
 	m_clockThread->wait();
 	if (m_workerThread->isError()) {
@@ -592,23 +592,23 @@ void TreetopsForm::stopped() {
 	updateView();
 }
 
-void TreetopsForm::exitClicked() {
+void TTForm::exitClicked() {
 	g_debug("quit");
 	close();
 }
 
-void TreetopsForm::cancelClicked() {
+void TTForm::cancelClicked() {
 	g_debug("cancel");
 	m_config.monitor()->cancel();
 	checkRun();
 }
 
-void TreetopsForm::helpClicked() {
+void TTForm::helpClicked() {
 	g_debug("help");
 	QDesktopServices::openUrl(QUrl("https://github.com/rskelly/treetops/wiki/Tree-Tops-and-Crowns", QUrl::TolerantMode));
 }
 
-void TreetopsForm::checkRun() {
+void TTForm::checkRun() {
 	if(m_workerThread) {
 		btnRun->setEnabled(m_config.canRun() && !m_workerThread->isRunning());
 		btnCancel->setEnabled(m_workerThread->isRunning());
@@ -620,12 +620,12 @@ void TreetopsForm::checkRun() {
 	}
 }
 
-void TreetopsForm::configUpdate(TreetopsConfig&, long field) {
+void TTForm::configUpdate(TTConfig&, long field) {
 	// Emit the event that will trigger handleConfig update in the UI thread.
 	emit configUpdateReceived(field);
 }
 
-void TreetopsForm::handleConfigUpdate(long field) {
+void TTForm::handleConfigUpdate(long field) {
 	if(field & SettingsFile) {
 		std::string filename = m_config.settings();
 		if(isfile(filename)) {
@@ -665,11 +665,11 @@ void TreetopsForm::handleConfigUpdate(long field) {
 	if(field & TopsThresholds)
 		txtTopsThresholds->setText(qstr(m_config.topsThresholdsList()));
 
-	if(field & TreetopsDatabase)
-		txtTreetopsDatabase->setText(qstr(m_config.treetopsDatabase()));
+	if(field & TTDatabase)
+		txtTTDatabase->setText(qstr(m_config.treetopsDatabase()));
 
-	if(field & TreetopsDatabaseDriver)
-		cboTreetopsDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
+	if(field & TTDatabaseDriver)
+		cboTTDatabaseDriver->setCurrentText(qstr(m_config.treetopsDatabaseDriver()));
 
 	if((field & DoCrowns) || (field & CrownsDoDatabase)) {
 		bool doCrownsAndDb = m_config.doCrowns() && m_config.crownsDoDatabase();

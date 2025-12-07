@@ -1061,7 +1061,7 @@ void CrownsAppConfig::update(long field) {
 void CrownsAppConfig::setSettings(const std::string& filename) {
 	if(m_locked) return;
 	m_settings = filename;
-	update(SettingsFile);
+	update(TTSettingsFile);
 }
 
 const std::string& CrownsAppConfig::settings() const {

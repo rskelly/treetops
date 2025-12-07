@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TreetopsForm</class>
- <widget class="QWidget" name="TreetopsForm">
+ <class>TTForm</class>
+ <widget class="QWidget" name="TTForm">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Treetops</string>
+   <string>TT</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,0">
    <item>
@@ -27,7 +27,7 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="2" column="2">
-       <widget class="QComboBox" name="cboTreetopsDatabaseDriver"/>
+       <widget class="QComboBox" name="cboTTDatabaseDriver"/>
       </item>
       <item row="4" column="0">
        <widget class="QLabel" name="label_19">
@@ -43,7 +43,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QLineEdit" name="txtTreetopsDatabase">
+       <widget class="QLineEdit" name="txtTTDatabase">
         <property name="mouseTracking">
          <bool>false</bool>
         </property>
@@ -53,7 +53,7 @@
        </widget>
       </item>
       <item row="2" column="4">
-       <widget class="QToolButton" name="btnTreetopsDatabase">
+       <widget class="QToolButton" name="btnTTDatabase">
         <property name="mouseTracking">
          <bool>false</bool>
         </property>
@@ -207,10 +207,10 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&amp;Treetops Database</string>
+         <string>&amp;TT Database</string>
         </property>
         <property name="buddy">
-         <cstring>txtTreetopsDatabase</cstring>
+         <cstring>txtTTDatabase</cstring>
         </property>
        </widget>
       </item>
