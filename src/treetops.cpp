@@ -1,15 +1,15 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
 
-#include <QtWidgets/QApplication>
-#include <QtWidgets/QMessageBox>
+//#include <QtWidgets/QApplication>
+//#include <QtWidgets/QMessageBox>
 
-#include <cpl_conv.h>
+//#include <cpl_conv.h>
 
-#include "geo.hpp"
-#include "treetops.hpp"
-#include "treetops_ui.hpp"
+//#include "treetops.hpp"
+#include "ui/treetops_ui.hpp"
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 
@@ -28,7 +28,7 @@ int runWithGui(int argc, char** argv) {
 				err.exec();
 				return false;
 			} catch (...) {
-				g_warn("Some qt exception.")
+				_warn("Some qt exception.")
 			}
 			return false;
 		}
@@ -41,7 +41,7 @@ int runWithGui(int argc, char** argv) {
 	QCoreApplication::setApplicationName("Treetops");
 
 	TTApplication q(argc, argv);
-	geo::ui::TreetopsForm f;
+	tt::ui::TreetopsForm f;
 	f.showForm();
 	return q.exec();
 }

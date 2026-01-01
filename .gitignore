@@ -21,3 +21,4 @@ core
 /_data/
 /build/
 wix/.vs/
+src/ui/user-history.db

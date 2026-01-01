@@ -8,143 +8,157 @@
 #include <fstream>
 #include <unordered_map>
 
-#include <QtCore/QSettings>
+#include <QSettings>
+#include <QDir>
+
+#include <nlohmann/json.hpp>
 
 #include "settings.hpp"
-#include "ui_util.hpp"
+#include "util.hpp"
 
-using namespace geo::treetops::config;
+using namespace tt::config;
+using namespace tt::util;
 
-namespace {
-
-	/**
-	 * Load the key-value file contents into a map.
-	 *
-	 * \param filename The target file. Will be overwritten.
-	 * \param map The map.
-	 */
-	bool loadMap(const std::string& filename, smap& map) {
-		if (filename.empty())
-			return false;
-		std::ifstream ins(filename, std::ios::in);
-		if (ins.bad())
-			return false;
-		constexpr int len = 1024;
-		char key[len];
-		char val[len];
-		while (ins.good()) {
-			ins.getline(key, len, ':');
-			ins.getline(val, len, '\n');
-			map[key] = val;
-		}
-		return true;
-	}
-
-	/**
-	 * Save the map as a key-value file.
-	 *
-	 * \param filename The target file.
-	 * \param map The map.
-	 */
-	void saveMap(const std::string& filename, smap& map) {
-		if (!filename.empty()) {
-			std::ofstream ofs(filename, std::ios::out);
-			if (ofs.good()) {
-				for (auto& it : map)
-					ofs << it.first << ":" << it.second << "\n";
-			}
-		}
-	}
-
-	/**
-	 * Return the map value corresponding to the given key as an integer.
-	 * Return the alternate if the key doesn't exist.
-	 *
-	 * \param map The map.
-	 * \param key The key.
-	 * \param alt The alternate value.
-	 */
-	int geti(const smap& map, const std::string& key, int alt) {
-		if (map.find(key) == map.end()) {
-			return alt;
-		}
-		else {
-			return atoi(map.at(key).c_str());
-		}
-	}
-
-	/**
-	 * Return the map value corresponding to the given key as a double.
-	 * Return the alternate if the key doesn't exist.
-	 *
-	 * \param map The map.
-	 * \param key The key.
-	 * \param alt The alternate value.
-	 */
-	double getf(const smap& map, const std::string& key, double alt) {
-		if (map.find(key) == map.end()) {
-			return alt;
-		}
-		else {
-			return atof(map.at(key).c_str());
-		}
-	}
-
-	/**
-	 * Return the map value corresponding to the given key as a boolean.
-	 * Return the alternate if the key doesn't exist.
-	 * Allowed values are anything that starts with 't' or 'T' or '1'.
-	 *
-	 * \param map The map.
-	 * \param key The key.
-	 * \param alt The alternate value.
-	 */
-	bool getb(const smap& map, const std::string& key, bool alt) {
-		if (map.find(key) == map.end()) {
-			return alt;
-		}
-		else {
-			const std::string& val = map.at(key);
-			return val[0] == 't' || val[0] == 'T' || val[0] == '1';
-		}
-	}
-
-	/**
-	 * Return the map value corresponding to the given key as a string.
-	 * Return the alternate if the key doesn't exist.
-	 *
-	 * \param map The map.
-	 * \param key The key.
-	 * \param alt The alternate value.
-	 */
-	std::string gets(const smap& map, const std::string& key, const std::string& alt) {
-		if (map.find(key) == map.end()) {
-			return alt;
-		}
-		else {
-			return map.at(key);
-		}
-	}
-
-} // anon
+using json = nlohmann::json;
 
 Settings::Settings() :
-	m_settings(new QSettings("ui_settings.txt", QSettings::Format::IniFormat)),
 	m_lastDir("") {
-	m_lastDir = geo::ui::util::sstr(m_settings->value("local/lastDir", "").toString());
+	load();
 }
 
-std::string& Settings::lastDir() {
-	return m_lastDir;
+void Settings::parseTopThresholds(const std::string& t) {
+
 }
 
-bool Settings::load(TreetopsConfig& config, const std::string& filename) {
-	m_settings->setValue("local/settings", QString(filename.c_str()));
+void Settings::parseCrownThresholds(const std::string& t) {
 
-	smap map;
-	if(!loadMap(filename, map))
-		return false;
+}
 
+void Settings::crownThresholds(const std::vector<CrownThreshold>& ct) {
+	m_crownThresholds.assign(ct.begin(), ct.end());
+}
+
+const std::vector<CrownThreshold>& Settings::crownThresholds() {
+	return m_crownThresholds;
+}
+
+void Settings::topThresholds(const std::vector<TopThreshold>& tt) {
+	m_topThresholds.assign(tt.begin(), tt.end());
+}
+
+const std::vector<TopThreshold>& Settings::topThresholds() {
+	return m_topThresholds;
+}
+
+const std::string& Settings::get(const std::string& k, const char* d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = d;
+	return m_settings[k];
+}
+
+const std::string& Settings::get(const std::string& k, const std::string& d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = d;
+	return m_settings[k];
+}
+
+bool Settings::get(const std::string& k, bool d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = std::to_string(d);
+	return m_settings[k] == "true";
+}
+
+int Settings::get(const std::string& k, int d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = std::to_string(d);
+	return std::stoi(m_settings[k]);
+}
+
+float Settings::get(const std::string& k, float d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = std::to_string(d);
+	return std::stof(m_settings[k]);
+}
+
+double Settings::get(const std::string& k, double d) {
+	if(m_settings.count(k) == 0)
+		m_settings[k] = std::to_string(d);
+	return std::stod(m_settings[k]);
+}
+
+void Settings::set(const std::string& k, const std::string& v) {
+	m_settings[k] = v;
+}
+
+void Settings::set(const std::string& k, const char* v) {
+	m_settings[k] = v;
+}
+
+void Settings::set(const std::string& k, bool v) {
+	m_settings[k] = v == true ? "true" : "false";
+}
+
+void Settings::set(const std::string& k, int v) {
+	m_settings[k] = std::to_string(v);
+}
+
+void Settings::set(const std::string& k, float v) {
+	m_settings[k] = std::to_string(v);
+}
+
+void Settings::set(const std::string& k, double v) {
+	m_settings[k] = std::to_string(v);
+}
+
+void Settings::settingsFile(const std::string& file) {
+	// Save to the existing configuration, set the file, 
+	// then save again to create the new file.
+	save();
+	QSettings settings("treetops.ini", QSettings::NativeFormat);
+	settings.setValue("settingsFile", QString(file.c_str()));
+	load();
+}
+
+std::string Settings::settingsFile() {
+	QSettings settings("treetops.ini", QSettings::NativeFormat);
+	return settings.value("settingsFile", QDir::home().filePath("tt_config.json")).toString().toStdString();
+}
+
+void Settings::load() {
+	std::string path = settingsFile();
+	try {
+		std::ifstream str(path);
+		json data = json::parse(str);
+		for (json::iterator it = data.begin(); it != data.end(); ++it)
+			m_settings[it.key()] = it.value();
+	} catch(const std::exception& e) {
+		
+	}
+}
+
+void Settings::save() {
+	std::ofstream str(settingsFile());
+	json data;
+	for(smap::iterator it = m_settings.begin(); it != m_settings.end(); ++it) {
+		data[it->first] = it->second;
+	}
+	str << data.dump();
+}
+
+
+void Settings::lastDir(const std::string& path) {
+	std::string dir = path;
+	if (isfile(dir))
+		dir = parent(dir);
+	m_settings["lastDir"] = dir;
+}
+
+
+const std::string& Settings::lastDir() {
+	return m_settings["lastDir"];
+}
+
+/*
 	config.setBuildIndex(getb(map, "buildIndex", config.buildIndex()));
 	config.setTableCacheSize(geti(map, "tableCacheSize", config.tableCacheSize()));
 	config.setRowCacheSize(geti(map, "rowCacheSize", config.rowCacheSize()));
@@ -215,9 +229,9 @@ void Settings::save(TreetopsConfig& config) {
 
 	saveMap(config.settings(), map);
 }
+*/
 
 Settings::~Settings() {
-	m_settings->setValue("local/lastDir", QString(lastDir().c_str()));
-	delete m_settings;
+	save();
 }
 
