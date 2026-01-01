@@ -103,7 +103,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 
 	QStringList vectorDrivers;
 	for(int i = 0; i < sizeof(VECTOR_DRIVERS) / sizeof(char*); ++i)
-		vectorDrivers << "ESRI Shapefile" << "SQLite"; //qstr(it.first);
+		vectorDrivers << VECTOR_DRIVERS[i];
 
 	cboSmoothedCHMDriver->addItems(rasterDrivers);
 	cboTreetopsDatabaseDriver->addItems(vectorDrivers);

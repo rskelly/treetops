@@ -22,3 +22,4 @@ core
 /build/
 wix/.vs/
 src/ui/user-history.db
+src/ui/symbology-style.db
