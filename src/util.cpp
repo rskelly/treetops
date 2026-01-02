@@ -915,6 +915,18 @@ std::string Stopwatch::time() {
 	return ss.str();
 }
 
+std::string tt::util::getDriverFromPath(const std::string& path) {
+	std::string ext = lowercase(extension(path));
+	if(ext == ".tif" || ext == ".tiff") {
+		return "GTiff";
+	} else if(ext == ".shp") {
+		return "ESRI Shapefile";
+	} else if(ext == ".sqlite") {
+		return "Spatialite";
+	} else {
+		return "";
+	}
+}
 
 void tt::util::saveGrid(const std::string& file, const std::vector<double> grid,
 		int cols, int rows, double minx, double miny, double xres, double yres,

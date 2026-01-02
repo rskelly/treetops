@@ -32,22 +32,26 @@ private:
 	// Reset the progress bars and status message.
 	void resetProgress();
 
-	// Handle updates from the config.
-	void configUpdate(long); //TreetopsConfig& config, long field);
+	// Connect all signals and slots.
+	void connectAll();
+
+	void loadSettings();
+
+	void setupUi(QWidget* parent);
+	void setRunTime(const std::string& time);
 
 public:
-	//TreetopsForm(QWidget* parent = nullptr);
-	void setupUi(QWidget* parent);
+
 	void showForm();
-	void setRunTime(const std::string& time);
-	void loadSettings();
 	~TreetopsForm() = default;
 
 signals:
-	void configUpdateReceived(long);
 	void updateReceived(long);
-	
+
 public slots:
+
+	void settingsUpdated(const std::string&);
+
 	void settingsFileClicked();
 	void settingsFileChanged(QString);
 
@@ -92,8 +96,6 @@ public slots:
 	void runClicked();
 	void cancelClicked();
 	void helpClicked();
-
-	void handleConfigUpdate(long);
 
 	/**
 	 * \brief Called when the worker thread stops.

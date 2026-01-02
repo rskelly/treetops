@@ -13,7 +13,7 @@
 using namespace tt::ui;
 using namespace tt::config;
 
-
+/*
 TopsThresholdsForm::TopsThresholdsForm(QWidget* parent) : 
 	QWidget(parent),
 	m_form(nullptr),
@@ -21,20 +21,21 @@ TopsThresholdsForm::TopsThresholdsForm(QWidget* parent) :
 	m_confirm(false) {
 	//this->setupUi(new QWidget());
 }
+*/
 
 void TopsThresholdsForm::setupUi(QWidget* form) {
-	//Ui::TopsThresholdsForm::setupUi(form);
+	Ui::TopsThresholdsForm::setupUi(form);
 	m_form = form;
 	scrollLayout = new QVBoxLayout();
 	scrollLayout->addItem(new QSpacerItem(1,1, QSizePolicy::Expanding, QSizePolicy::Expanding));
-	ui.contents->setLayout(scrollLayout);
-	connect(ui.btnExit, SIGNAL(clicked()), this, SLOT(btnExitClicked()));
-	connect(ui.btnHelp, SIGNAL(clicked()), this, SLOT(btnHelpClicked()));
-	connect(ui.btnCancel, SIGNAL(clicked()), this, SLOT(btnCancelClicked()));
-	connect(ui.btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
+	contents->setLayout(scrollLayout);
+	connect(btnExit, SIGNAL(clicked()), this, SLOT(btnExitClicked()));
+	connect(btnHelp, SIGNAL(clicked()), this, SLOT(btnHelpClicked()));
+	connect(btnCancel, SIGNAL(clicked()), this, SLOT(btnCancelClicked()));
+	connect(btnAddItem, SIGNAL(clicked()), this, SLOT(btnAddItemClicked()));
 }
 
-void TopsThresholdsForm::setThresholds(const std::vector<TopThreshold> &thresholds) {
+void TopsThresholdsForm::setThresholds(const std::vector<TopThreshold>& thresholds) {
 	m_thresholds = thresholds;
 	sortItems();
 	updateButtons();
@@ -57,10 +58,8 @@ void TopsThresholdsForm::sortItems() {
 	}
 	auto item = m_items.begin();
 	int i = 0;
-	/*
 	for(const TopThreshold& t : m_thresholds)
 		(*item++)->set(i++, t.threshold, t.window);
-		*/
 }
 
 std::vector<TopThreshold> TopsThresholdsForm::thresholds() const {
@@ -72,8 +71,6 @@ void TopsThresholdsForm::btnAddItemClicked() {
 	sortItems();
 	updateButtons();
 }
-
-	/*
 
 void TopsThresholdsForm::itemDelete(TopsThresholdItem* item) {
 	for(size_t i = item->index(); i < m_thresholds.size() - 1; ++i)
@@ -90,10 +87,9 @@ void TopsThresholdsForm::itemUpdate(TopsThresholdItem* item) {
 	sortItems();
 	updateButtons();
 }
-	*/
 
 void TopsThresholdsForm::updateButtons() {
-	ui.btnExit->setEnabled(valid());
+	btnExit->setEnabled(valid());
 }
 
 bool TopsThresholdsForm::valid() const {

@@ -52,6 +52,7 @@ link_directories(
 	
 add_executable(treetops 
 	src/fitpack/fitpack.cpp
+	include/settings.hpp # To run MOC.
 	src/settings.cpp
 	src/util.cpp
 	src/ui/ui_util.cpp 

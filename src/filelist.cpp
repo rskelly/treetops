@@ -32,9 +32,9 @@ FileList::FileList() :
 	m_parent(nullptr) {
 }
 
-void FileList::init(QWidget *parent, QPushButton *btnAddFiles,
-		QPushButton *btnRemoveAllFiles, QPushButton *btnRemoveSelectedFiles,
-		QListWidget *lstFiles, QDir &last, QString &filter) {
+void FileList::init(QWidget* parent, QPushButton* btnAddFiles,
+		QPushButton* btnRemoveAllFiles, QPushButton* btnRemoveSelectedFiles,
+		QListWidget* lstFiles, QDir& last, QString& filter) {
 	m_parent = parent;
 	m_btnAddFiles = btnAddFiles;
 	m_btnRemoveAllFiles = btnRemoveAllFiles;
@@ -54,7 +54,7 @@ void FileList::init(QWidget *parent, QPushButton *btnAddFiles,
 void FileList::updateFileList() {
 	while (m_lstFiles->count())
 		m_lstFiles->takeItem(0);
-	for (const std::string &file : m_files)
+	for (const std::string& file : m_files)
 		m_lstFiles->addItem(QString(file.c_str()));
 	updateButtons();
 	emit fileListChanged();
@@ -73,8 +73,8 @@ void FileList::fileListSelectionChanged() {
 void FileList::removeSelectedFilesClicked() {
 	std::vector<std::string> lst;
 	size_t i = 0;
-	for (const std::string &file : m_files) {
-		QListWidgetItem *item = m_lstFiles->item(i);
+	for (const std::string& file : m_files) {
+		QListWidgetItem* item = m_lstFiles->item(i);
 		if (!item->isSelected())
 			lst.push_back(file);
 		++i;
@@ -111,7 +111,7 @@ std::vector<std::string> FileList::files() {
 	return m_files;
 }
 
-void FileList::setFiles(const std::vector<std::string> &files) {
+void FileList::setFiles(const std::vector<std::string>& files) {
 	m_files = files;
 	updateFileList();
 }

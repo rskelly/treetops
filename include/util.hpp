@@ -158,6 +158,10 @@ public:
 	~TmpFile();
 };
 
+/**
+ * Return the spatial file format driver from the path using the extension.
+ */
+std::string getDriverFromPath(const std::string&);
 
 FileType getFileType(const std::string& filename);
 
@@ -698,7 +702,7 @@ public:
 		}
 	}
 
-	void extend(const Bounds &b) {
+	void extend(const Bounds& b) {
 		m_minx = _min(b.minx(), m_minx);
 		m_maxx = _max(b.maxx(), m_maxx);
 		m_miny = _min(b.miny(), m_miny);
@@ -775,12 +779,12 @@ public:
 		return s.str();
 	}
 
-	void print(std::ostream &str) const {
+	void print(std::ostream& str) const {
 		str << "[Bounds: " << minx() << ", " << miny() << ", " << minz() << "; "
 			<< maxx() << ", " << maxy() << ", " << maxz() << "]";
 	}
 
-	void fromString(const std::string &str) {
+	void fromString(const std::string& str) {
 		std::vector<std::string> parts;
 		split(std::back_inserter(parts), str);
 		if (parts.size() < 4)

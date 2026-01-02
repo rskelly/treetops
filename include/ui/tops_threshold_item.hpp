@@ -32,7 +32,7 @@ public:
 	void set(int index, double height, int window);
 	double height() const;
 	int window() const;
-	bool operator<(const TopsThresholdItem &other) const;
+	bool operator<(const TopsThresholdItem& other) const;
 	int index() const;
 	
 public slots:

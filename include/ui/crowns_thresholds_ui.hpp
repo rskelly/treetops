@@ -38,7 +38,7 @@ public:
 	bool m_confirm;
 
 	CrownsThresholdsForm();
-	void setThresholds(const std::vector<tt::config::CrownThreshold> &thresholds);
+	void setThresholds(const std::vector<tt::config::CrownThreshold>& thresholds);
 	std::vector<tt::config::CrownThreshold> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();

@@ -76,7 +76,6 @@ void tt::ui::util::getOutputFile(QWidget* form, const std::string& title, std::s
 }
 
 void tt::ui::util::getTopsThresholds(QWidget* /*form*/, std::vector<TopThreshold>& thresholds) {
-	/*
 	tt::ui::TopsThresholdsForm tf;
 	QDialog dlg;
 	tf.setupUi(&dlg);
@@ -84,7 +83,6 @@ void tt::ui::util::getTopsThresholds(QWidget* /*form*/, std::vector<TopThreshold
 	dlg.exec(); // TODO: There is a correct way to manage accepted response from dialogs.
 	if(tf.isConfirm())
 		thresholds = tf.thresholds();
-	*/
 }
 
 void tt::ui::util::getCrownsThresholds(QWidget* /*form*/, std::vector<CrownThreshold>& thresholds) {

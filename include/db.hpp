@@ -143,7 +143,7 @@ namespace tt {
             static std::map<std::string, std::string> drivers(const std::vector<std::string>& filter);
 
             // Returns a vector driver for the given filename.
-            static std::string getDriverForFilename(const std::string &filename);
+            static std::string getDriverForFilename(const std::string& filename);
 
             /**
              * Clear the database -- delete all rows.

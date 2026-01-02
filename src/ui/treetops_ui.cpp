@@ -4,7 +4,6 @@
 #define stringyx(x) stringy(x)
 #define stringy(GIT_REV) #GIT_REV
 
-
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
@@ -33,15 +32,12 @@ void TreetopsForm::setRunTime(const std::string& time) {
 	lblRunTime->setText(QString(time.c_str()));
 }
 
-/*
-TreetopsForm::~TreetopsForm() {
-}
-*/
-
 void TreetopsForm::showForm() {
 	setupUi(this);
 	loadSettings();
+	connectAll();
 	show();
+	checkRun();
 }
 
 void TreetopsForm::loadSettings() {
@@ -53,8 +49,8 @@ void TreetopsForm::loadSettings() {
 
 	// -- smoothing
 	grpSmoothing->setChecked(m_settings.get("doSmoothing", false));
-	spnSmoothWindow->setValue(m_settings.get("smoothWindowSize", 0));
-	spnSmoothSigma->setValue(m_settings.get("smoothSigma", 0.0));
+	spnSmoothWindow->setValue(m_settings.get("smoothWindowSize", 3));
+	spnSmoothSigma->setValue(m_settings.get("smoothSigma", 1.0));
 	txtSmoothedCHM->setText(qstr(m_settings.get("smoothedCHM", "")));
 	cboSmoothedCHMDriver->setCurrentText(qstr(m_settings.get("smoothedCHMDriver", RASTER_DRIVERS[0])));
 
@@ -81,8 +77,52 @@ void TreetopsForm::loadSettings() {
 	cboCrownsDatabaseDriver->setCurrentText(qstr(m_settings.get("crownsDatabaseDriver", "Spatialite")));
 }
 
+std::unordered_map<std::string, QLineEdit*> _txtMap;
+std::unordered_map<std::string, QComboBox*> _cboMap;
+std::unordered_map<std::string, QCheckBox*> _chkMap;
+
+void TreetopsForm::settingsUpdated(const std::string& k) {
+	std::cerr << "Setting changed " << k << std::endl;
+
+	if(k == "settingsFile") {
+		txtSettingsFile->setText(m_settings.settingsFile().c_str());
+		return;
+	}
+
+	if(_txtMap.count(k)) {
+		QLineEdit* txt = _txtMap.at(k);
+		if(txt)
+			txt->setText(QString(m_settings.get(k, "").c_str()));
+	} else if(_cboMap.count(k)) {
+		QComboBox* cbo = _cboMap.at(k);
+		if(cbo)
+			cbo->setCurrentText(QString(m_settings.get(k, "").c_str()));
+	} else if(_chkMap.count(k)) {
+		QCheckBox* chk = _chkMap.at(k);
+		chk->setChecked(m_settings.get(k, false));
+	}
+}
+
 void TreetopsForm::setupUi(QWidget *form) {
 	Ui::TreetopsForm::setupUi(form);
+
+	// Map the settings update keys to the fields that display/edit them.
+	_txtMap["originalCHM"] = txtOriginalCHM;
+	_txtMap["smoothedCHM"] = txtSmoothedCHM;
+	_txtMap["treetopsDatabase"] = txtTreetopsDatabase;
+	_txtMap["crownsDatabase"] = txtCrownsDatabase;
+	_txtMap["crownsRaster"] = txtCrownsRaster;
+	_txtMap["crownsThresholds"] = txtCrownsThresholds;
+	_txtMap["topsThresholds"] = txtTopsThresholds;
+	_cboMap["treetopsDatabaseDriver"] = cboTreetopsDatabaseDriver;
+	_cboMap["crownsDatabaseDriver"] = cboCrownsDatabaseDriver;
+	_cboMap["crownsRasterDriver"] = cboCrownsRasterDriver;
+	_cboMap["smoothedCHMDriver"] = cboSmoothedCHMDriver;
+	_chkMap["crownsDoDatabase"] = chkCrownsDoDatabase;
+	_chkMap["crownsKeepSmoothed"] = chkCrownsKeepSmoothed;
+	_chkMap["crownsRemoveDangles"] = chkCrownsRemoveDangles;
+	_chkMap["crownsRemoveHoles"] = chkCrownsRemoveHoles;
+	_chkMap["crownsUpdateHeights"] =chkCrownsUpdateHeights;
 
 	QString title = form->windowTitle();
 	form->setWindowTitle(title + " <Rev: " + stringyx(GIT_REV) + ">");
@@ -109,6 +149,13 @@ void TreetopsForm::setupUi(QWidget *form) {
 	cboTreetopsDatabaseDriver->addItems(vectorDrivers);
 	cboCrownsRasterDriver->addItems(rasterDrivers);
 	cboCrownsDatabaseDriver->addItems(vectorDrivers);
+
+}
+
+void TreetopsForm::connectAll() {
+	
+	// Connect to settings update.
+	connect(&m_settings, SIGNAL(settingsUpdate(const std::string&)), this, SLOT(settingsUpdated(const std::string&)));
 
 	// Connect events
 	connect(btnSettingsFile, SIGNAL(clicked()), this, SLOT(settingsFileClicked()));
@@ -163,9 +210,7 @@ void TreetopsForm::setupUi(QWidget *form) {
 	connect(btnCancel, SIGNAL(clicked()), this, SLOT(cancelClicked()));
 	connect(btnHelp, SIGNAL(clicked()), this, SLOT(helpClicked()));
 
-	// -- handle m_settings.updates in the ui thread.
-	connect(this, SIGNAL(updateReceived(long)), this, SLOT(handleConfigUpdate(long)));
-
+	
 	// -- callbacks
 	//connect(dynamic_cast<TreetopsMonitor*>(m_settings.monitor()), SIGNAL(stepProgress(int)), prgStep, SLOT(setValue(int)));
 	//connect(dynamic_cast<TreetopsMonitor*>(m_settings.monitor()), SIGNAL(statusUpdate(QString)), lblStatus, SLOT(setText(QString)));
@@ -177,7 +222,6 @@ void TreetopsForm::setupUi(QWidget *form) {
 	//m_settings.setListener(this);
 	//m_settings.setActive(true);
 	//m_settings.update(TopsThresholds|CrownsThresholds);
-	checkRun();
 }
 
 void TreetopsForm::resetProgress() {
@@ -223,43 +267,21 @@ void TreetopsForm::updateView() {
 	grpCrowns->setEnabled(enable);
 }
 
-void TreetopsForm::originalCHMClicked() {
-	std::string path;
-	std::string lastDir = m_settings.lastDir();
-	getInputFile(this, "CHM for Smoothing", lastDir, ALL_PATTERN, path);
-	bool active = m_settings.get("active", false);
-	m_settings.lastDir(path);
-	m_settings.set("smoothedCHMDriver", sstr(cboSmoothedCHMDriver->currentText()));
-	m_settings.set("treetopsDatabaseDriver", sstr(cboTreetopsDatabaseDriver->currentText()));
-	m_settings.set("crownsRasterDriver", sstr(cboCrownsRasterDriver->currentText()));
-	m_settings.set("crownsDatabaseDriver", sstr(cboCrownsDatabaseDriver->currentText()));
-	m_settings.set("active", active);
-	m_settings.set("originalCHM", path);
-	txtOriginalCHM->setText(QString(path.c_str()));
-}
-
-void TreetopsForm::originalCHMBandChanged(int band) {
-	m_settings.set("originalCHMBand", band);
-}
-
-void TreetopsForm::smoothedCHMClicked() {
-	std::string oldExt = tt::util::extension(m_settings.get("smoothedCHM", ""));
-	std::string path;
-	std::string lastDir = m_settings.lastDir();
-	getOutputFile(this, "Smoothed CHM", lastDir, ALL_PATTERN, path);
-	m_settings.lastDir(path);
-	m_settings.set("smoothedCHM", path);
-	txtSmoothedCHM->setText(QString(path.c_str()));
-}
-
-void TreetopsForm::smoothedCHMDriverChanged(QString text) {
-	m_settings.set("smoothedCHMDriver", sstr(text));
-}
-
 void TreetopsForm::originalCHMChanged(QString text) {
 	std::string path = text.toStdString();
 	m_settings.lastDir(path);
 	m_settings.set("originalCHM", path);
+}
+
+void TreetopsForm::originalCHMClicked() {
+	std::string path;
+	std::string lastDir = m_settings.lastDir();
+	getInputFile(this, "CHM for Smoothing", lastDir, ALL_PATTERN, path);
+	txtOriginalCHM->setText(path.c_str());
+}
+
+void TreetopsForm::originalCHMBandChanged(int band) {
+	m_settings.set("originalCHMBand", band);
 }
 
 void TreetopsForm::smoothedCHMChanged(QString text) {
@@ -268,20 +290,29 @@ void TreetopsForm::smoothedCHMChanged(QString text) {
 	m_settings.set("smoothedCHM", path);
 }
 
+void TreetopsForm::smoothedCHMClicked() {
+	std::string path;
+	std::string lastDir = m_settings.lastDir();
+	getOutputFile(this, "Smoothed CHM", lastDir, ALL_PATTERN, path);
+	txtSmoothedCHM->setText(path.c_str());
+}
+
+void TreetopsForm::smoothedCHMDriverChanged(QString text) {
+	m_settings.set("smoothedCHMDriver", sstr(text));
+}
+
 void TreetopsForm::treetopsDatabaseChanged(QString text) {
 	std::string path = text.toStdString();
 	m_settings.lastDir(path);
 	m_settings.set("treetopsDatabase", path);
+	m_settings.set("treetopsDatabaseDriver", getDriverFromPath(path));
 }
 
 void TreetopsForm::treetopsDatabaseClicked() {
-	std::string oldExt = tt::util::extension(m_settings.get("treetopsDatabase", ""));
 	std::string path;
 	std::string lastDir = m_settings.lastDir();
 	getOutputFile(this, "Treetops Database", lastDir, ALL_PATTERN, path);
-	m_settings.lastDir(path);
-	m_settings.set("treetopsDatabase", path);
-	txtTreetopsDatabase->setText(QString(path.c_str()));
+	txtTreetopsDatabase->setText(path.c_str());
 }
 
 void TreetopsForm::treetopsDatabaseDriverChanged(QString text) {
@@ -300,31 +331,36 @@ void TreetopsForm::crownsThresholdsClicked() {
 	m_settings.crownThresholds(thresholds);
 }
 
+void TreetopsForm::crownsRasterChanged(QString text) {
+	std::string path = text.toStdString();
+	m_settings.lastDir(path);
+	m_settings.set("crownsRaster", path);
+	m_settings.set("crownsRasterDriver", getDriverFromPath(path));
+}
+
+void TreetopsForm::crownsRasterDriverChanged(QString text) {
+	m_settings.set("crownsRasterDriver", sstr(text));
+}
+
 void TreetopsForm::crownsRasterClicked() {
-	// Get the extension of the stored file.
-	std::string ext = tt::util::extension(m_settings.get("crownsRaster", ""));
 	std::string path;
 	std::string lastDir = m_settings.lastDir();
 	getOutputFile(this, "Crowns Raster", lastDir, ALL_PATTERN, path);
+	txtCrownsRaster->setText(path.c_str());
+}
+
+void TreetopsForm::crownsDatabaseChanged(QString text) {
+	std::string path = text.toStdString();
 	m_settings.lastDir(path);
-	m_settings.set("crownsRaster", path);
-	// If the extension doesn't match unselect the driver. TODO: Automate this.
-	if(ext != tt::util::extension(path))
-		cboCrownsDatabaseDriver->setCurrentText("");
+	m_settings.set("crownsDatabase", path);
+	m_settings.set("crownsDatabaseDriver", getDriverFromPath(path));
 }
 
 void TreetopsForm::crownsDatabaseClicked() {
-	// Get the extension of the stored file.
-	std::string ext = tt::util::extension(m_settings.get("crownsDatabase", ""));
 	std::string path;
 	std::string lastDir = m_settings.lastDir();
 	getOutputFile(this, "Crowns Database", lastDir, ALL_PATTERN, path);
-	m_settings.lastDir(path);
-	m_settings.set("crownsDatabase", path);
-	// If the extension doesn't match unselect the driver. TODO: Automate this.
-	if(ext != tt::util::extension(path))
-		cboCrownsDatabaseDriver->setCurrentText("");
-	txtCrownsDatabase->setText(QString(path.c_str()));
+	txtCrownsDatabase->setText(path.c_str());
 }
 
 void TreetopsForm::crownsDatabaseDriverChanged(QString text) {
@@ -353,32 +389,6 @@ void TreetopsForm::doCrownsChanged(bool doCrowns) {
 	if(doCrowns && !m_settings.get("doTops", true))
 		grpTops->setChecked(true);
 	m_settings.set("doCrowns", doCrowns);
-}
-
-void TreetopsForm::crownsRasterChanged(QString text) {
-	// Get the extension of the file in the settings.
-	std::string ext = tt::util::extension(m_settings.get("crownsRaster", ""));
-	std::string path = text.toStdString();
-	m_settings.lastDir(path);
-	m_settings.set("crownsRaster", path);
-	// If the extension has changed, unselect the driver. TODO: Automate the selection.
-	if(ext != tt::util::extension(path))
-		cboCrownsRasterDriver->setCurrentText("");
-}
-
-void TreetopsForm::crownsRasterDriverChanged(QString text) {
-	m_settings.set("crownsRasterDriver", sstr(text));
-}
-
-void TreetopsForm::crownsDatabaseChanged(QString text) {
-	// Get the extension of the file in the settings.
-	std::string ext = tt::util::extension(m_settings.get("crownsDatabase", ""));
-	std::string path = text.toStdString();
-	m_settings.lastDir(path);
-	m_settings.set("crownsDatabase", path);
-	// If the extension has changed, unselect the driver. TODO: Automate the selection.
-	if(ext != tt::util::extension(m_settings.get("crownsDatabase", "")))
-		cboCrownsDatabaseDriver->setCurrentText("");
 }
 
 void TreetopsForm::topsThresholdsChanged(QString thresh) {
@@ -470,12 +480,7 @@ void TreetopsForm::checkRun() {
 		*/
 }
 
-void TreetopsForm::configUpdate(long field) {
-	// Emit the event that will trigger handleConfig update in the UI thread.
-	emit configUpdateReceived(field);
-}
-
-void TreetopsForm::handleConfigUpdate(long field) {
+//void TreetopsForm::handleConfigUpdate(long field) {
 	/*
 	if(field & SettingsFile) {
 		std::string path = m_settings.settingsFile();
@@ -551,5 +556,5 @@ void TreetopsForm::handleConfigUpdate(long field) {
 	m_settings.save(m_settings.;
 	*/
 
-	checkRun();
-}
+//	checkRun();
+//}

@@ -21,7 +21,7 @@ int runWithGui(int argc, char** argv) {
 		bool notify(QObject* receiver, QEvent* e) {
 			try {
 				return QApplication::notify(receiver, e);
-			} catch(const std::exception &ex) {
+			} catch(const std::exception& ex) {
 				QMessageBox err;
 				err.setText("Error");
 				err.setInformativeText(QString(ex.what()));
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
 		return runWithGui(argc, argv);
 
-	} catch (const std::exception &e) {
+	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}

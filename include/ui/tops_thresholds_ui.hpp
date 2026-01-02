@@ -23,13 +23,12 @@ namespace tt {
 namespace ui {
 
 // Represents the thresholds dialog.
-class TopsThresholdsForm : public QWidget {
+class TopsThresholdsForm : public QWidget, Ui::TopsThresholdsForm {
 	Q_OBJECT
 private:
 	void sortItems();
 	bool valid() const;
 	void updateButtons();
-	Ui::TopsThresholdsForm ui;
 	
 public:
 	QWidget* m_form;
@@ -38,7 +37,7 @@ public:
 	std::vector<tt::config::TopThreshold> m_thresholds;
 	bool m_confirm;
 
-	TopsThresholdsForm(QWidget* parent = nullptr);
+	// TopsThresholdsForm(QWidget* parent = nullptr);
 	void setThresholds(const std::vector<tt::config::TopThreshold>&);
 	std::vector<tt::config::TopThreshold> thresholds() const;
 	void setupUi(QWidget* form);
@@ -51,7 +50,7 @@ public slots:
 	void btnCancelClicked();
 	void btnExitClicked();
 
-signals:
+//signals:
 	void itemDelete(TopsThresholdItem*);
 	void itemUpdate(TopsThresholdItem*);
 };

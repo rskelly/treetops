@@ -12,6 +12,8 @@
 #include <fstream>
 #include <unordered_map>
 
+#include <QObject>
+
 namespace tt {
 namespace config {
 
@@ -69,16 +71,23 @@ typedef std::unordered_map<std::string, std::string> smap;
 /**
  * A class for loading and saving settings.
  */
-class Settings {
+class Settings : public QObject {
+	Q_OBJECT
 private:
 	smap m_settings;			///<! A map of local settings.
 	std::string m_lastDir;		///<! The last-used directory.
 	std::vector<CrownThreshold> m_crownThresholds;
 	std::vector<TopThreshold> m_topThresholds;
 
+signals:
+	/**
+	 * Emitted when the named setting has been updated.
+	 */
+	void settingsUpdate(const std::string&);
+
 public:
 
-	Settings();
+	explicit Settings();
 
 	void parseTopThresholds(const std::string&);
 
@@ -148,6 +157,7 @@ public:
 	void lastDir(const std::string&);
 
 	~Settings();
+
 };
 
 } // config

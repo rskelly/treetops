@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /* 
  * File:   filelist.hpp
  * Author: rob
@@ -21,18 +15,17 @@
 #include <QtWidgets/QWidget>
 
 namespace tt {
-
 namespace ui {
 
 class FileList: public QObject {
 	Q_OBJECT
 private:
 	std::vector<std::string> m_files;			///<! The internal file list.
-	QPushButton *m_btnAddFiles;					///<! The add files button.
-	QPushButton *m_btnRemoveSelectedFiles;		///<! The remove selected files button.
-	QPushButton *m_btnRemoveAllFiles;			///<! The remove all files button.
-	QListWidget *m_lstFiles;					///<! The file list widget.
-	QWidget *m_parent;							///<! The parent widget.
+	QPushButton* m_btnAddFiles;					///<! The add files button.
+	QPushButton* m_btnRemoveSelectedFiles;		///<! The remove selected files button.
+	QPushButton* m_btnRemoveAllFiles;			///<! The remove all files button.
+	QListWidget* m_lstFiles;					///<! The file list widget.
+	QWidget* m_parent;							///<! The parent widget.
 	QDir m_last;								///<! The last-used directory.
 	QString m_filter;							///<! The file name filter.
 
