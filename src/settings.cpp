@@ -59,6 +59,11 @@ Settings::Settings() :
 	load();
 }
 
+bool Settings::canRun() {
+	return 
+		exists(get("originalCHM", ""));
+}
+
 void Settings::parseTopThresholds(const std::string& t) {
 
 }

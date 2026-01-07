@@ -69,10 +69,13 @@ add_executable(treetops
 	src/ui/crowns_threshold_item.cpp
 	include/ui/crowns_thresholds_ui.hpp
 	src/ui/crowns_thresholds_ui.cpp
+	src/process.cpp
 #	src/grid.cpp
 #	src/filelist.cpp
     src/treetops.cpp
 )
+
+set_property(TARGET treetops PROPERTY CXX_STANDARD 20)
 
 target_compile_options(treetops PRIVATE
     -fPIC

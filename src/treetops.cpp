@@ -3,12 +3,6 @@
 #include <map>
 #include <iostream>
 
-//#include <QtWidgets/QApplication>
-//#include <QtWidgets/QMessageBox>
-
-//#include <cpl_conv.h>
-
-//#include "treetops.hpp"
 #include "ui/treetops_ui.hpp"
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")

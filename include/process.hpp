@@ -1,35 +1,47 @@
+#include "settings.hpp"
+
 namespace tt {
 namespace proc {
 
-    /**
-     * Step 1: smooth the grid.
-     */
-    void smoothGrid();
+    class Processor {
+    private:
+        tt::config::Settings* m_settings;
 
-    /**
-     * Step 2: find the tops.
-     */
-    void findTops();
+    public:
 
-    /**
-     * Step 3: delineate crowns.
-     */
-    void delineateCrowns();
+        Processor(tt::config::Settings*);
 
-    /**
-     * Step 4: merge crowns.
-     */
-    void mergeCrowns();
+        /**
+         * Step 1: smooth the grid.
+         */
+        void smoothGrid();
 
-    /**
-     * Step 5: polygonize crowns (and clean up, if configured).
-     */
-    void polygonizeCrowns();
+        /**
+         * Step 2: find the tops.
+         */
+        void findTops();
 
-    /**
-     * Step 6: save outputs.
-     */
-    void saveOutputs();
+        /**
+         * Step 3: delineate crowns.
+         */
+        void delineateCrowns();
 
-}
-}
+        /**
+         * Step 4: merge crowns.
+         */
+        void mergeCrowns();
+
+        /**
+         * Step 5: polygonize crowns (and clean up, if configured).
+         */
+        void polygonizeCrowns();
+
+        /**
+         * Step 6: save outputs.
+         */
+        void saveOutputs();
+
+    };
+
+} // process
+} // tt

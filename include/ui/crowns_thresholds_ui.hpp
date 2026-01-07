@@ -37,22 +37,24 @@ public:
 	std::vector<tt::config::CrownThreshold> m_thresholds;
 	bool m_confirm;
 
-	CrownsThresholdsForm();
+	//CrownsThresholdsForm();
 	void setThresholds(const std::vector<tt::config::CrownThreshold>& thresholds);
 	std::vector<tt::config::CrownThreshold> thresholds() const;
 	void setupUi(QWidget *form);
 	bool isConfirm();
+
 	~CrownsThresholdsForm();
 
+//signals:
+
 public slots:
+	void itemDelete(CrownsThresholdItem* item);
+	void itemUpdate(CrownsThresholdItem* item);
 	void btnAddItemClicked();
 	void btnHelpClicked();
 	void btnCancelClicked();
 	void btnExitClicked();
 
-signals:
-	void itemDelete(CrownsThresholdItem* item);
-	void itemUpdate(CrownsThresholdItem* item);
 };
 
 } // ui

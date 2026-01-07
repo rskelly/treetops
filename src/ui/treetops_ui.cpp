@@ -15,6 +15,7 @@
 #include "constants.hpp"
 #include "treetops.hpp"
 #include "settings.hpp"
+#include "process.hpp"
 
 #include "ui/ui_treetops.h"
 #include "ui/ui_util.hpp"
@@ -101,6 +102,7 @@ void TreetopsForm::settingsUpdated(const std::string& k) {
 		QCheckBox* chk = _chkMap.at(k);
 		chk->setChecked(m_settings.get(k, false));
 	}
+	checkRun();
 }
 
 void TreetopsForm::setupUi(QWidget *form) {
@@ -424,6 +426,8 @@ void TreetopsForm::runClicked() {
 	//	return;
 	//m_settings.monitor()->setCanceled(false);
 	//m_workerThread->start();
+	tt::proc::Processor p(&m_settings);
+	p.smoothGrid();
 }
 
 void TreetopsForm::started() {
@@ -467,17 +471,9 @@ void TreetopsForm::helpClicked() {
 }
 
 void TreetopsForm::checkRun() {
-	/*
-	if(m_workerThread) {
-		btnRun->setEnabled(m_settings.canRun() && !m_workerThread->isRunning());
-		btnCancel->setEnabled(m_workerThread->isRunning());
-		btnExit->setEnabled(!m_workerThread->isRunning());
-	} else {
-		btnRun->setEnabled(false);
-		btnCancel->setEnabled(false);
-		btnExit->setEnabled(true);
-	}
-		*/
+	btnRun->setEnabled(m_settings.canRun()); // && !m_workerThread->isRunning());
+	btnCancel->setEnabled(true); //m_workerThread->isRunning());
+	btnExit->setEnabled(true); //!m_workerThread->isRunning());
 }
 
 //void TreetopsForm::handleConfigUpdate(long field) {

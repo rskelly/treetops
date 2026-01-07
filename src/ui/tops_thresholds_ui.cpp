@@ -10,18 +10,10 @@
 #include "ui/ui_tops_thresholds.h"
 #include "ui/tops_thresholds_ui.hpp"
 
+
 using namespace tt::ui;
 using namespace tt::config;
 
-/*
-TopsThresholdsForm::TopsThresholdsForm(QWidget* parent) : 
-	QWidget(parent),
-	m_form(nullptr),
-	scrollLayout(nullptr),
-	m_confirm(false) {
-	//this->setupUi(new QWidget());
-}
-*/
 
 void TopsThresholdsForm::setupUi(QWidget* form) {
 	Ui::TopsThresholdsForm::setupUi(form);

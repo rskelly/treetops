@@ -42,17 +42,19 @@ public:
 	std::vector<tt::config::TopThreshold> thresholds() const;
 	void setupUi(QWidget* form);
 	bool isConfirm();
+
 	~TopsThresholdsForm();
 
+//signals:
+
 public slots:
+	void itemDelete(TopsThresholdItem*);
+	void itemUpdate(TopsThresholdItem*);
 	void btnAddItemClicked();
 	void btnHelpClicked();
 	void btnCancelClicked();
 	void btnExitClicked();
 
-//signals:
-	void itemDelete(TopsThresholdItem*);
-	void itemUpdate(TopsThresholdItem*);
 };
 
 } // ui

@@ -13,10 +13,12 @@
 #include "ui/ui_crowns_thresholds.h"
 #include "ui/crowns_thresholds_ui.hpp"
 
+
 using namespace tt::ui;
 using namespace tt::config;
 
 
+/*
 CrownsThresholdsForm::CrownsThresholdsForm() :
 	Ui::CrownsThresholdsForm(),
 	m_form(nullptr),
@@ -24,6 +26,7 @@ CrownsThresholdsForm::CrownsThresholdsForm() :
 	m_confirm(false) {
 	this->setupUi(new QWidget());
 }
+*/
 
 void CrownsThresholdsForm::setupUi(QWidget* form) {
 	Ui::CrownsThresholdsForm::setupUi(form);
@@ -74,7 +77,6 @@ void CrownsThresholdsForm::btnAddItemClicked() {
 	updateButtons();
 }
 
-/*
 void CrownsThresholdsForm::itemDelete(CrownsThresholdItem* item) {
 	for(size_t i = item->index(); i < m_thresholds.size() - 1; ++i)
 		m_thresholds[i] = m_thresholds[i + 1];
@@ -91,10 +93,9 @@ void CrownsThresholdsForm::itemUpdate(CrownsThresholdItem *item) {
 	sortItems();
 	updateButtons();
 }
-*/
 
 void CrownsThresholdsForm::updateButtons() {
-	//btnExit->setEnabled(valid());
+	btnExit->setEnabled(valid());
 }
 
 bool CrownsThresholdsForm::valid() const {

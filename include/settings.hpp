@@ -89,6 +89,11 @@ public:
 
 	explicit Settings();
 
+	/**
+	 * Return true if the settings are such that the process can run.
+	 */
+	bool canRun();
+
 	void parseTopThresholds(const std::string&);
 
 	void parseCrownThresholds(const std::string&);
