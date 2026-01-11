@@ -8,7 +8,6 @@ using namespace tt::proc;
 using namespace tt::grid;
 using namespace tt::config;
 
-
 void fixSmoothParams(int& windowSize, float& sigma) {
     if(windowSize < 3)
         windowSize = 3;
@@ -20,7 +19,6 @@ void fixSmoothParams(int& windowSize, float& sigma) {
 
 Processor::Processor(Settings* settings) :
         m_settings(settings) {
-    GDALAllRegister();
 }
 
 /**
@@ -29,9 +27,10 @@ Processor::Processor(Settings* settings) :
 void Processor::smoothGrid() {
     int windowSize = m_settings->get("smoothWindowSize", 0);
     float sigma = m_settings->get("smoothSigma", 1.0f);
-    Grid<float> grid = Grid<float>::load(m_settings->get("originalCHM", ""), m_settings->get("originalCHMBand", 1));
-    grid.smooth(windowSize, sigma);
-    //grid.save(m_settings->get("smoothedCHM", ""));
+    Grid<float> grid(m_settings->get("originalCHM", ""), m_settings->get("originalCHMBand", 1));
+    Grid<float> smoothed(grid);
+    grid.smooth(smoothed, windowSize, sigma);
+    smoothed.save(m_settings->get("smoothedCHM", ""));
 }
 
 /**

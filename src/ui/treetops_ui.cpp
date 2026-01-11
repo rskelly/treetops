@@ -46,7 +46,7 @@ void TreetopsForm::loadSettings() {
 	txtSettingsFile->setText(qstr(m_settings.settingsFile()));
 
 	txtOriginalCHM->setText(qstr(m_settings.get("originalCHM", "")));
-	spnOriginalCHMBand->setValue(m_settings.get("originalCHMBand", 0));
+	spnOriginalCHMBand->setValue(m_settings.get("originalCHMBand", 1));
 
 	// -- smoothing
 	grpSmoothing->setChecked(m_settings.get("doSmoothing", false));

@@ -1,6 +1,7 @@
 #ifndef _GRID_HPP_
 #define _GRID_HPP_
 
+#include <iostream>
 #include <string>
 #include <concepts>
 #include <inttypes.h>
@@ -95,21 +96,27 @@ namespace grid {
         }
     };
 
+    /**
+     * Represents a raster grid. Loaded from and saved to a rater file.
+     * Decides whether to use mapped or online memory depending on the size of the raster relative to
+     * GRID_MMAP_THRESHOLD.
+     * 
+     * Provides methods for smoothing, etc.
+     */
     template <class T>
     class Grid {
     private:
-        Tile<T> m_tile;                 // A Tile instance to return windows of data.
-        T* m_grid;                      // The main storage location. May be in-memory or mapped. Mapping is used when the grid is larger than GRID_MMAP_THRESHOLD.
-        bool m_mapped;                  // True if mapped.
-        int m_cols;                // The number of columns.
-        int m_rows;                // The number of rows.
-        int m_band;                     // Raster band. Starts with 1.
-        GDALDataType m_type;
-        double m_transform[6];           // The GDAL transform.
-        std::string m_crs;              // The CRS as a WKT string.
-        std::vector<std::string> m_bandMeta;
-        float m_nodata;
-        std::string m_driver;
+        T* m_grid;                              // The main storage location. May be in-memory or mapped. Mapping is used when the grid is larger than GRID_MMAP_THRESHOLD.
+        bool m_mapped;                          // True if mapped.
+        int m_cols;                             // The number of columns.
+        int m_rows;                             // The number of rows.
+        int m_band;                             // Raster band. Starts with 1.
+        GDALDataType m_type;                    // The GDAL data type of the raster.
+        double m_transform[6];                  // The GDAL transform.
+        std::string m_crs;                      // The CRS as a WKT string.
+        std::vector<std::string> m_bandMeta;    // Band metadata.
+        T m_nodata;                             // Value to use for nodata.
+        std::string m_driver;                   // The raster driver (e.g., "GTiff").
 
         /**
          * Free or unmap the allocated memory.
@@ -132,7 +139,8 @@ namespace grid {
         void initGrid(int cols, int rows) {
             freeGrid();
             // Check if the size threshold is exceeded. If so, use mmap.
-            m_mapped = sizeof(T) * cols * rows > GRID_MMAP_THRESHOLD;
+            size_t size = sizeof(T) * cols * rows;
+            m_mapped = size > GRID_MMAP_THRESHOLD;
             if(m_mapped) {
                 // Map the data segment.
                 m_grid = (T*) mmap(
@@ -149,79 +157,183 @@ namespace grid {
                 }
             } else {
                 // Allocate the data segment.
-                m_grid = (T*) malloc(sizeof(T) * cols * rows);
-                if(!m_grid)
+                m_grid = (T*) malloc(size);
+                if(m_grid == nullptr)
                     throw "Failed to allocate data for grid.";
             }
+            m_cols = cols;
+            m_rows = rows;
         }
 
         /**
-         * Convert a map unit to a grid unit.
+         * Copy this grid's affine transform to another array. The other array
+         * must be initialized with 6 elements.
          */
-        float map2Cell(float v) {
-            return 0;
-        }
-
-        /**
-         * Convert a cell unit to a map unit.
-         */
-        float cell2Map(float v) {
-            return 0;
+        void copyTransform(double* trans) const {
+            for(int i = 0; i < 6; ++i)
+                trans[i] = m_transform[i];
         }
 
     public:
 
         /**
-         * Initialize a grid of the given size.
+         * Construct an empty grid with size 0.
          */
-        Grid(int cols, int rows) :  
+        Grid() :
                 m_grid((T*) nullptr),
                 m_mapped(false),
-                m_cols(cols),
-                m_rows(rows) {
+                m_cols(0),
+                m_rows(0),
+                m_nodata(-9999),
+                m_type(GDALDataType::GDT_Float32) {
+            if(std::is_same<T, float>::value) {
+                m_type = GDALDataType::GDT_Float32;
+            } else if(std::is_same<T, int>::value) {
+                m_type = GDALDataType::GDT_Int32;
+            } else {
+                throw std::runtime_error("Only float and int are accepted types.");
+            }
+        }
+
+        /**
+         * Copy the properties of the other grid to this one, but no data.
+         */
+        Grid(const Grid<T>& other) : Grid() {
+            m_crs = other.m_crs;
+            m_nodata = other.m_nodata;
+            other.copyTransform(m_transform);
+            initGrid(other.cols(), other.rows());
+        }
+
+        /**
+         * Initialize a grid of the given size.
+         */
+        Grid(int cols, int rows) :  Grid() {
             initGrid(cols, rows);
+        }
+
+        /**
+         * Initialize the grid and load the file.
+         */
+        Grid(const std::string& filename, int band=1) : Grid() {
+            load(filename, band);
         }
 
         ~Grid() {
             freeGrid();
         }
 
+        int cols() const {
+            return m_cols;
+        }
+
+        int rows() const {
+            return m_rows;
+        }
+
         /**
-         * Retrieve a square tile of the given size centered on the given coordinate. Tile
-         * size must be odd, and will be incremented if it is even. The tile is owned by 
-         * the grid and cannot be updated or destroyed. Cells outside the bounds of the grid 
-         * are set to zero.
+         * Set the value at the given cell in the grid.
          */
-        const Tile<T>& read(int col, int row, int side) {
-            if(side % 2 == 0)
-                ++side;
-            m_tile.resize(side, side);
-            for(int r = row, j = 0; r < row + side + 1; ++r, ++j) {
-                for(int c = col, i = 0; c < col + side + 1; ++c, ++i) {
-                    T v = 0;
-                    if(r >= 0 && c >= 0 && r < m_rows && c < m_cols)
-                        v = m_grid[r * m_cols + c];
-                    m_tile.set(i, j, 0);
+        void set(int col, int row, T v) {
+            if(col >= 0 && col < m_cols && row >= 0 && row < m_rows)
+                m_grid[row * m_cols + col] = v;
+        }
+
+        /**
+         * Get the value at the given cell in the grid. If it's out of bounds return nodata.
+         */
+        T get(int col, int row) {
+            if(col >= 0 && col < m_cols && row >= 0 && row < m_rows)
+                return m_grid[row * m_cols + col];
+            return m_nodata;
+        }
+
+        /**
+         * Calculate an array of weights for Gaussian smoothing.
+         */
+        void gaussianWeights(std::vector<float>& weights, int window, double sigma, double mean = 0) const {
+            if (sigma <= 0)
+                throw std::runtime_error("Sigma must be > 0.");
+            if (window < 3)
+                throw std::runtime_error("Kernel size must be 3 or larger.");
+            if (window % 2 == 0) {
+                ++window;
+                std::cerr << "Gaussian kernel size must be an odd number >=3. Bumping up to " << window;
+            }
+            for (int r = 0; r < window; ++r) {
+                for (int c = 0; c < window; ++c) {
+                    int x = c - window / 2;
+                    int y = r - window / 2;
+                    weights[r * window + c] = (1 / (2.0 * M_PI * sigma * sigma)) * std::pow(M_E, -((x * x + y * y) / (2.0 * sigma * sigma)));
                 }
             }
-            return m_tile;
+        }
+        
+        /**
+         * Read a rectangular region of cells into the given vector.
+         */
+        void read(std::vector<T>& tile, int col, int row, int w, int h) {
+            tile.resize(w, h);
+            for(int r = row - h / 2; r <= row + h / 2 + 1; ++r) {
+                for(int c = col - w / 2; c <= col + w / 2 + 1; ++c) {
+                    float v = m_nodata;
+                    if(r >= 0 && r < m_rows && c >= 0 && c < m_cols)
+                        v = *(m_grid + (r * m_cols + c));
+                    tile[(r - row + h / 2) * w + (c - col + w / 2)] = v;
+                }
+            }
         }
 
         /**
-         * Clone the current grid into the given instance.
+         * Reset all pixels to nodata.
          */
-        void clone(Grid<T>& grid) {
-
+        void clear() {
+            for(size_t i = 0; i < m_rows * m_cols; ++i)
+                m_grid[i] = m_nodata;
         }
 
         /**
-         * Smooth the grid in-place using the given parameters to the Gaussian kernel.
+         * Smooth the grid into the given instance using the given parameters to the Gaussian kernel.
          */
-        void smooth(int window, float sigma) {
+        void smooth(Grid<T>& smoothed, int window, float sigma) const {
 
+            // Compute the weights for Gaussian smoothing.
+            std::vector<float> weights(window * window);
+            gaussianWeights(weights, window, sigma);
+            
+            smoothed.clear();
+
+            T v, n, s = 0;
+            T norm = 0;
+            for(int r = 0; r < m_rows; ++r) {
+                for(int c = 0; c < m_cols; ++c) {
+                    s = 0;
+                    norm = 0;
+                    for(int rr = -window / 2; rr <= window / 2; ++rr) {
+                        for(int cc = -window / 2; cc <= window / 2; ++cc) {
+                            v = m_nodata;
+                            if((r + rr) >= 0 && (r + rr) < m_rows && (c + cc) >= 0 && (c + cc) < m_cols) {
+                                v = m_grid[(r + rr) * m_cols + (c + cc)];
+                                if(v != m_nodata) {
+                                    s += v * (n = weights[(rr + window / 2) * window + (cc + window / 2)]);
+                                    norm += n;
+                                }
+                            }
+                        }
+                    }
+                    if(norm > 0) {
+                        smoothed.set(c, r, s / norm);
+                    } else {
+                        smoothed.set(c, r, m_nodata);
+                    }
+                }
+            }
         }
 
-        static void checkType(GDALDataType type) {
+        /**
+         * Check that the given GDAL data type corresponds to the type of this grid.
+         */
+        void checkType(GDALDataType type) {
             if(!(std::is_same<T, float>::value && type == GDALDataType::GDT_Float32)
                 && (std::is_same<T, int>::value && type == GDALDataType::GDT_Int32)) {
                 throw std::runtime_error("Raster type and template type must match. Currently float32 and int32 are accepted.");
@@ -231,13 +343,44 @@ namespace grid {
         /**
          * Load a grid from a raster file. The raster type must correspond to the template type.
          */
-        static Grid<T> load(const std::string& filename, int band) {
+        void save(const std::string& filename) {
+            if (filename.empty())
+                throw std::runtime_error("Filename must be given.");
+
+            // Attempt to open the dataset.
+            
+            GDALDriverManager* dm = GetGDALDriverManager();
+            GDALDriver* drv = dm->GetDriverByName("GTiff");
+            char** opts = nullptr;
+            const char* fn = filename.c_str();
+            GDALDataset* ds = (GDALDataset *) drv->Create(fn, m_cols, m_rows, 1, m_type, opts);
+            if (ds == NULL)
+                throw std::runtime_error("Failed to open raster.");
+
+            ds->SetGeoTransform(m_transform);
+            ds->SetProjection(m_crs.c_str());
+
+            GDALRasterBand* bnd = ds->GetRasterBand(1);
+            bnd->SetNoDataValue(m_nodata);
+            
+            if(CE_None != bnd->RasterIO(GF_Write, 0, 0, m_cols, m_rows,
+                    m_grid, m_cols, m_rows, m_type, 0, 0, nullptr)) { 
+                std::cerr << "Failed to write raster.";
+            }
+            GDALClose(ds);
+
+        }
+
+        /**
+         * Load a grid from a raster file. The raster type must correspond to the template type.
+         */
+        void load(const std::string& filename, int band) {
             if (filename.empty())
                 throw std::runtime_error("Filename must be given.");
 
             // Attempt to open the dataset.
 
-            GDALDataset* ds = (GDALDataset *) GDALOpen(filename.c_str(), GA_Update);
+            GDALDataset* ds = (GDALDataset *) GDALOpen(filename.c_str(), GA_ReadOnly);
             if (ds == NULL)
                 throw std::runtime_error("Failed to open raster.");
 
@@ -248,17 +391,11 @@ namespace grid {
                 throw std::runtime_error("Invalid band.");
             }
 
-            GDALDriver *drv = ds->GetDriver();
-            if(drv == NULL) {
-                GDALClose(ds);
-                throw std::runtime_error("Failed to retrieve driver.");
-            }
-
             char** interleave = ds->GetMetadata("INTERLEAVE");
-            std::string driver = drv->GetDescription();
-            GDALDataType type = ds->GetRasterBand(band)->GetRasterDataType();
+            GDALRasterBand* bnd = ds->GetRasterBand(band);
+            GDALDataType type = bnd->GetRasterDataType();
             try {
-                Grid<T>::checkType(type);
+                checkType(type);
             } catch(const std::runtime_error& e) {
                 GDALClose(ds);
                 throw e;
@@ -267,38 +404,22 @@ namespace grid {
             int cols = ds->GetRasterXSize();
             int rows = ds->GetRasterYSize();
             
-            Grid<T> grid(cols, rows);
-            ds->GetGeoTransform(grid.m_transform);
-            grid.m_crs = ds->GetProjectionRef();
-            grid.m_nodata = ds->GetRasterBand(band)->GetNoDataValue();
-            grid.m_type = type;
-            grid.m_driver = driver;
-            grid.m_band = band;
+            initGrid(cols, rows);
 
-            GDALRasterBand* bnd = ds->GetRasterBand(band);
+            ds->GetGeoTransform(m_transform);
+            m_crs = ds->GetProjectionRef();
+            m_nodata = ds->GetRasterBand(band)->GetNoDataValue();
+            m_type = type;
+            m_band = band;
+            //grid.m_driver = driver;
+
             GDALRasterIOExtraArg arg;
             INIT_RASTERIO_EXTRA_ARG(arg);
-            //struct gdalprg prg;
-            //prg.p = 0;
-            //arg.pfnProgress = gdalProgress;
-            //arg.pProgressData = &prg;
 
-            if(CE_None != bnd->RasterIO(GF_Read, 0, 0, grid.m_cols, grid.m_rows,
-                    grid.m_grid, grid.m_cols, grid.m_rows, grid.m_type, 0, 0, nullptr)) { //&arg)) {
-                // If the load was deliberately canceled, don't raise an error.
-                /*
-                if(Monitor::get().canceled()) {
-                    throw std::runtime_error("Failed to copy raster row.");
-                } else {
-                    Monitor::get().status(0.0f, "Load canceled.");
-                }
-                */
-            }
+            bnd->RasterIO(GF_Read, 0, 0, m_cols, m_rows,
+                    m_grid, m_cols, m_rows, m_type, 0, 0, nullptr);
+            
             GDALClose(ds);
-            GDALDestroy();
-
-            return grid;
-
         }
     };
 

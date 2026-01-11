@@ -3,6 +3,8 @@
 #include <map>
 #include <iostream>
 
+#include <gdal/gdal_priv.h>
+
 #include "ui/treetops_ui.hpp"
 
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
@@ -42,6 +44,8 @@ int runWithGui(int argc, char** argv) {
 
 int main(int argc, char** argv) {
 
+	GDALAllRegister();
+
 	try {
 
 		return runWithGui(argc, argv);
@@ -51,5 +55,6 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	GDALDestroy();
 }
 
