@@ -20,14 +20,16 @@
 #include "ui/ui_treetops.h"
 #include "ui/ui_util.hpp"
 #include "ui/treetops_ui.hpp"
+#include "treetops.hpp"
+
 
 using namespace tt;
 using namespace tt::ui;
 using namespace tt::ui::util;
 using namespace tt::config;
+using namespace tt::grid;
+using namespace tt::data;
 
-
-// TreetopsForm implementation
 
 void TreetopsForm::setRunTime(const std::string& time) {
 	lblRunTime->setText(QString(time.c_str()));
@@ -427,7 +429,7 @@ void TreetopsForm::runClicked() {
 	//m_settings.monitor()->setCanceled(false);
 	//m_workerThread->start();
 	tt::proc::Processor p(&m_settings);
-	p.smoothGrid();
+	p.run();	
 }
 
 void TreetopsForm::started() {

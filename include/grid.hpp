@@ -129,6 +129,8 @@ namespace grid {
                     free(m_grid);
                 }
             }
+            m_cols = 0;
+            m_rows = 0;
         }
 
         /**
@@ -163,15 +165,8 @@ namespace grid {
             }
             m_cols = cols;
             m_rows = rows;
-        }
-
-        /**
-         * Copy this grid's affine transform to another array. The other array
-         * must be initialized with 6 elements.
-         */
-        void copyTransform(double* trans) const {
-            for(int i = 0; i < 6; ++i)
-                trans[i] = m_transform[i];
+            for(size_t i = 0; i < m_cols * m_rows; ++i)
+                m_grid[i] = m_nodata;
         }
 
     public:
@@ -184,6 +179,7 @@ namespace grid {
                 m_mapped(false),
                 m_cols(0),
                 m_rows(0),
+                m_band(1),
                 m_nodata(-9999),
                 m_type(GDALDataType::GDT_Float32) {
             if(std::is_same<T, float>::value) {
@@ -199,9 +195,37 @@ namespace grid {
          * Copy the properties of the other grid to this one, but no data.
          */
         Grid(const Grid<T>& other) : Grid() {
-            m_crs = other.m_crs;
-            m_nodata = other.m_nodata;
-            other.copyTransform(m_transform);
+            copyOther(other);
+        }
+
+        T nodata() const {
+            return m_nodata;
+        }
+        
+        double* transform() {
+            return m_transform;
+        }
+
+        const std::string& crs() const {
+            return m_crs;
+        }
+
+        /**
+         * Copy this grid's affine transform to another array. The other array
+         * must be initialized with 6 elements.
+         */
+        void copyTransform(double* trans) const {
+            for(int i = 0; i < 6; ++i)
+                trans[i] = m_transform[i];
+        }
+
+        /**
+         * Copy the properties of the other grid to this one, but no data.
+         */
+        template <class U>
+        void copyOther(const Grid<U>& other) {
+            m_crs = other.crs();
+            other.copyTransform(transform());
             initGrid(other.cols(), other.rows());
         }
 
@@ -324,7 +348,7 @@ namespace grid {
                     if(norm > 0) {
                         smoothed.set(c, r, s / norm);
                     } else {
-                        smoothed.set(c, r, m_nodata);
+                        smoothed.set(c, r, smoothed.nodata());
                     }
                 }
             }

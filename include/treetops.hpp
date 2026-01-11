@@ -18,6 +18,25 @@
 
 namespace tt {
 
+namespace data {
+
+	class Treetop {
+	public:
+		int col;
+		int row;
+		int window;
+
+		Treetop() : Treetop(0, 0, 0) {}
+
+		Treetop(int col, int row, int window) :
+			col(col),
+			row(row),
+			window(window) {}
+
+	};
+
+} // data
+
 /**
  * The main class of the Treetops application. Contains the high-level
  * API for performing the process.
