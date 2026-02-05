@@ -22,13 +22,15 @@ namespace data {
 
 	class Treetop {
 	public:
+		int id;
 		int col;
 		int row;
 		int window;
 
-		Treetop() : Treetop(0, 0, 0) {}
+		Treetop() : Treetop(0, 0, 0, 0) {}
 
-		Treetop(int col, int row, int window) :
+		Treetop(int id, int col, int row, int window) :
+			id(id),
 			col(col),
 			row(row),
 			window(window) {}

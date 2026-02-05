@@ -17,20 +17,20 @@ namespace tt {
 	namespace ds {
 
 		template <class T, class U>
-		class SimpleIntervalTree {
+		class IntervalTree {
 		protected:
 			T m_key;
 			std::list<U> m_values;
-			std::unique_ptr<SimpleIntervalTree<T, U> > m_lt;
-			std::unique_ptr<SimpleIntervalTree<T, U> > m_gt;
+			std::unique_ptr<IntervalTree<T, U> > m_lt;
+			std::unique_ptr<IntervalTree<T, U> > m_gt;
 
-			SimpleIntervalTree(T key, U value) :
+			IntervalTree(T key, U value) :
 					m_key(key) {
 				m_values.push_back(value);
 			}
 
 		public:
-			SimpleIntervalTree() :
+			IntervalTree() :
 					m_key(nan("")) {}
 
 			// Add an item to the tree.
@@ -40,13 +40,13 @@ namespace tt {
 					m_values.push_back(value);
 				} else if(key < m_key) {
 					if(!m_lt.get()) {
-						m_lt.reset(new SimpleIntervalTree<T, U>(key, value));
+						m_lt.reset(new IntervalTree<T, U>(key, value));
 					} else {
 						m_lt->add(key, value);
 					}
 				} else {
 					if(!m_gt.get()) {
-						m_gt.reset(new SimpleIntervalTree<T, U>(key, value));
+						m_gt.reset(new IntervalTree<T, U>(key, value));
 					} else {
 						m_gt->add(key, value);
 					}

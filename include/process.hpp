@@ -2,6 +2,8 @@
 #include "treetops.hpp"
 #include "grid.hpp"
 
+using namespace tt::data;
+using namespace tt::grid;
 
 namespace tt {
 namespace proc {
@@ -9,7 +11,7 @@ namespace proc {
     class Processor {
     private:
         tt::config::Settings* m_settings;
-        std::vector<tt::data::Treetop> m_tops;
+        std::vector<Treetop> m_tops;
 
     public:
 
@@ -20,17 +22,18 @@ namespace proc {
         /**
          * Step 1: smooth the grid.
          */
-        void smoothGrid(tt::grid::Grid<float>&, tt::grid::Grid<float>&);
+        void smoothGrid(Grid<float>&, Grid<float>&);
 
         /**
          * Step 2: find the tops.
          */
-        void findTops(tt::grid::Grid<float>&, std::vector<tt::data::Treetop>&, tt::grid::Grid<int>&, tt::grid::Grid<int>&);
+        void findTops(Grid<float>&, std::vector<Treetop>&, Grid<int>&, Grid<int>&);
 
         /**
          * Step 3: delineate crowns.
+         * Source grid, crown grid, ID grid, window grid.
          */
-        void delineateCrowns();
+        void delineateCrowns(Grid<float>&, Grid<int>&, Grid<int>&, Grid<int>&);
 
         /**
          * Step 4: merge crowns.

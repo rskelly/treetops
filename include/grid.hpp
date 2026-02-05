@@ -165,8 +165,7 @@ namespace grid {
             }
             m_cols = cols;
             m_rows = rows;
-            for(size_t i = 0; i < m_cols * m_rows; ++i)
-                m_grid[i] = m_nodata;
+            fill(m_nodata);
         }
 
     public:
@@ -208,6 +207,19 @@ namespace grid {
 
         const std::string& crs() const {
             return m_crs;
+        }
+
+        void fill(T v) {
+            for(size_t i = 0; i < m_cols * m_rows; ++i)
+                m_grid[i] = v;
+        }
+
+        float xRes() {
+            return m_transform[0];
+        }
+
+        float yRes() {
+            return m_transform[4];
         }
 
         /**

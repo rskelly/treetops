@@ -369,14 +369,14 @@ public:
 };
 
 template <class T>
-class mqtree;
+class MQTree;
 
 template <class T>
-class mqnode {
+class MQNode {
 public:
-	mqtree<T>* m_tree;
-	mqnode<T>* m_parent;						///<! Pointer to this node's parent.
-	mqnode<T>* m_nodes[4];						///<! Pointers to this node's children (if instantiated).
+	MQTree<T>* m_tree;
+	MQNode<T>* m_parent;						///<! Pointer to this node's parent.
+	MQNode<T>* m_nodes[4];						///<! Pointers to this node's children (if instantiated).
 	double m_bounds[4];							///<! Geographic bounds of node.
 	double m_midx;								///<! Lateral midpoint of bounds.
 	double m_midy;								///<! Vertical midpoint of bounds.
@@ -389,7 +389,7 @@ public:
 	size_t m_iter;								///<! An index to keep track of iteration.
 
 	/**
-	 * \brief Create an mqtree node.
+	 * \brief Create an MQTree node.
 	 *
 	 * \param idx The index of the ndoe in the children list of the parent.
 	 * \param minx The minimum x coordinate of the bounding box.
@@ -402,8 +402,8 @@ public:
 	 * \param parent The parent node; nullptr if root.
 	 * \param cache The pointer to the LRU cache.
 	 */
-	mqnode(int idx, double minx, double miny, double maxx, double maxy, int depth,
-			mqnode<T>* parent, mqtree<T>* tree) :
+	MQNode(int idx, double minx, double miny, double maxx, double maxy, int depth,
+			MQNode<T>* parent, MQTree<T>* tree) :
 		m_tree(tree), m_parent(parent), m_depth(depth), m_idx(idx), m_split(false),
 		m_key(tree->nextKey()), m_size(0), m_iter(0) {
 
@@ -431,7 +431,7 @@ public:
 
 			// Generate the path list and reverse.
 			std::list<int> ids;
-			mqnode* n = this;
+			MQNode* n = this;
 			while(n) {
 				ids.push_back(n->m_idx);
 				n = n->m_parent;
@@ -488,12 +488,12 @@ public:
 	/**
 	 * \brief Return the node from the given index (quadrant). Create if required.
 	 */
-	mqnode<T>* node(int i) {
+	MQNode<T>* node(int i) {
 		int ix = i >> 1;
 		int iy = i & 1;
-		mqnode* n;
+		MQNode* n;
 		if(!(n = m_nodes[i])) {
-			n = m_nodes[i] = new mqnode(i,
+			n = m_nodes[i] = new MQNode(i,
 					ix ? m_midx : m_bounds[0],
 					iy ? m_midy : m_bounds[1],
 					ix ? m_bounds[2] : m_midx,
@@ -588,12 +588,12 @@ public:
 	class kqitem {
 	public:
 		T item;				// A leaf item.
-		mqnode<T>* node;	// A node.
+		MQNode<T>* node;	// A node.
 
 		/**
 		 * Construct the instance with a node.
 		 */
-		kqitem(mqnode<T>* node) :
+		kqitem(MQNode<T>* node) :
 			node(node) {}
 
 		/**
@@ -659,7 +659,7 @@ public:
 				continue;
 			} else {
 				// If the front of the queue is a node, expand it and continue.
-				mqnode<T>* node = q.top().node;
+				MQNode<T>* node = q.top().node;
 				if(!node->m_split) {
 					node->reset();
 					T item;
@@ -714,7 +714,7 @@ public:
 		return false;
 	}
 
-	~mqnode() {
+	~MQNode() {
 		for(int i = 0; i < 4; ++i) {
 			if(m_nodes[i])
 				delete m_nodes[i];
@@ -731,14 +731,14 @@ public:
  * which is the modulus of the given index.
  */
 template <class T>
-class mqtree {
-	friend class mqnode<T>;
+class MQTree {
+	friend class MQNode<T>;
 private:
 
 	int m_maxDepth;						///<! The maximum tree depth.
 	size_t m_maxCount;					///<! Max number of items in each cell.
 	lrucache<T> m_lru;
-	mqnode<T>* m_root;
+	MQNode<T>* m_root;
 	std::string m_rootPath;
 	int m_blkSize;
 	uint64_t m_nextKey;					///<! Retrieved by child nodes for identification.
@@ -751,7 +751,7 @@ protected:
 
 public:
 
-	mqtree<T>() :
+	MQTree() :
 		m_maxDepth(0),
 		m_maxCount(0),
 		m_root(nullptr),
@@ -760,7 +760,7 @@ public:
 	}
 
 	/**
-	 * Construct an mqtree.
+	 * Construct an MQTree.
 	 *
 	 * \param scale The scale factor for decreasing the precision of the data.
 	 * \param limit The memory threshold (bytes) that triggers the use of file-backed storage.
@@ -771,8 +771,8 @@ public:
 	 * \param maxDepth The maximum depth of the tree. Zero is no limit.
 	 * \param mode Determines whether file-backed storage is used, or memory.
 	 */
-	mqtree<T>(double minx, double miny, double maxx, double maxy, int maxDepth = 100, int cacheSize = 1000) :
-		mqtree<T>() {
+	MQTree(double minx, double miny, double maxx, double maxy, int maxDepth = 100, int cacheSize = 1000) :
+		MQTree<T>() {
 		init(minx, miny, maxx, maxy, maxDepth , cacheSize);
 	}
 
@@ -781,7 +781,7 @@ public:
 		m_lru.size(cacheSize);
 
 		// Create a root path.
-		if(!util::tmpdir("mqtree", "", m_rootPath))
+		if(!util::tmpdir("MQTree", "", m_rootPath))
 			_runerr("Failed to create root path.");
 
 		// Get the side length of the table region.
@@ -798,7 +798,7 @@ public:
 
 		// The max count takes the block size into consideration.
 		m_maxCount = (lrunode<T>::bufSize() - sizeof(size_t)) / sizeof(T);
-		m_root = new mqnode<T>(0, minx, miny, minx + side, miny + side, 0, nullptr, this);
+		m_root = new MQNode<T>(0, minx, miny, minx + side, miny + side, 0, nullptr, this);
 	}
 
 	size_t maxCount() const {
@@ -917,7 +917,7 @@ public:
 		m_lru.printStats();
 	}
 
-	~mqtree() {
+	~MQTree() {
 		m_lru.clear();
 		delete m_root;
 		util::rem(m_rootPath);

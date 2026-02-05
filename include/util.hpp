@@ -501,6 +501,7 @@ T linedist(T x, T y, T x1, T y1, T x2, T y2) {
 		std::sqrt(_sq(y2 - y1) + _sq(x2 - x1));
 }
 
+/*
 template <class T> 
 class Bounds {
 private:
@@ -830,7 +831,7 @@ public:
 
 };
 
-
+*/
 
 
 class BivariateSpline {
