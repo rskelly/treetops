@@ -1,3 +1,6 @@
+#ifndef __PROCESS_HPP__
+#define __PROCESS_HPP__
+
 #include "settings.hpp"
 #include "treetops.hpp"
 #include "grid.hpp"
@@ -15,7 +18,7 @@ namespace proc {
 
     public:
 
-        Processor(tt::config::Settings*);
+        Processor(tt::config::Settings&);
 
         void run();
 
@@ -33,20 +36,20 @@ namespace proc {
          * Step 3: delineate crowns.
          * Source grid, crown grid, ID grid, window grid.
          */
-        void delineateCrowns(Grid<float>&, Grid<int>&, Grid<int>&, Grid<int>&);
+        void delineateCrowns(std::vector<Treetop>&, Grid<float>&, Grid<int>&, Grid<int>&, Grid<int>&);
 
         /**
-         * Step 4: merge crowns.
+         * Step 4: polygonize crowns (and clean up, if configured).
          */
-        void mergeCrowns();
+        void polygonizeCrowns(const std::vector<Treetop>&, tt::grid::Grid<int>&, tt::vec::CrownDB&);
 
         /**
-         * Step 5: polygonize crowns (and clean up, if configured).
+         * Update the top object with the max height in the crown from the unsmoothed raster.
          */
-        void polygonizeCrowns();
+        void updateTops(const std::vector<Treetop>&, tt::grid::Grid<float>&, tt::grid::Grid<int>&);
 
         /**
-         * Step 6: save outputs.
+         * Step 5: save outputs.
          */
         void saveOutputs();
 
@@ -54,3 +57,5 @@ namespace proc {
 
 } // process
 } // tt
+
+#endif // __PROCESS_HPP__

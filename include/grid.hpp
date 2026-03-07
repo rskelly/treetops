@@ -1,11 +1,12 @@
-#ifndef _GRID_HPP_
-#define _GRID_HPP_
+#ifndef __GRID_HPP__
+#define __GRID_HPP__
 
 #include <iostream>
 #include <string>
 #include <concepts>
 #include <inttypes.h>
 #include <sys/mman.h>
+#include <unordered_set>
 
 #include <geos_c.h>
 
@@ -15,9 +16,11 @@
 #include <gdal/ogr_feature.h>
 #include <gdal/ogrsf_frmts.h>
 
+#include "util.hpp"
 
 #define GRID_MMAP_THRESHOLD 1000000 // Change to mmap when the array size is larger than this.
 
+using namespace tt::util::vec;
 
 namespace tt {
 namespace grid {
@@ -112,7 +115,7 @@ namespace grid {
         int m_rows;                             // The number of rows.
         int m_band;                             // Raster band. Starts with 1.
         GDALDataType m_type;                    // The GDAL data type of the raster.
-        double m_transform[6];                  // The GDAL transform.
+        std::vector<double> m_transform;        // The GDAL transform.
         std::string m_crs;                      // The CRS as a WKT string.
         std::vector<std::string> m_bandMeta;    // Band metadata.
         T m_nodata;                             // Value to use for nodata.
@@ -141,7 +144,7 @@ namespace grid {
         void initGrid(int cols, int rows) {
             freeGrid();
             // Check if the size threshold is exceeded. If so, use mmap.
-            size_t size = sizeof(T) * cols * rows;
+            int size = sizeof(T) * cols * rows;
             m_mapped = size > GRID_MMAP_THRESHOLD;
             if(m_mapped) {
                 // Map the data segment.
@@ -181,6 +184,9 @@ namespace grid {
                 m_band(1),
                 m_nodata(-9999),
                 m_type(GDALDataType::GDT_Float32) {
+            
+            m_transform.resize(6);
+            
             if(std::is_same<T, float>::value) {
                 m_type = GDALDataType::GDT_Float32;
             } else if(std::is_same<T, int>::value) {
@@ -201,7 +207,7 @@ namespace grid {
             return m_nodata;
         }
         
-        double* transform() {
+        const std::vector<double>& transform() {
             return m_transform;
         }
 
@@ -210,23 +216,50 @@ namespace grid {
         }
 
         void fill(T v) {
-            for(size_t i = 0; i < m_cols * m_rows; ++i)
+            for(int i = 0; i < m_cols * m_rows; ++i)
                 m_grid[i] = v;
         }
 
-        float xRes() {
-            return m_transform[0];
+        double xRes() {
+            return m_transform[1];
         }
 
-        float yRes() {
-            return m_transform[4];
+        double yRes() {
+            return m_transform[5];
+        }
+
+        double toX(int col) {
+            return m_transform[0] + col * m_transform[1];
+        }
+
+        double toY(int row) {
+            return m_transform[3] + row * m_transform[5];
+        }
+
+        void copyBounds(std::vector<float>& bounds) {
+            bounds.resize(4);
+            int x1 = 0, x2 = 2, y1 = 3, y2 = 1;
+            if(xRes() < 0) {
+                x1 = 2;
+                x2 = 0;
+            }
+            if(yRes() < 0) {
+                y1 = 1;
+                y2 = 3;
+            }
+            bounds[x1] = m_transform[0];
+            bounds[x2] = bounds[0] + cols() * xRes();
+            bounds[y1] = m_transform[3];
+            bounds[y2] = bounds[1] + rows() * yRes();
+
         }
 
         /**
          * Copy this grid's affine transform to another array. The other array
          * must be initialized with 6 elements.
          */
-        void copyTransform(double* trans) const {
+        void copyTransform(std::vector<double>& trans) const {
+            trans.resize(6);
             for(int i = 0; i < 6; ++i)
                 trans[i] = m_transform[i];
         }
@@ -237,7 +270,7 @@ namespace grid {
         template <class U>
         void copyOther(const Grid<U>& other) {
             m_crs = other.crs();
-            other.copyTransform(transform());
+            other.copyTransform(m_transform);
             initGrid(other.cols(), other.rows());
         }
 
@@ -310,12 +343,17 @@ namespace grid {
          */
         void read(std::vector<T>& tile, int col, int row, int w, int h) {
             tile.resize(w, h);
-            for(int r = row - h / 2; r <= row + h / 2 + 1; ++r) {
-                for(int c = col - w / 2; c <= col + w / 2 + 1; ++c) {
+            // If the column + width is larger than the available width, trim it.
+            if(col + w > m_cols || w < 1 || col < 0)
+                _runerr("Invalid column or width: " << col << "; " << w);
+            if(row + h > m_rows || h < 1 || row < 0)
+                _runerr("Invalid row or height: " << row << "; " << h);
+            for(int r = row; r < row + h; ++r) {
+                for(int c = col; c < col + w; ++c) {
                     float v = m_nodata;
                     if(r >= 0 && r < m_rows && c >= 0 && c < m_cols)
                         v = *(m_grid + (r * m_cols + c));
-                    tile[(r - row + h / 2) * w + (c - col + w / 2)] = v;
+                    tile[(r - row) * w + (c - col)] = v;
                 }
             }
         }
@@ -324,7 +362,7 @@ namespace grid {
          * Reset all pixels to nodata.
          */
         void clear() {
-            for(size_t i = 0; i < m_rows * m_cols; ++i)
+            for(int i = 0; i < m_rows * m_cols; ++i)
                 m_grid[i] = m_nodata;
         }
 
@@ -393,7 +431,7 @@ namespace grid {
             if (ds == NULL)
                 throw std::runtime_error("Failed to open raster.");
 
-            ds->SetGeoTransform(m_transform);
+            ds->SetGeoTransform(m_transform.data());
             ds->SetProjection(m_crs.c_str());
 
             GDALRasterBand* bnd = ds->GetRasterBand(1);
@@ -420,6 +458,7 @@ namespace grid {
             if (ds == NULL)
                 throw std::runtime_error("Failed to open raster.");
 
+            ds->GetGeoTransform(m_transform.data());
             if(band > ds->GetRasterCount()) {
                 //std::stringstream ss;
                 //ss << std::string("Invalid band ") << band << "; only " << ds->GetRasterCount() << " in raster."
@@ -427,6 +466,7 @@ namespace grid {
                 throw std::runtime_error("Invalid band.");
             }
 
+            ds->GetGeoTransform(m_transform.data());
             char** interleave = ds->GetMetadata("INTERLEAVE");
             GDALRasterBand* bnd = ds->GetRasterBand(band);
             GDALDataType type = bnd->GetRasterDataType();
@@ -442,7 +482,7 @@ namespace grid {
             
             initGrid(cols, rows);
 
-            ds->GetGeoTransform(m_transform);
+            ds->GetGeoTransform(m_transform.data());
             m_crs = ds->GetProjectionRef();
             m_nodata = ds->GetRasterBand(band)->GetNoDataValue();
             m_type = type;
@@ -457,10 +497,112 @@ namespace grid {
             
             GDALClose(ds);
         }
+
+        /**
+         * \brief Vectorizes the raster by consuming pixels and calling back with completed GEOS polygon objects.
+         *
+         * The callback is a functor which accepts an int for the ID, a GEOSGeometry* and a GEOSContextHandle_t.
+         * The caller is responsible for disposing of the geometry object.
+         *
+         * \param callback The callback functor.
+         * \param pc An option PolygonContext containing configuration information.
+         */
+        void polygonize(PolyMergeCallback* callback, PolyCtx* pc) {
+
+            if(!pc)
+                throw std::runtime_error("A PolygonContext is requried.");
+
+            // Extract some grid properties.
+            pc->cols = cols();
+            pc->rows = rows();
+            pc->resX = this->xRes();
+            pc->resY = this->yRes();
+            copyBounds(pc->bounds);
+
+            // The starting corner coordinates. The bounds already respect the sign of the resolution.
+            pc->startX = pc->bounds[0];
+            pc->startY = pc->bounds[1];
+
+            // "Epsilon" for snapping geometries.
+            double eps = 0.0001;
+
+            // Thread control features.
+            pc->merging = true;
+
+            // Row buffer.
+            std::vector<T> buf(pc->cols);
+            // Lists of geoms under construction.
+            std::unordered_map<int, std::vector<GEOSGeometry*>> geomParts;
+            // The list of geometries currently being built.
+            std::unordered_set<int> activeIds;
+
+            // Process raster.
+            for(int r = 0; r < pc->rows; ++r) {
+
+                read(buf, 0, r, pc->cols, 1);
+
+                // Initialize the corner coordinates.
+                double x0 = pc->startX;
+                double y0 = pc->startY + r * pc->resY;
+                double x1 = x0;
+                double y1 = y0 + pc->resY;
+
+                // For tracking cell values. TODO: An unsigned int is possible here: overflow.
+                int v0 = buf[0];
+                int v1 = -1;
+
+                // Reset the list of IDs extant in the current row.
+                activeIds.clear();
+
+                // Note: Counts past the end to trigger writing the last cell.
+                for(int c = 1; c < pc->cols; ++c) {
+
+                    // If the current cell value differs from the previous one...
+                    if(c == pc->cols - 1 || (v1 = buf[c]) != v0) {
+                        // Update the right x coordinate.
+                        x1 = pc->startX + c * pc->resX;
+                        // If the value is a valid ID, create and the geometry and save it for writing.
+                        if(v0 > 0) {
+                            GEOSGeometry* geom = polyMakeGeom(pc->gctx, x0, y0, x1, y1, eps, 3);
+                            geomParts[v0].push_back(geom);
+                            activeIds.insert(v0);
+                        }
+                        // Update values for next loop.
+                        v0 = v1;
+                        x0 = x1;
+                    }
+                }
+
+                // IDs that are in the geoms array and not in the current row are ready to be finalized.
+                std::vector<int> rem;
+                for(const auto& it : geomParts) {
+                    if(activeIds.find(it.first) == activeIds.end()) {
+                        pc->geomBuf.push_back(std::make_pair(it.first, std::move(geomParts[it.first])));
+                        rem.push_back(it.first);
+                    }
+                }
+                for(int i : rem)
+                    geomParts.erase(i);
+
+            }
+
+            // Finalize all remaining geometries.
+            for(const auto& it : geomParts) {
+                pc->geomBuf.push_back(std::make_pair(it.first, std::move(geomParts[it.first])));
+            }
+            geomParts.clear();
+
+            // Start merge. TODO: Threading starts here.
+            polyMerge(callback, pc);
+
+            // Let the threads shut down when they run out of geometries.
+            pc->merging = false;
+
+        }        
     };
 
 
 }
 }
 
-#endif // _GRID_HPP_
+#endif // __GRID_HPP__

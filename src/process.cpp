@@ -1,18 +1,22 @@
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "process.hpp"
 #include "grid.hpp"
+#include "vector.hpp"
 #include "settings.hpp"
 #include "treetops.hpp"
 #include "ds/interval_tree.hpp"
 #include "ds/mqtree.hpp"
+#include "ds.hpp"
 
 using namespace tt::proc;
 using namespace tt::grid;
 using namespace tt::config;
 using namespace tt::data;
 using namespace tt::ds;
+using namespace tt::vec;
 
 namespace {
 
@@ -142,28 +146,45 @@ namespace {
     };    
 } // anon
 
-Processor::Processor(Settings* settings) :
-        m_settings(settings) {
+Processor::Processor(Settings& settings) :
+        m_settings(&settings) {
 }
 
 void Processor::run() {
 
-	std::unique_ptr<Grid<float>> grid = std::make_unique<Grid<float>>();
+	std::unique_ptr<Grid<float>> grid;			// Source grid.
+	std::unique_ptr<Grid<float>> smoothed;		// Smoothed grid.
+	Grid<float>* working;						// Points to the smoothed or original grid, depending on settings.
+
+	grid = std::make_unique<Grid<float>>();
 	grid->load(m_settings->get("originalCHM", ""), m_settings->get("originalCHMBand", 1));
 
 	if(m_settings->get("doSmoothing", true)) {
-		std::unique_ptr<Grid<float>> smoothed = std::make_unique<Grid<float>>();
+		smoothed = std::make_unique<Grid<float>>();
 		smoothGrid(*grid, *smoothed);
-		grid.reset(smoothed.release());
+		working = smoothed.get();
+	} else {
+		working = grid.get();
 	}
 
 	std::vector<Treetop> tops;
     Grid<int> topsWindowGrid;
     Grid<int> topsIDGrid;
-	findTops(*grid, tops, topsWindowGrid, topsIDGrid);
+	findTops(*working, tops, topsWindowGrid, topsIDGrid);
 
     topsWindowGrid.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops_windows.tif"));
     topsIDGrid.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops_ids.tif"));
+
+	Grid<int> crowns(topsIDGrid);
+	delineateCrowns(tops, *working, crowns, topsIDGrid, topsWindowGrid);
+	crowns.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.tif"));
+
+	if(true /* settings -> update tops */)
+		updateTops(tops, *grid, crowns);
+
+	CrownDB db;
+	polygonizeCrowns(tops, crowns, db);
+	db.saveCrowns(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.sqlite"), "Spatialite", "crowns", crowns.crs());
 }
 
 /**
@@ -214,9 +235,6 @@ void Processor::findTops(Grid<float>& grid, std::vector<Treetop>& tops,
 	// Iterate over the thresholds from lowest height to highest.
 	for(const TopThreshold& t : m_settings->topThresholds()) {
 
-        // To store treetops with col/row and window size.
-        std::list<Treetop> tops;
-
         // Iterate over the raster, applying the kernel to find the maxium at the centre.
         float v;
         float max;   // The maximum elevation (i.e., the top height)
@@ -227,7 +245,7 @@ void Processor::findTops(Grid<float>& grid, std::vector<Treetop>& tops,
                 if((v = grid.get(col, row)) >= t.threshold) {
                     isMax = isMaxCenter(grid, col, row, t.window, nodata, max, nulls);
                     if (isMax && nulls <= topsMaxNulls)
-                        tops.emplace_back(++topId, col, row, t.window);
+                        tops.emplace_back(++topId, col, row, t.window, max);
                 }
             }
         }
@@ -243,7 +261,7 @@ void Processor::findTops(Grid<float>& grid, std::vector<Treetop>& tops,
 /**
  * Step 3: delineate crowns.
  */
-void Processor::delineateCrowns(Grid<float>& grid, Grid<int>& crowns, Grid<int>& ids, Grid<int>& windows) {
+void Processor::delineateCrowns(std::vector<Treetop>& tops, Grid<float>& grid, Grid<int>& crowns, Grid<int>& ids, Grid<int>& windows) {
 
 	crowns.fill(0);
 	float res = grid.xRes();
@@ -251,10 +269,10 @@ void Processor::delineateCrowns(Grid<float>& grid, Grid<int>& crowns, Grid<int>&
 	// The interval tree keeps track of ranges of completed rows
 	int maxRadius = 0;
 	MQTree<Treetop> qt;
-	IntervalTree<float, size_t> st;
+	IntervalTree<float, int> st;
 	const std::vector<CrownThreshold>& thresh = m_settings->crownThresholds();
     
-	for(size_t i = 0; i < thresh.size(); ++i) {
+	for(int i = 0; i < thresh.size(); ++i) {
 		st.add(thresh[i].fraction, i);
 		if(thresh[i].radius > (maxRadius * res))
 			maxRadius = std::ceil(thresh[i].radius / res);
@@ -265,143 +283,142 @@ void Processor::delineateCrowns(Grid<float>& grid, Grid<int>& crowns, Grid<int>&
 	float nodata = grid.nodata();
 
 	// Build the list of offsets for D8 search.
-	size_t offsetCount = 8;
+	int offsetCount = 8;
 	int offsets[][2] = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}};
-
-	// Set up list of tiles for piecewise handling.
-	// Tiles will have a buffer added, then removed before writing back.
-	int tileSize = 512;
-	std::list<std::pair<int, int>> tiles;
-	for(int tr = 0; tr < rows; tr += tileSize) {
-		for(int tc = 0; tc < cols; tc += tileSize)
-			tiles.emplace_back(tc, tr);
-	}
 
 	// A list to track visited pixels.
 	std::vector<bool> visited(cols * rows);
 	std::fill(visited.begin(), visited.end(), false);
 
-	// Collect unique top IDs to count status.
-	size_t topCount = 0;
-	std::unordered_set<size_t> topSet;
-	{
-		Treetop t;
-		qt.reset();
-		while(qt.next(t)) {
-			topSet.insert(t.id);
-			++topCount;
+	// Convert the Tops to Nodes, add to work queue.
+	std::queue<Node> q;
+	Treetop query;
+
+	// Enqueue the tops for processing. TODO: Would be nice to search and enqueue in one step.
+	for(Treetop& top : tops)
+		q.emplace(top);
+
+	// Run through the queue.
+	while(!q.empty()) {
+
+		// Get the next node.
+		Node n = std::move(q.front());
+		q.pop();
+
+		// Calculate pixel index; set the ID at the current pixel in the crowns raster.
+		int i = n.r * cols + n.c;
+		if(visited[i])
+			continue;
+		crowns.set(n.c, n.r, n.id);
+		visited[i] = true;
+
+		// Execute the kernel. For each neighbour, we're going to check the pixel height
+		// to see if it's part of the crown that owns the current node.
+		for(int j = 0; j < offsetCount; ++j) {
+
+			// Add offsets.
+			int cc = n.c + offsets[j][0];
+			int rr = n.r + offsets[j][1];
+
+			// Is out of range, continue.
+			if(cc < 0 || rr < 0	|| cc >= cols || rr >= rows)
+				continue;
+
+			// Calculate the offset pixel index.
+			int ii = rr * cols + cc;
+			if(visited[ii])
+				continue;
+
+			// Get the height from the smoothed raster.
+			float z = grid.get(cc, rr);
+
+			// If is not nodata and is not less than the neighbouring pixel, is valid.
+			if(z == nodata || z >= n.z || std::isnan(z))
+				continue;
+
+			// Find the index of the threshold corresponding to the given top height.
+			int idx;
+			if(st.find(z, &idx)) {
+				const CrownThreshold& ct = thresh[idx];			// Get the crown threshold object.
+				float pradius = std::pow(ct.radius / res, 2);	// The squared radius in pixels.
+
+				float radius = std::pow((float) cc - n.tc, 2) + std::pow((float) rr - n.tr, 2);
+				float frac = (n.tz - z) / n.tz;
+
+				// Check that the top meets the threshold:
+				if(z < ct.threshold 				// is greater than the min height;
+						|| frac > ct.fraction		// is within the height fraction;
+						|| radius > pradius)		// is within the radius.
+					continue;
+
+				// The pixel is a member of the current crown; add it to the queue.
+				q.emplace(n.id, cc, rr, z, n.tc, n.tr, n.tz);
+			}
 		}
 	}
 
-	/*
-	// Convert the Tops to Nodes, add to work queue.
-	std::queue<Treetop> q;
-	Bounds<int> bounds;
-	Treetop query;
-	for(const auto& tile : tiles) {
-		// Create a bounding box to search for tops; this is the
-		// buffer size, plus a fringe equal to max radius.
-		bounds.set(tile.first - maxRadius, tile.second - maxRadius, tile.first + tileSize + maxRadius, tile.second + tileSize + maxRadius);
+}
 
-		// Search radius is the diagonal of the box plus maxRadius.
-		float rad = std::sqrt(std::pow(bounds.width() / 2, 2) + std::pow(bounds.height() / 2, 2)) + maxRadius;
+/**
+ * Step 4: update tops with the max height from the unsmoothed raster within the delineated crown.
+ */
+void Processor::updateTops(const std::vector<Treetop>& tops, Grid<float>& grid, Grid<int>& crowns) {
 
-		// Search starts at the box's center.
-		query.update(0, 0, 0, 0, 0, bounds.midx(), bounds.midy(), 0, 0, 0);
+	std::unordered_map<int, Treetop*> topMap;
+	for(const Treetop& top : tops)
+		topMap.emplace(top.id, &top);
 
-		// Search for the tops.
-		std::list<Treetop> tops;
-		if(!qt.search(query, rad, std::back_inserter(tops)))
-			continue;
-
-		// Enqueue the tops for processing. TODO: Would be nice to search and enqueue in one step.
-		for(Treetop& top : tops)
-			q.emplace(top);
-
-		// Run through the queue.
-		while (!Monitor::get().canceled() && !q.empty()) {
-
-			// Get the next node.
-			Node n = std::move(q.front());
-			q.pop();
-
-			// If this is an original top, remove from the status set and update monitor.
-			if(n.c == n.tc && n.r == n.tr) {
-				topSet.erase(n.id);
-				Monitor::get().status(1.0f - (float) topSet.size() / topCount);
-			}
-
-			// Calculate pixel index; set the ID at the current pixel in the crowns raster.
-			size_t i = (size_t) n.r * (size_t) cols + (size_t) n.c;
-			if(visited[i])
-				continue;
-			crowns.set(n.c, n.r, n.id);
-			visited[i] = true;
-
-			// Execute the kernel. For each neighbour, we're going to check the pixel height
-			// to see if it's part of the crown that owns the current node.
-			for(size_t j = 0; j < offsetCount; ++j) {
-
-				// Add offsets.
-				int cc = n.c + offsets[j][0];
-				int rr = n.r + offsets[j][1];
-
-				// Is out of range, continue.
-				if(cc < 0 || rr < 0	|| cc >= cols || rr >= rows)
-					continue;
-
-				// Calculate the offset pixel index.
-				size_t ii = (size_t) rr * (size_t) cols + (size_t) cc;
-				if(visited[ii])
-					continue;
-
-				// Get the height from the smoothed raster.
-				float z = smoothed.get(cc, rr);
-
-				// If is not nodata and is not less than the neighbouring pixel, is valid.
-				if(z == nodata || z >= n.z || std::isnan(z))
-					continue;
-
-				// Find the index of the threshold corresponding to the given top height.
-				size_t idx;
-				if(st.find(z, &idx)) {
-					const CrownThreshold& ct = thresh[idx];			// Get the crown threshold object.
-					float pradius = std::pow(ct.radius / resX, 2);	// The squared radius in pixels.
-
-					float radius = std::pow((float) cc - n.tc, 2) + std::pow((float) rr - n.tr, 2);
-					float frac = (n.tz - z) / n.tz;
-
-					// Check that the top meets the threshold:
-					if(z < ct.threshold 				// is greater than the min height;
-							|| frac > ct.fraction		// is within the height fraction;
-							|| radius > pradius)		// is within the radius.
-						continue;
-
-					// The pixel is a member of the current crown; add it to the queue.
-					q.emplace(n.id, cc, rr, z, n.tc, n.tr, n.tz);
+	for(int r = 0; r < crowns.rows(); ++r) {
+		for(int c = 0; c < crowns.cols(); ++c) {
+			int id = crowns.get(c, r);
+			if(topMap.contains(id)) {
+				Treetop* top = topMap.at(id);
+				float v = grid.get(c, r);
+				if(v != grid.nodata() && v > top->oz) {
+					top->oz = v;
+					top->ox = grid.toX(c);
+					top->oy = grid.toY(r);
 				}
 			}
 		}
 	}
 
-	config.crowns().flush();
-
-	Monitor::get().status(1.0f, "");
-	*/
 }
-
-/**
- * Step 4: merge crowns.
- */
-void Processor::mergeCrowns() {}
 
 /**
  * Step 5: polygonize crowns (and clean up, if configured).
  */
-void Processor::polygonizeCrowns() {}
+void Processor::polygonizeCrowns(const std::vector<Treetop>& tops, Grid<int>& crowns, CrownDB& db) {
+
+	// The polygonization context will be passed into the poly threads.
+	PolyCtx pc;
+	pc.removeDangles = m_settings->get("crownsRemoveDangles", false);
+	pc.removeHoles = m_settings->get("crownsRemoveHoles", false);
+	pc.running = true;
+	pc.dimensions = 3; // Need to set the tree height later.
+
+	// Create the functor that will accept polygon objects.
+    // TODO: This will be important for threading.
+	PolyMergeCallback callback;
+	crowns.polygonize(&callback, &pc);
+
+	std::unordered_map<int, const Treetop*> topMap;
+	for(const Treetop& top : tops)
+		topMap[top.id] = &top;
+
+	for(std::pair<int, GEOSGeometry*>& geom : pc.geoms) {
+		const Treetop* top = topMap[geom.first];
+		db.insert(*top, geom.second, pc.gctx);
+	}
+
+	// Cleanup any waiting to be written.
+	pc.running = false;
+
+}
+
 
 /**
- * Step 6: save outputs.
+ * Step 5: save outputs.
  */
 void Processor::saveOutputs() {
 

@@ -428,7 +428,7 @@ void TreetopsForm::runClicked() {
 	//	return;
 	//m_settings.monitor()->setCanceled(false);
 	//m_workerThread->start();
-	tt::proc::Processor p(&m_settings);
+	tt::proc::Processor p(m_settings);
 	p.run();	
 }
 

@@ -5,8 +5,8 @@
  * Created on November 27, 2016, 1:04 PM
  */
 
-#ifndef FILELIST_HPP
-#define FILELIST_HPP
+#ifndef __FILELIST_HPP__
+#define __FILELIST_HPP__
 
 #include <QtCore/QDir>
 #include <QtCore/QObject>
@@ -88,5 +88,5 @@ signals:
 }
 }
 
-#endif /* FILELIST_HPP */
+#endif /* __FILELIST_HPP__ */
 

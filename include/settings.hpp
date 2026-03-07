@@ -5,8 +5,8 @@
  *      Author: rob
  */
 
-#ifndef _SETTINGS_HPP_
-#define _SETTINGS_HPP_
+#ifndef __SETTINGS_HPP__
+#define __SETTINGS_HPP__
 
 #include <string>
 #include <fstream>
@@ -168,4 +168,4 @@ public:
 } // config
 } // tt
 
-#endif /* _SETTINGS_HPP_ */
+#endif /* __SETTINGS_HPP__ */

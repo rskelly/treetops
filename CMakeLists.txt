@@ -69,10 +69,12 @@ add_executable(treetops
 	src/ui/crowns_threshold_item.cpp
 	include/ui/crowns_thresholds_ui.hpp
 	src/ui/crowns_thresholds_ui.cpp
+	src/ds.cpp
 	src/process.cpp
-#	src/grid.cpp
+	src/vector.cpp
 #	src/filelist.cpp
     src/treetops.cpp
+    src/treetops_app.cpp
 )
 
 set_property(TARGET treetops PROPERTY CXX_STANDARD 20)
@@ -85,6 +87,7 @@ target_link_libraries(treetops PRIVATE
  	#Qt5::Gui 
 	#Qt5::Core 
 	Qt5::Widgets 
+	${GEOS_LIBRARY}
 	${GDAL_LIBRARY}
  	${SQLITE_LIBRARY} 
  	${SPATIALITE_LIBRARY} 

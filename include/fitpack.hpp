@@ -1,3 +1,6 @@
+#ifndef __FITPACK_HPP__
+#define __FITPACK_HPP__
+
 /**
  * This file provides an interface to selected fitpack routines in the src/fitpack folder.
  * There is a dummy c file there, and fortran files which are selected depending on compiler
@@ -32,3 +35,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // __FITPACK_HPP__

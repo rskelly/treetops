@@ -23,3 +23,5 @@ core
 wix/.vs/
 src/ui/user-history.db
 src/ui/symbology-style.db
+documents/html
+documents/latex
