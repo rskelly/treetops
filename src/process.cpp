@@ -179,12 +179,13 @@ void Processor::run() {
 	delineateCrowns(tops, *working, crowns, topsIDGrid, topsWindowGrid);
 	crowns.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.tif"));
 
-	if(true /* settings -> update tops */)
-		updateTops(tops, *grid, crowns);
+	updateTops(tops, *grid, crowns);
 
 	CrownDB db;
 	polygonizeCrowns(tops, crowns, db);
-	db.saveCrowns(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.sqlite"), "Spatialite", "crowns", crowns.crs());
+	db.saveCrowns(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.sqlite"), "sqlite", "crowns", crowns.crs());
+	db.saveTops(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops.sqlite"), "sqlite", "tops", crowns.crs());
+
 }
 
 /**
@@ -244,8 +245,13 @@ void Processor::findTops(Grid<float>& grid, std::vector<Treetop>& tops,
             for (int col = 0; col < cols; ++col) {
                 if((v = grid.get(col, row)) >= t.threshold) {
                     isMax = isMaxCenter(grid, col, row, t.window, nodata, max, nulls);
-                    if (isMax && nulls <= topsMaxNulls)
-                        tops.emplace_back(++topId, col, row, t.window, max);
+                    if (isMax && nulls <= topsMaxNulls) {
+						Treetop top(++topId, col, row, t.window, max);
+						top.sx = grid.toX(col);
+						top.sy = grid.toY(row);
+						top.sz = v;
+                        tops.push_back(top);
+					}
                 }
             }
         }
@@ -362,10 +368,10 @@ void Processor::delineateCrowns(std::vector<Treetop>& tops, Grid<float>& grid, G
 /**
  * Step 4: update tops with the max height from the unsmoothed raster within the delineated crown.
  */
-void Processor::updateTops(const std::vector<Treetop>& tops, Grid<float>& grid, Grid<int>& crowns) {
+void Processor::updateTops(std::vector<Treetop>& tops, Grid<float>& grid, Grid<int>& crowns) {
 
 	std::unordered_map<int, Treetop*> topMap;
-	for(const Treetop& top : tops)
+	for(Treetop& top : tops)
 		topMap.emplace(top.id, &top);
 
 	for(int r = 0; r < crowns.rows(); ++r) {

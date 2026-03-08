@@ -455,9 +455,9 @@ void CrownDB::saveCrowns(const std::string& filename, const std::string& driver,
 		}
 		double z, th, gz;
 		if(top.oz > 0) {
-			z = top.oz;
-			gz = top.groundZ;
-			th = z * 0.5 + gz;
+			z = top.oz;				// The "true" height from the unsmoothed raster.
+			gz = top.groundZ;		// The height of ground, if a terrain model is given.
+			th = z * 0.5 + gz;		// ?
 		} else {
 			z = top.sz;
 			gz = 0;

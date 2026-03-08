@@ -4,9 +4,11 @@
 #include "settings.hpp"
 #include "treetops.hpp"
 #include "grid.hpp"
+#include "vector.hpp"
 
 using namespace tt::data;
 using namespace tt::grid;
+using namespace tt::vec;
 
 namespace tt {
 namespace proc {
@@ -46,7 +48,7 @@ namespace proc {
         /**
          * Update the top object with the max height in the crown from the unsmoothed raster.
          */
-        void updateTops(const std::vector<Treetop>&, tt::grid::Grid<float>&, tt::grid::Grid<int>&);
+        void updateTops(std::vector<Treetop>&, tt::grid::Grid<float>&, tt::grid::Grid<int>&);
 
         /**
          * Step 5: save outputs.
