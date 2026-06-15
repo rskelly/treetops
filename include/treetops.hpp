@@ -46,7 +46,9 @@ namespace tt {
 				window(window),
 				height(height),
 				ox(0), oy(0), oz(0),
-				sx(0), sy(0), sz(0) {}
+				groundZ(0),
+				sx(0), sy(0), sz(0),
+				parentId(0) {}
 
 		};
 
@@ -58,14 +60,14 @@ namespace tt {
 	 */
 	class Treetops {
 	private:
-		tt::config::Settings* m_settings;
+		tt::config::Config* m_settings;
 
 	public:
 
-		/**
-		 * Construct the Treetops object.
-		 */
-		Treetops(tt::config::Settings& settings);
+	/**
+	 * Construct the Treetops object.
+	 */
+	Treetops(tt::config::Config& settings);
 
 		/**
 		 * A convenience method for smoothing the input raster before using it to

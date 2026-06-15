@@ -1,11 +1,12 @@
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
+#include <stdexcept>
 
 #include "process.hpp"
 #include "grid.hpp"
 #include "vector.hpp"
-#include "settings.hpp"
+#include "config.hpp"
 #include "treetops.hpp"
 #include "ds/interval_tree.hpp"
 #include "ds/mqtree.hpp"
@@ -146,46 +147,60 @@ namespace {
     };    
 } // anon
 
-Processor::Processor(Settings& settings) :
+Processor::Processor(const Settings& settings) :
         m_settings(&settings) {
 }
 
 void Processor::run() {
 
-	std::unique_ptr<Grid<float>> grid;			// Source grid.
-	std::unique_ptr<Grid<float>> smoothed;		// Smoothed grid.
-	Grid<float>* working;						// Points to the smoothed or original grid, depending on settings.
+	const std::string chm = m_settings->get("originalCHM", "");
+	if(chm.empty())
+		throw std::runtime_error("originalCHM is not set.");
+
+	std::unique_ptr<Grid<float>> grid;
+	std::unique_ptr<Grid<float>> smoothed;
+	Grid<float>* working;
 
 	grid = std::make_unique<Grid<float>>();
-	grid->load(m_settings->get("originalCHM", ""), m_settings->get("originalCHMBand", 1));
+	grid->load(chm, m_settings->get("originalCHMBand", 1));
+	working = grid.get();
 
-	if(m_settings->get("doSmoothing", true)) {
+	if(m_settings->get("doSmoothing", false)) {
 		smoothed = std::make_unique<Grid<float>>();
 		smoothGrid(*grid, *smoothed);
 		working = smoothed.get();
-	} else {
-		working = grid.get();
 	}
 
-	std::vector<Treetop> tops;
-    Grid<int> topsWindowGrid;
-    Grid<int> topsIDGrid;
-	findTops(*working, tops, topsWindowGrid, topsIDGrid);
-
-    topsWindowGrid.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops_windows.tif"));
-    topsIDGrid.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops_ids.tif"));
-
-	Grid<int> crowns(topsIDGrid);
-	delineateCrowns(tops, *working, crowns, topsIDGrid, topsWindowGrid);
-	crowns.save(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.tif"));
-
-	updateTops(tops, *grid, crowns);
-
+	Grid<int> topsWindowGrid;
+	Grid<int> topsIDGrid;
+	Grid<int> crowns;
 	CrownDB db;
-	polygonizeCrowns(tops, crowns, db);
-	db.saveCrowns(join(tt::util::parent(m_settings->get("originalCHM", "")), "crowns.sqlite"), "sqlite", "crowns", crowns.crs());
-	db.saveTops(join(tt::util::parent(m_settings->get("originalCHM", "")), "tops.sqlite"), "sqlite", "tops", crowns.crs());
+	std::string projection = grid->crs();
+	bool dbPopulated = false;
 
+	if(m_settings->get("doTops", true)) {
+		findTops(*working, m_tops, topsWindowGrid, topsIDGrid);
+
+		if(m_settings->get("doCrowns", true)) {
+			crowns.copyOther(topsIDGrid);
+			delineateCrowns(m_tops, *working, crowns, topsIDGrid, topsWindowGrid);
+
+			if(m_settings->get("crownsUpdateHeights", true))
+				updateTops(m_tops, *grid, crowns);
+
+			if(m_settings->get("crownsDoDatabase", true)) {
+				polygonizeCrowns(m_tops, crowns, db);
+				dbPopulated = true;
+			}
+		}
+	}
+
+	if(m_settings->get("doTops", true) && !dbPopulated) {
+		for(const Treetop& top : m_tops)
+			db.insert(top, nullptr, db.gctx());
+	}
+
+	saveOutputs(topsWindowGrid, topsIDGrid, crowns, db, projection);
 }
 
 /**
@@ -222,7 +237,7 @@ void Processor::findTops(Grid<float>& grid, std::vector<Treetop>& tops,
     topsIDGrid.copyOther(grid);
 
     // The maximum proportion of nulls allowed in a window.
-    float topsMaxNulls = 0.5; //m_settings->get("topsMaxNulls", 0.5);
+    float topsMaxNulls = m_settings->get("topsMaxNulls", 0.5f);
 
 	// Build a list of circular window offsets for the window sizes. Find the largest window size.
 	int maxWindow = 0;
@@ -308,7 +323,7 @@ void Processor::delineateCrowns(std::vector<Treetop>& tops, Grid<float>& grid, G
 	while(!q.empty()) {
 
 		// Get the next node.
-		Node n = std::move(q.front());
+		Node n = q.front();
 		q.pop();
 
 		// Calculate pixel index; set the ID at the current pixel in the crowns raster.
@@ -424,9 +439,38 @@ void Processor::polygonizeCrowns(const std::vector<Treetop>& tops, Grid<int>& cr
 
 
 /**
- * Step 5: save outputs.
+ * Save configured outputs.
  */
-void Processor::saveOutputs() {
+void Processor::saveOutputs(
+		Grid<int>& topsWindowGrid,
+		Grid<int>& topsIDGrid,
+		Grid<int>& crowns,
+		CrownDB& db,
+		const std::string& projection) {
 
+	if(m_settings->get("doTops", true)) {
+		const std::string topsWindows = m_settings->get("topsWindowsRaster", "");
+		const std::string topsIds = m_settings->get("topsIdsRaster", "");
+		if(!topsWindows.empty())
+			topsWindowGrid.save(topsWindows);
+		if(!topsIds.empty())
+			topsIDGrid.save(topsIds);
+
+		const std::string topsDb = m_settings->get("treetopsDatabase", "");
+		if(!topsDb.empty())
+			db.saveTops(topsDb, m_settings->vectorDriver("treetopsDatabaseDriver"), "tops", projection);
+	}
+
+	if(m_settings->get("doCrowns", true)) {
+		const std::string crownsRaster = m_settings->get("crownsRaster", "");
+		if(!crownsRaster.empty())
+			crowns.save(crownsRaster);
+
+		if(m_settings->get("crownsDoDatabase", true)) {
+			const std::string crownsDb = m_settings->get("crownsDatabase", "");
+			if(!crownsDb.empty())
+				db.saveCrowns(crownsDb, m_settings->vectorDriver("crownsDatabaseDriver"), "crowns", projection);
+		}
+	}
 }
 

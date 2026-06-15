@@ -14,6 +14,7 @@ nbproject
 .cproject
 .settings
 .project
+.cache
 /data/
 /wix/**/bin
 /wix/**/obj
