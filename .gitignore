@@ -20,6 +20,9 @@ nbproject
 /wix/**/obj
 core
 /_data/
+/app/node_modules/
+/app/src-tauri/binaries/
+/app/src-tauri/target/
 /build/
 /dist/
 /build/vcpkg/

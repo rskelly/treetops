@@ -50,6 +50,7 @@ endif()
 
 set(TREETOPS_CORE_SOURCES
 	src/config.cpp
+	src/status.cpp
 	src/util.cpp
 	src/ds.cpp
 	src/process.cpp

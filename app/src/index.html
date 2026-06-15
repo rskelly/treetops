@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Treetops</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <div>
+          <h1>Treetops</h1>
+          <p class="subtitle">Tree top detection and crown delineation</p>
+        </div>
+        <div class="header-actions">
+          <button id="load-config-btn" type="button" class="secondary">Load settings</button>
+          <button id="save-config-btn" type="button" class="secondary">Save settings</button>
+        </div>
+      </header>
+
+      <section class="panel">
+        <h2>Input / Output</h2>
+        <div class="field-grid">
+          <label class="field">
+            <span>Config file</span>
+            <div class="input-row">
+              <input id="config-path" type="text" placeholder="Path to settings.json" />
+              <button type="button" class="secondary browse-btn" data-target="config-path" data-mode="save">Browse</button>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>Original CHM</span>
+            <div class="input-row">
+              <input id="original-chm" type="text" />
+              <button type="button" class="secondary browse-btn" data-target="original-chm" data-mode="open">Browse</button>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>Smoothed CHM</span>
+            <input id="smoothed-chm" type="text" />
+          </label>
+
+          <label class="field">
+            <span>Treetops database</span>
+            <input id="treetops-database" type="text" />
+          </label>
+
+          <label class="field">
+            <span>Crowns raster</span>
+            <input id="crowns-raster" type="text" />
+          </label>
+
+          <label class="field">
+            <span>Crowns database</span>
+            <input id="crowns-database" type="text" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Processing</h2>
+        <div class="toggle-grid">
+          <label class="checkbox"><input id="do-smoothing" type="checkbox" checked /> Smoothing</label>
+          <label class="checkbox"><input id="do-tops" type="checkbox" checked /> Tree tops</label>
+          <label class="checkbox"><input id="do-crowns" type="checkbox" checked /> Crowns</label>
+        </div>
+
+        <div class="field-grid compact">
+          <label class="field">
+            <span>Smooth window size</span>
+            <input id="smooth-window-size" type="number" min="3" step="2" value="3" />
+          </label>
+          <label class="field">
+            <span>Smooth sigma</span>
+            <input id="smooth-sigma" type="number" min="0" step="0.1" value="1" />
+          </label>
+          <label class="field">
+            <span>Raster band</span>
+            <input id="original-chm-band" type="number" min="1" step="1" value="1" />
+          </label>
+        </div>
+
+        <div class="threshold-section">
+          <h3>Top thresholds</h3>
+          <div id="top-thresholds" class="threshold-list"></div>
+          <button id="add-top-threshold" type="button" class="secondary small">Add threshold</button>
+        </div>
+
+        <div class="threshold-section">
+          <h3>Crown thresholds</h3>
+          <div id="crown-thresholds" class="threshold-list"></div>
+          <button id="add-crown-threshold" type="button" class="secondary small">Add threshold</button>
+        </div>
+      </section>
+
+      <section class="panel run-panel">
+        <div class="run-actions">
+          <button id="run-btn" type="button" class="primary">Run</button>
+          <button id="cancel-btn" type="button" class="danger" disabled>Cancel</button>
+        </div>
+        <pre id="log-output" class="log-output"></pre>
+      </section>
+
+      <footer class="status-bar">
+        <div class="status-text">
+          <span id="status-phase" class="status-phase">idle</span>
+          <span id="status-message">Ready</span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <span id="progress-label" class="progress-label">0%</span>
+      </footer>
+    </div>
+  </body>
+</html>

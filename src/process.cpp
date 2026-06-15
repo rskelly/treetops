@@ -7,6 +7,7 @@
 #include "grid.hpp"
 #include "vector.hpp"
 #include "config.hpp"
+#include "status.hpp"
 #include "treetops.hpp"
 #include "ds/interval_tree.hpp"
 #include "ds.hpp"
@@ -156,6 +157,8 @@ void Processor::run() {
 	if(chm.empty())
 		throw std::runtime_error("originalCHM is not set.");
 
+	status::report("loading", 0, "Loading canopy height model");
+
 	std::unique_ptr<Grid<float>> grid;
 	std::unique_ptr<Grid<float>> smoothed;
 	Grid<float>* working;
@@ -163,11 +166,16 @@ void Processor::run() {
 	grid = std::make_unique<Grid<float>>();
 	grid->load(chm, m_settings->get("originalCHMBand", 1));
 	working = grid.get();
+	status::report("loading", 10, "Loaded " + chm);
 
 	if(m_settings->get("doSmoothing", false)) {
+		status::report("smoothing", 15, "Gaussian smoothing");
 		smoothed = std::make_unique<Grid<float>>();
 		smoothGrid(*grid, *smoothed);
 		working = smoothed.get();
+		status::report("smoothing", 30, "Smoothing complete");
+	} else {
+		status::report("smoothing", 30, "Smoothing skipped");
 	}
 
 	Grid<int> topsWindowGrid;
@@ -178,20 +186,30 @@ void Processor::run() {
 	bool dbPopulated = false;
 
 	if(m_settings->get("doTops", true)) {
+		status::report("tops", 35, "Detecting tree tops");
 		findTops(*working, m_tops, topsWindowGrid, topsIDGrid);
+		status::report("tops", 55, "Found " + std::to_string(m_tops.size()) + " tree tops");
 
 		if(m_settings->get("doCrowns", true)) {
+			status::report("crowns", 60, "Delineating tree crowns");
 			crowns.copyOther(topsIDGrid);
 			delineateCrowns(m_tops, *working, crowns, topsIDGrid, topsWindowGrid);
+			status::report("crowns", 75, "Crown delineation complete");
 
-			if(m_settings->get("crownsUpdateHeights", true))
+			if(m_settings->get("crownsUpdateHeights", true)) {
+				status::report("crowns", 78, "Updating tree top heights");
 				updateTops(m_tops, *grid, crowns);
+			}
 
 			if(m_settings->get("crownsDoDatabase", true)) {
+				status::report("polygonize", 80, "Polygonizing crowns");
 				polygonizeCrowns(m_tops, crowns, db);
 				dbPopulated = true;
+				status::report("polygonize", 88, "Polygonization complete");
 			}
 		}
+	} else {
+		status::report("tops", 55, "Tree top detection skipped");
 	}
 
 	if(m_settings->get("doTops", true) && !dbPopulated) {
@@ -199,7 +217,9 @@ void Processor::run() {
 			db.insert(top, nullptr, db.gctx());
 	}
 
+	status::report("saving", 90, "Saving outputs");
 	saveOutputs(topsWindowGrid, topsIDGrid, crowns, db, projection);
+	status::report("done", 100, "Processing complete");
 }
 
 /**

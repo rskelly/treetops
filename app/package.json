@@ -1,0 +1,16 @@
+{
+  "name": "treetops-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check-rust": "bash scripts/check-rust.sh",
+    "prepare-sidecar": "bash scripts/prepare-sidecar.sh",
+    "dev": "npm run check-rust && npm run prepare-sidecar && tauri dev",
+    "build": "npm run check-rust && npm run prepare-sidecar && tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
