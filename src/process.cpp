@@ -9,7 +9,6 @@
 #include "config.hpp"
 #include "treetops.hpp"
 #include "ds/interval_tree.hpp"
-#include "ds/mqtree.hpp"
 #include "ds.hpp"
 
 using namespace tt::proc;
@@ -147,7 +146,7 @@ namespace {
     };    
 } // anon
 
-Processor::Processor(const Settings& settings) :
+Processor::Processor(const Config& settings) :
         m_settings(&settings) {
 }
 
@@ -287,17 +286,11 @@ void Processor::delineateCrowns(std::vector<Treetop>& tops, Grid<float>& grid, G
 	crowns.fill(0);
 	float res = grid.xRes();
 
-	// The interval tree keeps track of ranges of completed rows
-	int maxRadius = 0;
-	MQTree<Treetop> qt;
 	IntervalTree<float, int> st;
 	const std::vector<CrownThreshold>& thresh = m_settings->crownThresholds();
     
-	for(int i = 0; i < thresh.size(); ++i) {
+	for(int i = 0; i < thresh.size(); ++i)
 		st.add(thresh[i].fraction, i);
-		if(thresh[i].radius > (maxRadius * res))
-			maxRadius = std::ceil(thresh[i].radius / res);
-	}
 
 	int cols = grid.cols();
 	int rows = grid.rows();
@@ -313,9 +306,8 @@ void Processor::delineateCrowns(std::vector<Treetop>& tops, Grid<float>& grid, G
 
 	// Convert the Tops to Nodes, add to work queue.
 	std::queue<Node> q;
-	Treetop query;
 
-	// Enqueue the tops for processing. TODO: Would be nice to search and enqueue in one step.
+	// Enqueue the tops for processing.
 	for(Treetop& top : tops)
 		q.emplace(top);
 

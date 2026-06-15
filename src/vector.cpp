@@ -5,9 +5,9 @@
 #include "util.hpp"
 
 using namespace tt::util;
+using namespace tt::util::vec;
 using namespace tt::vec;
 using namespace tt::data;
-using namespace tt::grid;
 using namespace tt::config;
 
 

@@ -9,7 +9,7 @@
 #include <ogr_feature.h>
 #include <ogrsf_frmts.h>
 
-#include "settings.hpp"
+#include "config.hpp"
 #include "treetops.hpp"
 #include "util.hpp"
 
