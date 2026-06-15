@@ -21,6 +21,9 @@ nbproject
 core
 /_data/
 /build/
+/dist/
+/build/vcpkg/
+/packaging/**/dist/
 wix/.vs/
 src/ui/user-history.db
 src/ui/symbology-style.db

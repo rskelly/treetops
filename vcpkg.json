@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "treetops",
+  "version-string": "0.1.0",
+  "description": "Tree top detection and crown delineation for canopy height models",
+  "dependencies": [
+    {
+      "name": "gdal",
+      "default-features": false,
+      "features": [
+        "libspatialite",
+        "recommended-features"
+      ]
+    },
+    "geos",
+    "nlohmann-json"
+  ]
+}

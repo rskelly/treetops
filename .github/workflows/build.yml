@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake \
+            libgdal-dev libgeos-dev \
+            libsqlite3-dev libspatialite-dev \
+            nlohmann-json3-dev
+
+      - name: Build
+        run: bash packaging/linux/build.sh
+
+      - name: Smoke test
+        run: ./build/bin/treetops-cli --help
+
+  windows-portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build portable package
+        shell: pwsh
+        run: |
+          packaging/windows/build-portable.ps1 `
+            -BuildDir build/windows-portable `
+            -OutputDir dist/treetops-portable-win64
+
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          dist/treetops-portable-win64/treetops-cli.exe --help
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: treetops-portable-win64
+          path: dist/treetops-portable-win64.zip
