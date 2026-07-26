@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(treetops VERSION 0.1.0)
 
+set(TREETOPS_VERSION "${PROJECT_VERSION}")
+
 enable_language(CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -74,6 +76,7 @@ target_link_libraries(treetops_core PUBLIC
 
 add_executable(treetops-cli src/treetops_cli.cpp)
 set_property(TARGET treetops-cli PROPERTY CXX_STANDARD 20)
+target_compile_definitions(treetops-cli PRIVATE TREETOPS_VERSION="${TREETOPS_VERSION}")
 target_link_libraries(treetops-cli PRIVATE treetops_core)
 
 if(WIN32 AND VCPKG_TARGET_TRIPLET)

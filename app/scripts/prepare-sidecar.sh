@@ -15,8 +15,20 @@ if [[ ! -f "$SRC" ]]; then
 fi
 
 TRIPLE="$(rustc -vV | sed -n 's/^host: //p')"
-DEST="$TARGET_DIR/treetops-cli-$TRIPLE"
+
+if [[ "${OSTYPE:-}${OS:-}" == msys* || "${OSTYPE:-}${OS:-}" == cygwin* || "${OS:-}" == "Windows_NT" ]]; then
+  DEST="$TARGET_DIR/treetops-cli.exe"
+  ALT_DEST="$TARGET_DIR/treetops-cli-$TRIPLE.exe"
+else
+  DEST="$TARGET_DIR/treetops-cli"
+  ALT_DEST="$TARGET_DIR/treetops-cli-$TRIPLE"
+fi
 
 cp "$SRC" "$DEST"
-chmod +x "$DEST"
+cp "$SRC" "$ALT_DEST"
+if [[ "$DEST" != *.exe ]]; then
+  chmod +x "$DEST" "$ALT_DEST"
+fi
+
 echo "Sidecar ready: $DEST"
+echo "Sidecar ready: $ALT_DEST"

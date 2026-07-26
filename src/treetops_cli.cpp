@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@ void printUsage(const char* prog) {
 		<< "      --no-smooth        Skip Gaussian smoothing\n"
 		<< "      --no-crowns        Detect treetops only\n"
 		<< "  -h, --help            Show this help\n"
+		<< "      --version         Show the application version\n"
 		<< "\n"
 		<< "Example:\n"
 		<< "  " << prog << " -c _data/settings.json\n"
@@ -54,6 +56,9 @@ Options parseArgs(int argc, char** argv) {
 			opts.noSmooth = true;
 		} else if(arg == "--no-crowns") {
 			opts.noCrowns = true;
+		} else if(arg == "--version") {
+			std::cout << "treetops " << TREETOPS_VERSION << "\n";
+			exit(0);
 		} else {
 			throw std::runtime_error("Unknown argument: " + arg);
 		}

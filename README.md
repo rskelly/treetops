@@ -57,6 +57,20 @@ Pre-built Windows packages are also available from GitHub Actions workflow artif
 
 ### Desktop UI (Tauri)
 
+For a packaged desktop build, use the helper scripts:
+
+```bash
+./packaging/linux/build-gui.sh
+```
+
+On Windows, build an installer with:
+
+```powershell
+packaging\windows\build-installer.ps1
+```
+
+These scripts build the CLI, prepare the sidecar, and invoke the desktop packaging workflow for the selected platform.
+
 The Tauri app in `app/` provides settings configuration and processing controls with a status bar.
 
 Linux prerequisites:
@@ -84,6 +98,10 @@ cd app && rustup override set 1.88.0
 ```
 
 The UI saves settings to JSON, launches `treetops-cli` as a sidecar, and displays `@status:` progress updates in the status bar.
+
+Release artifacts are written to:
+- Linux: `app/src-tauri/target/release/bundle/`
+- Windows: `dist/` plus an MSI installer when the Windows packaging script completes.
 
 ## Usage
 
