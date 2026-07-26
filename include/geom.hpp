@@ -3,6 +3,11 @@
 
 #include <geos_c.h>
 
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include <gdal_priv.h>
 #include <ogr_spatialref.h>
 #include <ogr_geometry.h>

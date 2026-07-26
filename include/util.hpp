@@ -8,6 +8,28 @@
 #ifndef __UTIL_HPP__
 #define __UTIL_HPP__
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <io.h>
+#include <BaseTsd.h>
+#ifndef open
+#define open _open
+#endif
+#ifndef read
+#define read _read
+#endif
+#ifndef write
+#define write _write
+#endif
+#ifndef lseek
+#define lseek _lseek
+#endif
+#ifndef close
+#define close _close
+#endif
+#endif
 
 // Define a convenience for squaring things.
 #define _sq(a) ((a)*(a))
@@ -33,6 +55,8 @@
 #define DBL_SMALL std::numeric_limits<double>::lowest()
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <chrono>
 #include <algorithm>
@@ -40,6 +64,7 @@
 #include <sstream>
 #include <iostream>
 #include <list>
+#include <vector>
 
 #include <gdal_priv.h>
 #include <geos_c.h>

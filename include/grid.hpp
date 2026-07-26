@@ -5,8 +5,13 @@
 #include <string>
 #include <concepts>
 #include <inttypes.h>
-#include <sys/mman.h>
+#include <cstdlib>
 #include <unordered_set>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#endif
 
 #include <geos_c.h>
 
@@ -127,9 +132,13 @@ namespace grid {
         void freeGrid() {
             if(m_grid) {
                 if(m_mapped) {
+#if defined(_WIN32)
+                    std::free(m_grid);
+#else
                     munmap(m_grid, sizeof(T) * m_rows * m_cols);
+#endif
                 } else {
-                    free(m_grid);
+                    std::free(m_grid);
                 }
             }
             m_cols = 0;
@@ -145,7 +154,11 @@ namespace grid {
             freeGrid();
             // Check if the size threshold is exceeded. If so, use mmap.
             int size = sizeof(T) * cols * rows;
+#if defined(_WIN32)
+            m_mapped = false;
+#else
             m_mapped = size > GRID_MMAP_THRESHOLD;
+#endif
             if(m_mapped) {
                 // Map the data segment.
                 m_grid = (T*) mmap(
@@ -162,7 +175,7 @@ namespace grid {
                 }
             } else {
                 // Allocate the data segment.
-                m_grid = (T*) malloc(size);
+                m_grid = (T*) std::malloc(size);
                 if(m_grid == nullptr)
                     throw "Failed to allocate data for grid.";
             }
