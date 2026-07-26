@@ -5,7 +5,7 @@
 
 #include "process.hpp"
 #include "grid.hpp"
-#include "vector.hpp"
+#include "geom.hpp"
 #include "config.hpp"
 #include "status.hpp"
 #include "treetops.hpp"

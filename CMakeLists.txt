@@ -56,7 +56,7 @@ set(TREETOPS_CORE_SOURCES
 	src/util.cpp
 	src/ds.cpp
 	src/process.cpp
-	src/vector.cpp
+	src/geom.cpp
 )
 
 add_library(treetops_core STATIC ${TREETOPS_CORE_SOURCES})

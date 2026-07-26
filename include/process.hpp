@@ -4,7 +4,7 @@
 #include "config.hpp"
 #include "treetops.hpp"
 #include "grid.hpp"
-#include "vector.hpp"
+#include "geom.hpp"
 
 using namespace tt::data;
 using namespace tt::grid;

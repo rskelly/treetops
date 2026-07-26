@@ -1,7 +1,7 @@
 #include <fcntl.h>
 
 #include "treetops.hpp"
-#include "vector.hpp"
+#include "geom.hpp"
 #include "util.hpp"
 
 using namespace tt::util;
