@@ -6,29 +6,37 @@ Treetops detects tree tops and delineates tree crowns in canopy height models (C
 
 [Project wiki](https://github.com/rskelly/treetops/wiki)
 
-## Building
+## Build, package, and run
 
-### Linux
+### 1. Prerequisites
 
-Install dependencies (Debian/Ubuntu):
+#### Linux (Debian/Ubuntu)
 
 ```bash
 sudo apt-get install -y \
   build-essential cmake \
   libgdal-dev libgeos-dev \
   libsqlite3-dev libspatialite-dev \
-  nlohmann-json3-dev
+  nlohmann-json3-dev \
+  libwebkit2gtk-4.1-dev curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
-Build:
+#### Windows
+
+Install a recent Visual Studio Build Tools setup with C++ support and a working Node.js installation. The Windows packaging flow expects PowerShell and the standard Windows runtime toolchain.
+
+### 2. Build the command-line application
+
+From the repository root:
 
 ```bash
 packaging/linux/build.sh
 ```
 
-The binary is written to `build/bin/treetops-cli`.
+This produces the CLI binary at `build/bin/treetops-cli`.
 
-You can also build manually:
+You can also build it manually:
 
 ```bash
 mkdir -p build && cd build
@@ -36,102 +44,108 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j"$(nproc)"
 ```
 
-### Windows (portable package)
+### 3. Run the command-line application
 
-On Windows, build a self-contained folder that runs without installation:
-
-```powershell
-packaging\windows\build-portable.ps1
-```
-
-This produces:
-
-- `dist\treetops-portable-win64\` — portable application folder
-- `dist\treetops-portable-win64.zip` — distributable archive
-
-The build script uses **vcpkg** by default (bootstrapped into `build\vcpkg` on first run). If **OSGeo4W** is installed at `C:\OSGeo4W`, it is used automatically. Override with `-OsGeo4WRoot` or `-VcpkgRoot` if needed.
-
-The portable folder includes the executable, required DLLs, VC++ runtime DLLs, GDAL/PROJ data files, and a launcher batch file. No registry changes or system install is required.
-
-Pre-built Windows packages are also available from GitHub Actions workflow artifacts (`treetops-portable-win64`).
-
-### Desktop UI (Tauri)
-
-For a packaged desktop build, use the helper scripts:
+Show the CLI help:
 
 ```bash
-./packaging/linux/build-gui.sh
+./build/bin/treetops-cli -h
 ```
 
-On Windows, build an installer with:
-
-```powershell
-packaging\windows\build-installer.ps1
-```
-
-These scripts build the CLI, prepare the sidecar, and invoke the desktop packaging workflow for the selected platform.
-
-The Tauri app in `app/` provides settings configuration and processing controls with a status bar.
-
-Linux prerequisites:
+Show the version:
 
 ```bash
-sudo apt-get install -y \
-  libwebkit2gtk-4.1-dev build-essential curl wget file \
-  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+./build/bin/treetops-cli --version
 ```
 
-Build the CLI, then run the UI:
+Run with a configuration file:
 
 ```bash
-packaging/linux/build.sh
+./build/bin/treetops-cli -c _data/settings.json
+```
+
+Run with an explicit raster input and output directory:
+
+```bash
+./build/bin/treetops-cli -i _data/J5_10cm_CHM.tif -o _data
+```
+
+### 4. Run the desktop GUI
+
+The desktop UI is a Tauri application that launches the CLI as a sidecar.
+
+Install the web/frontend dependencies and start it in development mode:
+
+```bash
 cd app
 npm install
 npm run dev
 ```
 
-Tauri requires **Rust 1.88+** for current dependencies. The `app/rust-toolchain.toml` pins `1.88.0`; `npm run dev` runs `check-rust` to install it via rustup if needed. If you see a `dlopen2` / `edition2024` error, your Rust toolchain is too old — update with:
+Tauri requires Rust 1.88+; the repo pins this in `app/rust-toolchain.toml`. If you see an old-toolchain error, run:
 
 ```bash
 rustup toolchain install 1.88.0
 cd app && rustup override set 1.88.0
 ```
 
-The UI saves settings to JSON, launches `treetops-cli` as a sidecar, and displays `@status:` progress updates in the status bar.
+### 5. Package release artifacts
 
-Release artifacts are written to:
-- Linux: `app/src-tauri/target/release/bundle/`
-- Windows: `dist/` plus an MSI installer when the Windows packaging script completes.
+#### Linux packages
 
-## Usage
-
-### Linux
+Create a Linux desktop bundle (AppImage, DEB, and RPM):
 
 ```bash
-./build/bin/treetops-cli -h
-./build/bin/treetops-cli -c _data/settings.json
-./build/bin/treetops-cli -i _data/J5_10cm_CHM.tif -o _data
+./packaging/linux/build-gui.sh
 ```
 
-### Windows (portable)
+Artifacts are written to:
 
-Unzip `dist\treetops-portable-win64.zip` anywhere, then run:
+- `app/src-tauri/target/release/bundle/appimage/`
+- `app/src-tauri/target/release/bundle/deb/`
+- `app/src-tauri/target/release/bundle/rpm/`
 
-```bat
-treetops.bat -h
-treetops.bat -c examples\settings.json
-treetops.bat -i C:\data\chm.tif -o C:\data\output
+#### Windows portable build
+
+Build a portable Windows folder:
+
+```powershell
+packaging\windows\build-portable.ps1
 ```
 
-`treetops.bat` sets `PATH`, `GDAL_DATA`, and `PROJ_LIB` relative to the application folder. You can also run `treetops-cli.exe` directly if those environment variables are already configured.
+This writes a portable package to `dist/treetops-portable-win64` and a zip archive under `dist/`.
 
-### Options
+#### Windows installer
 
+Build a Windows installer (MSI-style packaging flow):
+
+```powershell
+packaging\windows\build-installer.ps1
 ```
+
+The script prepares the Windows build and emits the packaged outputs to `dist/`.
+
+### 6. Install and launch packaged builds
+
+#### Linux
+
+- AppImage: run `./Treetops_0.1.0_amd64.AppImage`
+- DEB: install with `sudo apt install ./Treetops_0.1.0_amd64.deb`
+- RPM: install with `sudo rpm -i ./Treetops-0.1.0-1.x86_64.rpm`
+
+#### Windows
+
+- Extract the portable folder from the zip archive or run the installer produced by the Windows packaging script.
+- The GUI can be launched from the installed Start Menu entry or from the packaged application folder.
+
+### CLI options
+
+```text
   -c, --config FILE     JSON settings file
   -i, --input FILE      Input CHM/DSM raster (overrides config)
   -o, --output-dir DIR  Output directory (derives output paths from input name)
       --no-smooth        Skip Gaussian smoothing
       --no-crowns        Detect treetops only
   -h, --help            Show help
+      --version         Show the application version
 ```
