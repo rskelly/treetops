@@ -409,8 +409,8 @@ void Processor::updateTops(std::vector<Treetop>& tops, Grid<float>& grid, Grid<i
 				float v = grid.get(c, r);
 				if(v != grid.nodata() && v > top->oz) {
 					top->oz = v;
-					top->ox = grid.toX(c);
-					top->oy = grid.toY(r);
+					top->ox = grid.toX(c) + grid.xRes() / 2.0;
+					top->oy = grid.toY(r) + grid.yRes() / 2.0;
 				}
 			}
 		}
