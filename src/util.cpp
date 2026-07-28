@@ -8,6 +8,10 @@
 
 #ifdef _WIN32
 #include <io.h>
+#include <winbase.h>
+#include <processthreadsapi.h>
+#include <minwinbase.h>
+#include <sysinfoapi.h>
 #else
 #include <sys/time.h>
 #include <glob.h>
