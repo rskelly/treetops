@@ -14,6 +14,7 @@
 #endif
 #include <io.h>
 #include <BaseTsd.h>
+using ssize_t = SSIZE_T;
 #ifndef open
 #define open _open
 #endif

@@ -3,7 +3,15 @@
 #include <string>
 #include <vector>
 
+#if defined(__has_include)
+#  if __has_include(<gdal/gdal_priv.h>)
+#    include <gdal/gdal_priv.h>
+#  elif __has_include(<gdal_priv.h>)
+#    include <gdal_priv.h>
+#  endif
+#else
 #include <gdal/gdal_priv.h>
+#endif
 
 #include "config.hpp"
 #include "process.hpp"

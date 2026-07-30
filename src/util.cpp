@@ -8,9 +8,8 @@
 
 #ifdef _WIN32
 #include <io.h>
-#include <winbase.h>
+#include <windows.h>
 #include <processthreadsapi.h>
-#include <minwinbase.h>
 #include <sysinfoapi.h>
 #else
 #include <sys/time.h>
@@ -30,9 +29,27 @@
 #include <random>
 #include <filesystem>
 
+#if defined(__has_include)
+#  if __has_include(<gdal/gdal_priv.h>)
+#    include <gdal/gdal_priv.h>
+#  elif __has_include(<gdal_priv.h>)
+#    include <gdal_priv.h>
+#  endif
+#  if __has_include(<gdal/ogr_spatialref.h>)
+#    include <gdal/ogr_spatialref.h>
+#  elif __has_include(<ogr_spatialref.h>)
+#    include <ogr_spatialref.h>
+#  endif
+#  if __has_include(<gdal/ogrsf_frmts.h>)
+#    include <gdal/ogrsf_frmts.h>
+#  elif __has_include(<ogrsf_frmts.h>)
+#    include <ogrsf_frmts.h>
+#  endif
+#else
 #include <gdal_priv.h>
 #include <ogr_spatialref.h>
 #include <ogrsf_frmts.h>
+#endif
 
 #include "util.hpp"
 
